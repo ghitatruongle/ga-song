@@ -1,0 +1,7 @@
+output: dist/
+releases:
+  - name: release
+    package:
+      platform: linux
+      targets:
+        - deb

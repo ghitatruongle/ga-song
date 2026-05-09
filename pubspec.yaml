@@ -55,6 +55,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   msix: ^3.16.13
+  debian: ^1.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -126,4 +127,14 @@ msix_config:
 dependency_overrides:
   hotkey_manager_linux:
     path: packages/hotkey_manager_linux
-  path_provider_android: 2.2.22
+
+debian:
+  name: ga-song
+  display_name: GA Song
+  description: A new Flutter project.
+  maintainer: ghitatruongle <ghitatruongle@gmail.com>
+  version: 1.0.0
+  section: utils
+  priority: optional
+  architecture: amd64
+  depends: libgtk-3-0, libblkid1, liblzma5
