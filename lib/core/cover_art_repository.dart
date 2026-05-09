@@ -62,15 +62,35 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   Future<void> preloadNextSongs(List<SongModel> songs, int currentIndex, int count) async {
+    final concurrency = PlatformCapabilities.instance.preloadConcurrency;
+    final toPreload = <int>[];
     for (int i = 1; i <= count; i++) {
       final nextIndex = (currentIndex + i) % songs.length;
       if (nextIndex != currentIndex) {
+        toPreload.add(nextIndex);
+      }
+    }
+
+    if (concurrency >= toPreload.length) {
+      // Desktop: parallel preload
+      await Future.wait(toPreload.map((idx) async {
         try {
-          final fileName = songs[nextIndex].fileName;
+          final fileName = songs[idx].fileName;
           await resolveEntry(fileName);
           getCachedProvider(fileName, cacheWidth: 200, cacheHeight: 200);
         } catch (e) {
-          debugPrint('Failed to preload cover art for song at index $nextIndex: $e');
+          debugPrint('Failed to preload cover art for song at index $idx: $e');
+        }
+      }));
+    } else {
+      // Android: sequential preload to prevent OOM
+      for (final idx in toPreload) {
+        try {
+          final fileName = songs[idx].fileName;
+          await resolveEntry(fileName);
+          getCachedProvider(fileName, cacheWidth: 200, cacheHeight: 200);
+        } catch (e) {
+          debugPrint('Failed to preload cover art for song at index $idx: $e');
         }
       }
     }

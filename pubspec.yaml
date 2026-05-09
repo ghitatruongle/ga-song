@@ -118,3 +118,4 @@ flutter_launcher_icons:
 dependency_overrides:
   hotkey_manager_linux:
     path: packages/hotkey_manager_linux
+  path_provider_android: 2.2.22

@@ -53,6 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
   TabItem? _lastFilterTab;
   String? _lastFilterPlaylist;
 
+  /// Cached album list — only rebuilt when _songs changes.
+  List<String> _cachedAlbums = <String>[];
+  /// Cached album → song count — O(1) lookup instead of O(n) scan per tile.
+  Map<String, int> _cachedAlbumSongCount = <String, int>{};
+
   @override
   void initState() {
     super.initState();
@@ -76,9 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (currentIndex >= 0 && currentIndex < _songs.length) {
       _coverArtRepository.preloadNextSongs(_songs, currentIndex, 3);
     }
-    if (mounted) {
-      setState(() {});
-    }
+    // No setState here — child widgets observe currentIndexNotifier
+    // via ValueListenableBuilder directly. Calling setState({}) was
+    // rebuilding the entire HomeScreen tree (including the blurred
+    // background) on every song change, which is very expensive.
   }
 
   void _applySort() {
@@ -128,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _songs = sorted;
       _songIndexByFileName = indexByFileName;
       _cachedFilteredSongs = null; // Invalidate filter cache after sort
+      _rebuildAlbumCache();
       if (newActiveSongs != null) {
         _activePlaylistSongs = newActiveSongs;
         // Rebuild cached index map for active playlist after sort
@@ -145,6 +152,19 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       _playlistService.reorderPlaylist(_songs);
     }
+  }
+
+  /// Rebuild album cache from _songs. Called only when _songs changes.
+  void _rebuildAlbumCache() {
+    final albumCounts = <String, int>{};
+    for (final song in _songs) {
+      final album = song.album;
+      if (album != null && album.isNotEmpty) {
+        albumCounts[album] = (albumCounts[album] ?? 0) + 1;
+      }
+    }
+    _cachedAlbums = albumCounts.keys.toList();
+    _cachedAlbumSongCount = albumCounts;
   }
 
   Future<void> _loadSongs() async {
@@ -293,13 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPlaylistsGrid() {
     final adaptiveColor = context.adaptive;
-    // Chỉ lấy các album được đặt tên — bỏ "ALL" vì Library tab đã là toàn bộ thư viện
-    final albums = _songs
-        .map((s) => s.album)
-        .where((a) => a != null && a.isNotEmpty)
-        .cast<String>()
-        .toSet()
-        .toList();
+    // Use cached album list — rebuilt only when _songs changes (in _rebuildAlbumCache)
+    final albums = _cachedAlbums;
 
     return Column(
       children: [
@@ -348,9 +363,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemCount: albums.length,
                     itemBuilder: (context, index) {
                       final albumName = albums[index];
-                      final count = _songs
-                          .where((s) => s.album == albumName)
-                          .length;
+                      // O(1) lookup from cached map instead of O(n) scan
+                      final count = _cachedAlbumSongCount[albumName] ?? 0;
+
 
                       return GestureDetector(
                         onTap: () async {
@@ -570,19 +585,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         valueListenable:
                             sl<SettingsManager>().enableBlurNotifier,
                         builder: (context, enableBlur, _) {
-                          final blurLevel = enableBlur
-                              ? sl<SettingsManager>().blurLevelNotifier.value
-                              : 0.0;
+                          return ValueListenableBuilder<double>(
+                            valueListenable: sl<SettingsManager>().blurLevelNotifier,
+                            builder: (context, blurLevelVal, _) {
+                              final blurLevel = enableBlur ? blurLevelVal : 0.0;
 
-                          return ValueListenableBuilder<String?>(
-                            valueListenable: sl<SettingsManager>()
-                                .customBackgroundImageNotifier,
-                            builder: (context, customBgPath, _) {
-                              // Priority 1: Custom background image
-                              if (customBgPath != null &&
-                                  customBgPath.isNotEmpty) {
-                                return _BlurredBackground(
-                                  blurLevel: blurLevel,
+                              return ValueListenableBuilder<String?>(
+                                valueListenable: sl<SettingsManager>()
+                                    .customBackgroundImageNotifier,
+                                builder: (context, customBgPath, _) {
+                                  // Priority 1: Custom background image
+                                  if (customBgPath != null &&
+                                      customBgPath.isNotEmpty) {
+                                    return _BlurredBackground(
+                                      blurLevel: blurLevel,
                                   child: AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 800),
                                     child: Image.file(
@@ -631,17 +647,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     );
                                   }
-                                  return Container(
-                                    color: const Color(0xFF0F0F0F),
-                                  );
+                                  return const SizedBox.shrink();
                                 },
                               );
                             },
                           );
                         },
-                      ),
-                    ),
+                      );
+                    },
                   ),
+                ),
+              ),
 
                   // 2. Main Content
                   Column(

@@ -104,8 +104,10 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   static const int fftSampleCount = 256;
-  static const int maxParticleCount = 150;
-  static const int starCount = 200;
+  static final int maxParticleCount =
+      PlatformCapabilities.instance.maxParticleCount;
+  static final int starCount =
+      PlatformCapabilities.instance.maxStarCount;
 
   static const double _fftSmoothFactor = 0.45;
   static const double _fftNewFactor = 0.55;
@@ -129,7 +131,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   AudioData? _audioData;
 
   // ── Particle pool (zero-allocation per frame) ──────────────────────────────
-  final List<Particle> _particlePool = List<Particle>.generate(
+  late final List<Particle> _particlePool = List<Particle>.generate(
     maxParticleCount,
     (_) => Particle(0, 0, 0, 0, 0, 0, 0, Colors.transparent),
   );
@@ -159,7 +161,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   int _overBudgetCount = 0;
   bool _halfRateMode = false;
   int _frameCounter = 0;
-  static final int _frameBudgetMs =
+  int get _frameBudgetMs =>
       PlatformCapabilities.instance.visualizerFrameBudgetMs;
 
   // P1.3: Pre-computed star color palette (20 slots, ~18° hue apart).

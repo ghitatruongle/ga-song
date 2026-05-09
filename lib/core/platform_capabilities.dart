@@ -55,7 +55,13 @@ class PlatformCapabilities {
   /// - [DeviceTier.low]: (reserved — add RAM-based detection if needed)
   DeviceTier get deviceTier {
     if (isDesktop) return DeviceTier.high;
-    return DeviceTier.mid; // Android 10+ as specified
+    if (isAndroid) {
+      if (Platform.numberOfProcessors <= 4) {
+        return DeviceTier.low;
+      }
+      return DeviceTier.mid;
+    }
+    return DeviceTier.mid; // Default fallback
   }
 
   // ─── Performance tuning knobs ─────────────────────────────────────────────
@@ -88,6 +94,27 @@ class PlatformCapabilities {
   double get backgroundBlurSigma {
     if (isAndroid) return 20.0; // Lighter blur on mobile
     return 30.0;
+  }
+
+  /// Max particle count for the visualizer.
+  /// Android: 80 (reduce CPU + RAM); Desktop: 150.
+  int get maxParticleCount {
+    if (isAndroid) return 80;
+    return 150;
+  }
+
+  /// Max star count for the starfield visualizer.
+  /// Android: 100; Desktop: 200.
+  int get maxStarCount {
+    if (isAndroid) return 100;
+    return 200;
+  }
+
+  /// How many audio sources to preload concurrently.
+  /// Android: 1 (sequential, prevents OOM); Desktop: 3 (fast SSD).
+  int get preloadConcurrency {
+    if (isAndroid) return 1;
+    return 3;
   }
 
   /// Whether the visualizer should run in adaptive frame-rate mode.
