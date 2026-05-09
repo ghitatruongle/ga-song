@@ -114,3 +114,7 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/pic/app_logo.png"
     icon_size: 256
+
+dependency_overrides:
+  hotkey_manager_linux:
+    path: packages/hotkey_manager_linux
