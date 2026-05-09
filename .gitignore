@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local execution logs
+/*_log.txt
+/*_log*.txt
+/pubget*.txt
+/analyze*.txt

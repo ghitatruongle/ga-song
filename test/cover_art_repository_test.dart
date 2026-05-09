@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/cover_art_repository.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   test(
     'resolveEntry always returns exists=true (graceful fallback)',
     () async {
