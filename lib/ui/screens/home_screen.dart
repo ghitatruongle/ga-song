@@ -582,12 +582,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   Positioned.fill(
                     child: RepaintBoundary(
                       child: ValueListenableBuilder<bool>(
-                        valueListenable:
-                            sl<SettingsManager>().enableBlurNotifier,
-                        builder: (context, enableBlur, _) {
-                          return ValueListenableBuilder<double>(
-                            valueListenable: sl<SettingsManager>().blurLevelNotifier,
-                            builder: (context, blurLevelVal, _) {
+                        valueListenable: sl<SettingsManager>().useNativeWindowEffectNotifier,
+                        builder: (context, useNative, _) {
+                          if (useNative) return const SizedBox.shrink();
+                          return ValueListenableBuilder<bool>(
+                            valueListenable: sl<SettingsManager>().enableBlurNotifier,
+                            builder: (context, enableBlur, _) {
+                              return ValueListenableBuilder<double>(
+                                valueListenable: sl<SettingsManager>().blurLevelNotifier,
+                                builder: (context, blurLevelVal, _) {
                               final blurLevel = enableBlur ? blurLevelVal : 0.0;
 
                               return ValueListenableBuilder<String?>(
@@ -655,9 +658,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       );
                     },
-                  ),
-                ),
+                  );
+                },
               ),
+            ),
+          ),
 
                   // 2. Main Content
                   Column(

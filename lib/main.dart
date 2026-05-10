@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:audio_service/audio_service.dart';
 
 import 'core/audio/audio_effect_service.dart';
+import 'core/audio/audio_engine_service.dart';
+import 'core/audio/playlist_service.dart';
 import 'core/performance_probe.dart';
 import 'core/platform_capabilities.dart';
 import 'core/service_locator.dart';
@@ -10,6 +14,8 @@ import 'core/settings_manager.dart';
 import 'core/services/window_manager_service.dart';
 import 'core/services/system_tray_service.dart';
 import 'core/services/hotkey_service.dart';
+import 'core/services/smtc_service.dart';
+import 'core/services/audio_handler_service.dart';
 import 'ui/screens/home_screen.dart';
 
 Widget _buildErrorScreen(Object error, StackTrace stackTrace) {
@@ -161,7 +167,20 @@ Future<void> main() async {
       sl<WindowManagerService>().init(),
       sl<HotkeyService>().init(),
       if (!kDebugMode) sl<SystemTrayService>().init(),
+      if (Platform.isWindows) sl<SmtcService>().init(),
     ]);
+  }
+  
+  if (!kIsWeb && (Platform.isAndroid || Platform.isLinux)) {
+    final audioHandler = await AudioService.init(
+      builder: () => GaSongAudioHandler(sl<AudioEngineService>(), sl<PlaylistService>()),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.ghitatruongle.gasong.channel.audio',
+        androidNotificationChannelName: 'GA Song Playback',
+        androidNotificationOngoing: true,
+      ),
+    );
+    sl.registerSingleton<AudioHandler>(audioHandler);
   }
 
   runApp(GASongApp(home: initialScreen));
@@ -181,12 +200,14 @@ class GASongApp extends StatelessWidget {
         settings.useDynamicColorNotifier,
         settings.customPrimaryColorNotifier,
         settings.dynamicPrimaryColorNotifier,
+        settings.useNativeWindowEffectNotifier,
       ]),
       builder: (context, _) {
         final themeMode = settings.themeModeNotifier.value;
         final useDynamic = settings.useDynamicColorNotifier.value;
         final customColor = settings.customPrimaryColorNotifier.value;
         final dynamicColor = settings.dynamicPrimaryColorNotifier.value;
+        final useNative = settings.useNativeWindowEffectNotifier.value;
         final primaryColor = useDynamic
             ? (dynamicColor ?? customColor)
             : customColor;
@@ -196,7 +217,7 @@ class GASongApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           themeMode: themeMode,
           theme: ThemeData.light().copyWith(
-            scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+            scaffoldBackgroundColor: useNative ? Colors.transparent : const Color(0xFFF5F5F5),
             primaryColor: primaryColor,
             colorScheme: ColorScheme.light(
               primary: primaryColor,
@@ -206,7 +227,7 @@ class GASongApp extends StatelessWidget {
             cardColor: const Color(0xFFFFFFFF),
           ),
           darkTheme: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: const Color(0xFF121212),
+            scaffoldBackgroundColor: useNative ? Colors.transparent : const Color(0xFF121212),
             primaryColor: primaryColor,
             colorScheme: ColorScheme.dark(
               primary: primaryColor,

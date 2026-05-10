@@ -18,6 +18,8 @@ class SettingsManager {
   final ValueNotifier<bool> isMiniPlayerNotifier = ValueNotifier(false);
   final ValueNotifier<bool> miniPlayerModeNotifier = ValueNotifier(false);
 
+  final ValueNotifier<bool> useNativeWindowEffectNotifier = ValueNotifier(false);
+
   final ValueNotifier<bool> isGridViewNotifier = ValueNotifier(false);
   final ValueNotifier<String?> customBackgroundImageNotifier = ValueNotifier(
     null,
@@ -112,6 +114,7 @@ class SettingsManager {
     }
 
     // Load feature settings
+    useNativeWindowEffectNotifier.value = _prefs.getBool('useNativeWindowEffect') ?? false;
     enableBlurNotifier.value = _prefs.getBool('enableBlur') ?? true;
     blurLevelNotifier.value = _prefs.getDouble('blurLevel') ?? 30.0;
     minimizeToTrayNotifier.value = _prefs.getBool('minimizeToTray') ?? true;
@@ -279,6 +282,11 @@ class SettingsManager {
   Future<void> setBlurLevel(double level) async {
     blurLevelNotifier.value = level.clamp(0.0, 100.0);
     await _prefs.setDouble('blurLevel', blurLevelNotifier.value);
+  }
+
+  Future<void> setUseNativeWindowEffect(bool enable) async {
+    useNativeWindowEffectNotifier.value = enable;
+    await _prefs.setBool('useNativeWindowEffect', enable);
   }
 
   Future<void> setMinimizeToTray(bool minimize) async {
@@ -480,6 +488,7 @@ class SettingsManager {
   }
 
   void dispose() {
+    useNativeWindowEffectNotifier.dispose();
     themeModeNotifier.dispose();
     enableBlurNotifier.dispose();
     isMiniPlayerNotifier.dispose();

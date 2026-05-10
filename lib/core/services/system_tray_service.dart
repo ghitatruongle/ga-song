@@ -10,6 +10,7 @@ import '../audio/playlist_service.dart';
 class SystemTrayService {
   SystemTray? _systemTray;
   final AppWindow _appWindow = AppWindow();
+  final Menu _menu = Menu();
 
   Future<void> init() async {
     if (kIsWeb || (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux)) {
@@ -45,47 +46,7 @@ class SystemTrayService {
 
       await _systemTray!.initSystemTray(title: "G.A - Song", iconPath: path);
       
-      final Menu menu = Menu();
-      await menu.buildFrom([
-        MenuItemLabel(
-          label: 'Show',
-          onClicked: (menuItem) => _appWindow.show(),
-        ),
-        MenuItemLabel(
-          label: 'Hide',
-          onClicked: (menuItem) => _appWindow.hide(),
-        ),
-        MenuSeparator(),
-        MenuItemLabel(
-          label: 'Play/Pause',
-          onClicked: (menuItem) {
-            final engineService = sl<AudioEngineService>();
-            if (engineService.engineState.value == AudioEngineState.playing) {
-              engineService.pause();
-            } else {
-              sl<PlaylistService>().play();
-            }
-          },
-        ),
-        MenuItemLabel(
-          label: 'Next',
-          onClicked: (menuItem) => sl<PlaylistService>().next(),
-        ),
-        MenuItemLabel(
-          label: 'Previous',
-          onClicked: (menuItem) => sl<PlaylistService>().previous(),
-        ),
-        MenuSeparator(),
-        MenuItemLabel(
-          label: 'Exit',
-          onClicked: (menuItem) async {
-            await teardownServices();
-            await windowManager.destroy();
-          },
-        ),
-      ]);
-
-      await _systemTray!.setContextMenu(menu);
+      await _buildMenu();
 
       _systemTray!.registerSystemTrayEventHandler((eventName) {
         if (eventName == kSystemTrayEventClick) {
@@ -98,6 +59,8 @@ class SystemTrayService {
               : _appWindow.show();
         }
       });
+
+      sl<AudioEngineService>().engineState.addListener(_updateMenu);
     } catch (e, stackTrace) {
       debugPrint("SystemTray init failed: $e");
       debugPrint("Stack trace: $stackTrace");
@@ -105,7 +68,59 @@ class SystemTrayService {
     }
   }
 
+  Future<void> _buildMenu() async {
+    if (_systemTray == null) return;
+
+    final engineService = sl<AudioEngineService>();
+    final isPlaying = engineService.engineState.value == AudioEngineState.playing;
+
+    await _menu.buildFrom([
+      MenuItemLabel(
+        label: 'Show',
+        onClicked: (menuItem) => _appWindow.show(),
+      ),
+      MenuItemLabel(
+        label: 'Hide',
+        onClicked: (menuItem) => _appWindow.hide(),
+      ),
+      MenuSeparator(),
+      MenuItemLabel(
+        label: isPlaying ? 'Pause' : 'Play',
+        onClicked: (menuItem) {
+          if (isPlaying) {
+            engineService.pause();
+          } else {
+            sl<PlaylistService>().play();
+          }
+        },
+      ),
+      MenuItemLabel(
+        label: 'Next',
+        onClicked: (menuItem) => sl<PlaylistService>().next(),
+      ),
+      MenuItemLabel(
+        label: 'Previous',
+        onClicked: (menuItem) => sl<PlaylistService>().previous(),
+      ),
+      MenuSeparator(),
+      MenuItemLabel(
+        label: 'Exit',
+        onClicked: (menuItem) async {
+          await teardownServices();
+          await windowManager.destroy();
+        },
+      ),
+    ]);
+
+    await _systemTray!.setContextMenu(_menu);
+  }
+
+  void _updateMenu() {
+    _buildMenu();
+  }
+
   void dispose() {
+    sl<AudioEngineService>().engineState.removeListener(_updateMenu);
     _systemTray?.destroy();
   }
 }

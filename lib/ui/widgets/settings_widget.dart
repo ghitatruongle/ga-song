@@ -134,6 +134,32 @@ class SettingsWidget extends StatelessWidget {
                     },
                   ),
                 ),
+                const SizedBox(height: 10),
+                if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS))
+                  _buildSettingCard(
+                    isDark: isDark,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: settings.useNativeWindowEffectNotifier,
+                      builder: (context, useNative, _) {
+                        return SwitchListTile(
+                          title: Text(
+                            'Hiệu ứng cửa sổ hệ thống (Mica/Acrylic)',
+                            style: TextStyle(color: textColor),
+                          ),
+                          subtitle: Text(
+                            'Sử dụng hiệu ứng trong suốt nguyên bản của hệ điều hành. Sẽ tắt hình nền mờ của ứng dụng.',
+                            style: TextStyle(
+                              color: textColor.withValues(alpha: 0.6),
+                              fontSize: 13,
+                            ),
+                          ),
+                          value: useNative,
+                          activeThumbColor: Theme.of(context).primaryColor,
+                          onChanged: settings.setUseNativeWindowEffect,
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 20),
                 _buildSectionHeader(
                   'Phím tắt toàn cục (Global Hotkeys)',

@@ -7,8 +7,14 @@ import android.util.Rational
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import android.content.Context
+import com.ryanheise.audioservice.AudioServicePlugin
 
 class MainActivity : FlutterActivity() {
+
+    override fun provideFlutterEngine(context: Context): FlutterEngine? {
+        return AudioServicePlugin.getFlutterEngine(context)
+    }
 
     private val CHANNEL = "com.gasong.ga_song/pip"
 
