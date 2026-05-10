@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import '../service_locator.dart';
 import '../settings_manager.dart';
 
@@ -10,48 +11,80 @@ class WindowManagerService with WindowListener {
       return;
     }
 
-    await windowManager.ensureInitialized();
+    try {
+      await Window.initialize();
+      await windowManager.ensureInitialized();
 
-    const windowOptions = WindowOptions(
-      size: Size(1000, 700),
-      minimumSize: Size(800, 600),
-      center: true,
-      backgroundColor: Colors.transparent,
-      skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.hidden,
-    );
+      const windowOptions = WindowOptions(
+        size: Size(1000, 700),
+        minimumSize: Size(800, 600),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        titleBarStyle: TitleBarStyle.hidden,
+      );
 
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      if (!kDebugMode) {
-        await windowManager.setPreventClose(true);
-      }
-      
-      // Restore previous window position if available
-      final savedPosition = sl<SettingsManager>().savedWindowPosition;
-      if (savedPosition != null) {
-        try {
-          await windowManager.setPosition(savedPosition);
-        } catch (e) {
-          debugPrint('Failed to restore window position: $e');
+      windowManager.waitUntilReadyToShow(windowOptions, () async {
+        if (!kDebugMode) {
+          try {
+            await windowManager.setPreventClose(true);
+          } catch (e) {
+            debugPrint('Wayland/Linux fallback: setPreventClose not supported. $e');
+          }
         }
-      }
-      
-      // C3 fix: also restore the saved window size
-      final savedSize = sl<SettingsManager>().savedWindowSize;
-      if (savedSize != null) {
-        try {
-          await windowManager.setSize(savedSize);
-        } catch (e) {
-          debugPrint('Failed to restore window size: $e');
+        
+        // Restore previous window position if available
+        final savedPosition = sl<SettingsManager>().savedWindowPosition;
+        if (savedPosition != null) {
+          try {
+            await windowManager.setPosition(savedPosition);
+          } catch (e) {
+            debugPrint('Failed to restore window position: $e');
+          }
         }
-      }
+        
+        // C3 fix: also restore the saved window size
+        final savedSize = sl<SettingsManager>().savedWindowSize;
+        if (savedSize != null) {
+          try {
+            await windowManager.setSize(savedSize);
+          } catch (e) {
+            debugPrint('Failed to restore window size: $e');
+          }
+        }
 
-      await windowManager.show();
-      await windowManager.focus();
-    });
+        try {
+          await windowManager.show();
+          await windowManager.focus();
+        } catch (e) {
+          debugPrint('Failed to show/focus window: $e');
+        }
+        
+        _applyWindowEffect();
+      });
+    } catch (e) {
+      debugPrint('Window manager initialization failed (possible Wayland unsupported feature): $e');
+    }
 
     if (!kDebugMode) {
       windowManager.addListener(this);
+    }
+    
+    sl<SettingsManager>().useNativeWindowEffectNotifier.addListener(_applyWindowEffect);
+    sl<SettingsManager>().themeModeNotifier.addListener(_applyWindowEffect);
+  }
+
+  void _applyWindowEffect() {
+    final useNative = sl<SettingsManager>().useNativeWindowEffectNotifier.value;
+    final theme = sl<SettingsManager>().themeModeNotifier.value;
+    final isDark = theme == ThemeMode.dark || (theme == ThemeMode.system && PlatformDispatcher.instance.platformBrightness == Brightness.dark);
+    
+    if (useNative) {
+      Window.setEffect(effect: WindowEffect.mica, dark: isDark).catchError((_) {
+        Window.setEffect(effect: WindowEffect.acrylic, dark: isDark).catchError((_) {});
+      });
+    } else {
+      Window.setEffect(effect: WindowEffect.disabled);
     }
   }
 
@@ -69,6 +102,8 @@ class WindowManagerService with WindowListener {
   }
 
   void dispose() {
+    sl<SettingsManager>().useNativeWindowEffectNotifier.removeListener(_applyWindowEffect);
+    sl<SettingsManager>().themeModeNotifier.removeListener(_applyWindowEffect);
     if (!kDebugMode) {
       windowManager.removeListener(this);
     }

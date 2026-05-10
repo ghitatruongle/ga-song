@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../song_model.dart';
 import '../audio_source_cache_policy.dart';
+import '../platform_capabilities.dart';
 import 'audio_engine_service.dart';
 import 'audio_effect_service.dart';
 
@@ -363,9 +364,20 @@ class PlaylistService {
       );
       final keepPaths = keepIndices.map((i) => _playlist[i].assetPath).toSet();
 
-      await Future.wait(
-        keepIndices.map((i) => _engineService.preload(_playlist[i].assetPath)),
-      );
+      // Concurrency-limited preload: sequential on Android (1), parallel on desktop (3)
+      final concurrency = PlatformCapabilities.instance.preloadConcurrency;
+      final indicesToPreload = keepIndices.toList();
+      if (concurrency >= indicesToPreload.length) {
+        // Fast path: parallel preload (desktop)
+        await Future.wait(
+          indicesToPreload.map((i) => _engineService.preload(_playlist[i].assetPath)),
+        );
+      } else {
+        // Throttled path: sequential preload (Android)
+        for (final i in indicesToPreload) {
+          await _engineService.preload(_playlist[i].assetPath);
+        }
+      }
       await _engineService.evictSources(keepPaths);
     } finally {
       _isPreparingCache = false;

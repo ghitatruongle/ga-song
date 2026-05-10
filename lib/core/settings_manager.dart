@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +17,8 @@ class SettingsManager {
   final ValueNotifier<double> blurLevelNotifier = ValueNotifier(30.0);
   final ValueNotifier<bool> isMiniPlayerNotifier = ValueNotifier(false);
   final ValueNotifier<bool> miniPlayerModeNotifier = ValueNotifier(false);
+
+  final ValueNotifier<bool> useNativeWindowEffectNotifier = ValueNotifier(false);
 
   final ValueNotifier<bool> isGridViewNotifier = ValueNotifier(false);
   final ValueNotifier<String?> customBackgroundImageNotifier = ValueNotifier(
@@ -111,6 +114,7 @@ class SettingsManager {
     }
 
     // Load feature settings
+    useNativeWindowEffectNotifier.value = _prefs.getBool('useNativeWindowEffect') ?? false;
     enableBlurNotifier.value = _prefs.getBool('enableBlur') ?? true;
     blurLevelNotifier.value = _prefs.getDouble('blurLevel') ?? 30.0;
     minimizeToTrayNotifier.value = _prefs.getBool('minimizeToTray') ?? true;
@@ -185,17 +189,24 @@ class SettingsManager {
     final hotkeysJson = _prefs.getString('customHotkeys');
     if (hotkeysJson != null) {
       try {
-        final hotkeys = Map<String, String>.from(
-          (hotkeysJson.split(';')).fold<Map<String, String>>({}, (map, pair) {
-            final parts = pair.split(':');
-            if (parts.length == 2) {
-              map[parts[0]] = parts[1];
-            }
-            return map;
-          }),
-        );
+        final Map<String, dynamic> decoded = jsonDecode(hotkeysJson);
+        final hotkeys = decoded.map((key, value) => MapEntry(key, value.toString()));
         customHotkeysNotifier.value = hotkeys;
-      } catch (_) {}
+      } catch (_) {
+        // Fallback to old format
+        try {
+          final hotkeys = Map<String, String>.from(
+            (hotkeysJson.split(';')).fold<Map<String, String>>({}, (map, pair) {
+              final parts = pair.split(':');
+              if (parts.length == 2) {
+                map[parts[0]] = parts[1];
+              }
+              return map;
+            }),
+          );
+          customHotkeysNotifier.value = hotkeys;
+        } catch (_) {}
+      }
     }
 
     // Load Media Key
@@ -271,6 +282,11 @@ class SettingsManager {
   Future<void> setBlurLevel(double level) async {
     blurLevelNotifier.value = level.clamp(0.0, 100.0);
     await _prefs.setDouble('blurLevel', blurLevelNotifier.value);
+  }
+
+  Future<void> setUseNativeWindowEffect(bool enable) async {
+    useNativeWindowEffectNotifier.value = enable;
+    await _prefs.setBool('useNativeWindowEffect', enable);
   }
 
   Future<void> setMinimizeToTray(bool minimize) async {
@@ -429,20 +445,14 @@ class SettingsManager {
     final hotkeys = Map<String, String>.from(customHotkeysNotifier.value);
     hotkeys[action] = keys;
     customHotkeysNotifier.value = hotkeys;
-    final hotkeysString = hotkeys.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(';');
-    await _prefs.setString('customHotkeys', hotkeysString);
+    await _prefs.setString('customHotkeys', jsonEncode(hotkeys));
   }
 
   Future<void> removeCustomHotkey(String action) async {
     final hotkeys = Map<String, String>.from(customHotkeysNotifier.value);
     hotkeys.remove(action);
     customHotkeysNotifier.value = hotkeys;
-    final hotkeysString = hotkeys.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(';');
-    await _prefs.setString('customHotkeys', hotkeysString);
+    await _prefs.setString('customHotkeys', jsonEncode(hotkeys));
   }
 
   // ─── Media Key Setters ───────────────────────────────────────────────────
@@ -478,6 +488,7 @@ class SettingsManager {
   }
 
   void dispose() {
+    useNativeWindowEffectNotifier.dispose();
     themeModeNotifier.dispose();
     enableBlurNotifier.dispose();
     isMiniPlayerNotifier.dispose();

@@ -8,6 +8,7 @@ import 'view_models/player_view_model.dart';
 import 'services/window_manager_service.dart';
 import 'services/system_tray_service.dart';
 import 'services/hotkey_service.dart';
+import 'services/smtc_service.dart';
 import 'pip_service.dart';
 import 'platform_capabilities.dart';
 
@@ -53,6 +54,12 @@ void setupServiceLocator() {
     }
     if (!sl.isRegistered<HotkeyService>()) {
       sl.registerLazySingleton<HotkeyService>(() => HotkeyService());
+    }
+    if (!sl.isRegistered<SmtcService>()) {
+      sl.registerLazySingleton<SmtcService>(
+        () => SmtcService(sl<AudioEngineService>(), sl<PlaylistService>()),
+        dispose: (param) => param.dispose(),
+      );
     }
   }
   if (!sl.isRegistered<PipService>()) {

@@ -256,6 +256,8 @@ class AudioEngineService {
     } catch (_) {}
   }
 
+  Timer? _crossfadeTimer;
+
   Future<void> crossfadeTo(
     String nextAssetPath,
     double crossfadeDuration, {
@@ -268,7 +270,7 @@ class AudioEngineService {
     }
 
     _isCrossfading = true;
-    final fadeSteps = 20;
+    const fadeSteps = 20;
     final stepDuration = Duration(
       milliseconds: (crossfadeDuration * 1000 / fadeSteps).round(),
     );
@@ -286,24 +288,46 @@ class AudioEngineService {
       final fadeOutStep = currentFullVolume / fadeSteps;
       final fadeInStep = targetVolume / fadeSteps;
 
-      for (int i = 1; i <= fadeSteps; i++) {
-        if (!_isDisposed && _isCrossfading) {
-          while (engineState.value == AudioEngineState.paused && !_isDisposed && _isCrossfading) {
-            await Future.delayed(const Duration(milliseconds: 50));
-          }
-          if (!_isDisposed && _isCrossfading) {
-            if (_currentHandle != null) {
-              _soloud.setVolume(_currentHandle!, currentFullVolume - (fadeOutStep * i));
-            }
-            if (_crossfadeHandle != null) {
-              _soloud.setVolume(_crossfadeHandle!, fadeInStep * i);
-            }
-            await Future.delayed(stepDuration);
-          }
-        } else {
-          break;
+      // Use a Completer so the caller can await crossfade completion
+      final completer = Completer<void>();
+      int currentStep = 0;
+
+      _crossfadeTimer?.cancel();
+      _crossfadeTimer = Timer.periodic(stepDuration, (timer) {
+        // Pause-aware: skip step if paused
+        if (engineState.value == AudioEngineState.paused) return;
+
+        if (_isDisposed || !_isCrossfading) {
+          timer.cancel();
+          _crossfadeTimer = null;
+          if (!completer.isCompleted) completer.complete();
+          return;
         }
-      }
+
+        currentStep++;
+        try {
+          if (_currentHandle != null) {
+            _soloud.setVolume(
+              _currentHandle!,
+              (currentFullVolume - (fadeOutStep * currentStep)).clamp(0.0, 1.0),
+            );
+          }
+          if (_crossfadeHandle != null) {
+            _soloud.setVolume(
+              _crossfadeHandle!,
+              (fadeInStep * currentStep).clamp(0.0, 1.0),
+            );
+          }
+        } catch (_) {}
+
+        if (currentStep >= fadeSteps) {
+          timer.cancel();
+          _crossfadeTimer = null;
+          if (!completer.isCompleted) completer.complete();
+        }
+      });
+
+      await completer.future;
 
       if (!_isDisposed && _isCrossfading) {
         await _cleanupCurrent();
@@ -364,6 +388,8 @@ class AudioEngineService {
       final crossHandle = _crossfadeHandle;
       _crossfadeHandle = null;
       _isCrossfading = false;
+      _crossfadeTimer?.cancel();
+      _crossfadeTimer = null;
       if (crossHandle != null) {
         try {
           _soloud.stop(crossHandle);
@@ -387,6 +413,8 @@ class AudioEngineService {
   Future<void> dispose() async {
     _isDisposed = true;
     _positionTimer?.cancel();
+    _crossfadeTimer?.cancel();
+    _crossfadeTimer = null;
     await _songCompletedController.close();
     await _cleanupCurrent();
     await _disposeAllCached();

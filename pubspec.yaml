@@ -42,6 +42,10 @@ dependencies:
   file_picker: ^11.0.2
   flutter_acrylic: ^1.1.4
   hotkey_manager: ^0.2.3
+  smtc_windows: ^0.1.2
+  audio_service: ^0.18.18
+  path_provider: ^2.1.5
+  audio_service_mpris: ^0.2.1
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +58,8 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  msix: ^3.16.13
+  debian: ^1.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -114,3 +120,25 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/pic/app_logo.png"
     icon_size: 256
+
+msix_config:
+  display_name: GA Song
+  publisher_display_name: GA Song
+  title_bar_color: '#FF000000'
+  logo_path: assets/pic/app_logo.png
+  capabilities: internetClient, microphone
+
+dependency_overrides:
+  hotkey_manager_linux:
+    path: packages/hotkey_manager_linux
+
+debian:
+  name: ga-song
+  display_name: GA Song
+  description: A new Flutter project.
+  maintainer: ghitatruongle <ghitatruongle@gmail.com>
+  version: 1.0.0
+  section: utils
+  priority: optional
+  architecture: amd64
+  depends: libgtk-3-0, libblkid1, liblzma5

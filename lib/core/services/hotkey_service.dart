@@ -159,7 +159,9 @@ class HotkeyService {
         return HotKey(
           key: mainKey,
           modifiers: modifiers.isEmpty ? null : modifiers,
-          scope: HotKeyScope.system,
+          scope: defaultTargetPlatform == TargetPlatform.linux
+              ? HotKeyScope.inapp
+              : HotKeyScope.system,
         );
       }
     } catch (_) {}
