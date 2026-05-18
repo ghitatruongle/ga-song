@@ -3,9 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/service_locator.dart';
 import '../../core/audio/playlist_service.dart';
-import '../../song_model.dart';
+import 'package:ga_song/models/song.dart';
 import '../../core/cover_art_repository.dart';
 import '../../core/performance_probe.dart';
+import '../widgets/desktop_title_bar.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/main_content.dart';
 import '../widgets/bottom_player_bar.dart';
@@ -16,39 +17,57 @@ import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
 import 'mini_player_screen.dart';
 import 'dart:io';
-import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
-import '../widgets/window_caption_button.dart';
 import '../../core/pip_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/lyric_provider.dart';
+import '../../providers/song_provider.dart';
+import '../widgets/lyric_view.dart';
+import 'ktv_screen.dart';
+import 'online_screen.dart';
+import '../../core/services/music_manager.dart';
+import '../widgets/playlist_manager_widget.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final PlaylistService _playlistService = sl<PlaylistService>();
   final CoverArtRepository _coverArtRepository = sl<CoverArtRepository>();
+  final SettingsManager _settingsManager = sl<SettingsManager>();
 
-  List<SongModel> _songs = [];
+  List<Song> _songs = [];
   Map<String, int> _songIndexByFileName = <String, int>{};
   bool _isLoading = true;
   String? _loadingError;
   String _searchQuery = '';
   TabItem _currentTab = TabItem.home;
+
+  // P-1 fix: Cache merged listenable for background to avoid per-frame
+  // Listenable.merge allocation and prevent nested ValueListenableBuilder.
+  late final Listenable _backgroundListenable;
+
+  // Listen to external tab changes (e.g. from KTVScreen exit button)
+  void Function()? _tabListener;
+
+  /// Cache tabs có widget tĩnh (const) — build 1 lần, tái sử dụng vô hạn.
+  /// Giúp chuyển tab về KTV/Personal/Settings/Online gần như tức thời.
+  final Map<TabItem, Widget> _tabCache = {};
   String? _selectedPlaylistName;
 
   /// Danh sách bài hát đang được nạp vào PlaylistService.
   /// Dùng để tính index cục bộ khi user bấm bài trong playlist view.
-  List<SongModel> _activePlaylistSongs = [];
+  List<Song> _activePlaylistSongs = [];
 
   /// Cached map fileName → index trong _activePlaylistSongs.
   /// Chỉ rebuild khi _activePlaylistSongs thay đổi — tránh tạo Map mới mỗi build.
   Map<String, int> _cachedPlaylistIndexMap = {};
 
   /// Cached kết quả filter — tránh filter lại toàn bộ mỗi lần setState.
-  List<SongModel>? _cachedFilteredSongs;
+  List<Song>? _cachedFilteredSongs;
   String _lastFilterQuery = '';
   TabItem? _lastFilterTab;
   String? _lastFilterPlaylist;
@@ -61,10 +80,30 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSongs();
+    // P-1 fix: Merge all background-related notifiers into one listenable.
+    // This eliminates 5 nested ValueListenableBuilder levels.
+    _backgroundListenable = Listenable.merge(<Listenable>[
+      sl<SettingsManager>().useNativeWindowEffectNotifier,
+      sl<SettingsManager>().enableBlurNotifier,
+      sl<SettingsManager>().blurLevelNotifier,
+      sl<SettingsManager>().customBackgroundImageNotifier,
+      _playlistService.currentIndexNotifier,
+    ]);
     _playlistService.currentIndexNotifier.addListener(_onSongChanged);
     sl<SettingsManager>().sortModeNotifier.addListener(_applySort);
     sl<SettingsManager>().sortAscendingNotifier.addListener(_applySort);
+    // Listen for external tab changes (e.g. KTV back button)
+    _tabListener = () {
+      final tabIndex = _settingsManager.currentTabIndexNotifier.value;
+      final tabs = TabItem.values;
+      if (tabIndex >= 0 && tabIndex < tabs.length) {
+        final newTab = tabs[tabIndex];
+        if (newTab != _currentTab) {
+          setState(() => _currentTab = newTab);
+        }
+      }
+    };
+    _settingsManager.currentTabIndexNotifier.addListener(_tabListener!);
   }
 
   @override
@@ -72,6 +111,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _playlistService.currentIndexNotifier.removeListener(_onSongChanged);
     sl<SettingsManager>().sortModeNotifier.removeListener(_applySort);
     sl<SettingsManager>().sortAscendingNotifier.removeListener(_applySort);
+    if (_tabListener != null) {
+      _settingsManager.currentTabIndexNotifier.removeListener(_tabListener!);
+    }
+    _tabCache.clear();
     super.dispose();
   }
 
@@ -87,30 +130,45 @@ class _HomeScreenState extends State<HomeScreen> {
     // background) on every song change, which is very expensive.
   }
 
+  /// Q-10 fix: Convert int mode to SortMode enum for consistency with PlaylistService.
+  static SortMode _sortModeFromInt(int mode) {
+    switch (mode) {
+      case 0: return SortMode.name;
+      case 1: return SortMode.artist;
+      case 2: return SortMode.dateAdded;
+      case 3: return SortMode.duration;
+      default: return SortMode.name;
+    }
+  }
+
   void _applySort() {
     if (_songs.isEmpty) return;
 
     final settings = sl<SettingsManager>();
-    final mode = settings.sortModeNotifier.value;
+    final sortMode = _sortModeFromInt(settings.sortModeNotifier.value);
     final asc = settings.sortAscendingNotifier.value;
     final int dir = asc ? 1 : -1;
 
-    final sorted = List<SongModel>.from(_songs);
+    final sorted = List<Song>.from(_songs);
     sorted.sort((a, b) {
-      switch (mode) {
-        case 0: // Name
+      switch (sortMode) {
+        case SortMode.name:
           return dir * a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case 1: // Artist
+        case SortMode.artist:
           final aArtist = a.artist?.toLowerCase() ?? '';
           final bArtist = b.artist?.toLowerCase() ?? '';
           if (aArtist.isEmpty && bArtist.isEmpty) return 0;
           if (aArtist.isEmpty) return dir;
           if (bArtist.isEmpty) return -dir;
           return dir * aArtist.compareTo(bArtist);
-        case 2: // Date Added
-        case 3: // Duration
-        default:
-          return dir * a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case SortMode.dateAdded:
+          final aDate = a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final bDate = b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return dir * aDate.compareTo(bDate);
+        case SortMode.duration:
+          final aDur = a.durationMs ?? 0;
+          final bDur = b.durationMs ?? 0;
+          return dir * aDur.compareTo(bDur);
       }
     });
 
@@ -120,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Nếu đang xem một playlist cụ thể, re-sort _activePlaylistSongs
     // để giữ đồng bộ với thứ tự mới của _songs.
-    List<SongModel>? newActiveSongs;
+    List<Song>? newActiveSongs;
     if (_selectedPlaylistName != null && _activePlaylistSongs.isNotEmpty) {
       final activeFileNames = _activePlaylistSongs
           .map((s) => s.fileName)
@@ -134,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _songs = sorted;
       _songIndexByFileName = indexByFileName;
       _cachedFilteredSongs = null; // Invalidate filter cache after sort
+      _cachedViewSongs = null; // P-4 fix: Invalidate view songs cache
       _rebuildAlbumCache();
       if (newActiveSongs != null) {
         _activePlaylistSongs = newActiveSongs;
@@ -167,26 +226,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _cachedAlbumSongCount = albumCounts;
   }
 
-  Future<void> _loadSongs() async {
+  // Database stream listener will update _songs instead
+  Future<void> _handleSongsUpdate(List<Song> songs) async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _loadingError = null;
     });
 
     try {
-      final songs = await SongLoader.loadSongs();
-      await _coverArtRepository.primeForSongs(
-        songs.map((song) => song.fileName),
-      );
-      if (!mounted) {
-        return;
-      }
+      await _coverArtRepository.primeForSongs(songs);
+      if (!mounted) return;
 
-      // Assign raw list; _applySort() will sort & call setState once
       _songs = songs;
       _applySort();
 
-      // Trigger dominant-color extraction & cover preload (no extra rebuild)
       if (_songs.isNotEmpty) {
         _loadDominantColor();
         final idx = _playlistService.currentIndexNotifier.value;
@@ -195,16 +250,13 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (error, stackTrace) {
-      debugPrint('Failed to load songs: $error\n$stackTrace');
-      if (!mounted) {
-        return;
-      }
+      debugPrint('Failed to process songs: $error\n$stackTrace');
+      if (!mounted) return;
 
       setState(() {
-        _songs = <SongModel>[];
+        _songs = <Song>[];
         _songIndexByFileName = <String, int>{};
-        _loadingError =
-            'Không thể tải danh sách bài hát. Vui lòng kiểm tra assets/song và thử tải lại.';
+        _loadingError = 'Không thể nạp danh sách bài hát từ Database.';
       });
     } finally {
       if (mounted) {
@@ -215,15 +267,25 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<SongModel> get _currentViewSongs {
+  // P-4 fix: Cache filtered view songs to avoid recreating list on every access.
+  List<Song>? _cachedViewSongs;
+  String? _cachedViewPlaylistName;
+
+  List<Song> get _currentViewSongs {
     if (_selectedPlaylistName == null) {
       return _songs;
     }
-    return _songs.where((s) => s.album == _selectedPlaylistName).toList();
+    // Return cached if playlist name hasn't changed
+    if (_cachedViewSongs != null && _cachedViewPlaylistName == _selectedPlaylistName) {
+      return _cachedViewSongs!;
+    }
+    _cachedViewPlaylistName = _selectedPlaylistName;
+    _cachedViewSongs = _songs.where((s) => s.album == _selectedPlaylistName).toList();
+    return _cachedViewSongs!;
   }
 
   /// Trả về danh sách đã filter, có cache — tránh rebuild mỗi lần setState.
-  List<SongModel> get _filteredSongs {
+  List<Song> get _filteredSongs {
     final queryMatch = _lastFilterQuery == _searchQuery;
     final tabMatch = _lastFilterTab == _currentTab;
     final playlistMatch = _lastFilterPlaylist == _selectedPlaylistName;
@@ -258,58 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _buildTitleBar() {
-    if (kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS) {
-      return const SizedBox(height: 50); // Keep spacing but no buttons
-    }
-    return DragToMoveArea(
-      child: SizedBox(
-        height: 50,
-        child: Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              WindowCaptionButton.minimize(
-                onPressed: () async => windowManager.minimize(),
-                iconNormal: Icon(
-                  Icons.remove,
-                  color: context.adaptive,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 8),
-              WindowCaptionButton.maximize(
-                onPressed: () async {
-                  if (await windowManager.isMaximized()) {
-                    await windowManager.unmaximize();
-                  } else {
-                    await windowManager.maximize();
-                  }
-                },
-                iconNormal: Icon(
-                  Icons.crop_square,
-                  color: context.adaptive,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 8),
-              WindowCaptionButton.close(
-                onPressed: () async => windowManager.close(),
-                iconNormal: Icon(
-                  Icons.close,
-                  color: context.adaptive,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Q-3 fix: Use shared DesktopTitleBar widget
+  Widget _buildTitleBar() => const DesktopTitleBar();
 
   Widget _buildPlaylistsGrid() {
     final adaptiveColor = context.adaptive;
@@ -511,11 +523,22 @@ class _HomeScreenState extends State<HomeScreen> {
             songIndexByFileName: _cachedPlaylistIndexMap,
             onSearchChanged: _onSearchChanged,
             searchQuery: _searchQuery,
-            onRefresh: _loadSongs,
+            onRefresh: () {
+              // The stream handles real-time updates, but user can still force reload
+              final asyncValue = ref.read(songListProvider);
+              if (asyncValue.hasValue) {
+                _handleSongsUpdate(asyncValue.value!);
+              }
+            },
           ),
         ),
       ],
     );
+  }
+
+  /// U-4 fix: Whether the sidebar is currently visible.
+  bool _isSidebarVisible(BuildContext context) {
+    return MediaQuery.of(context).size.height > 200;
   }
 
   Widget _buildCurrentTab() {
@@ -536,19 +559,48 @@ class _HomeScreenState extends State<HomeScreen> {
           songIndexByFileName: _songIndexByFileName,
           onSearchChanged: _onSearchChanged,
           searchQuery: _searchQuery,
-          onRefresh: _loadSongs,
+          onRefresh: () {
+            final asyncValue = ref.read(songListProvider);
+            if (asyncValue.hasValue) {
+              _handleSongsUpdate(asyncValue.value!);
+            }
+          },
         );
+      case TabItem.online:
+        // YouTube player chỉ hỗ trợ trên Android (youtube_player_iframe không hỗ trợ Desktop)
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+          PerformanceProbe.instance.markSurface('Online Screen');
+          return _tabCache.putIfAbsent(TabItem.online, () => const OnlineScreen());
+        }
+        // Fallback về Home nếu bằng cách nào đó desktop chọn tab này
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _currentTab = TabItem.home);
+        });
+        return const SizedBox.shrink();
+      case TabItem.ktv:
+        PerformanceProbe.instance.markSurface('KTV Screen');
+        return _tabCache.putIfAbsent(TabItem.ktv, () => const KTVScreen());
       case TabItem.personal:
         PerformanceProbe.instance.markSurface('Personal Visualizer');
-        return const PersonalVisualizerWidget();
+        return _tabCache.putIfAbsent(TabItem.personal, () => const PersonalVisualizerWidget());
       case TabItem.settings:
         PerformanceProbe.instance.markSurface('Settings');
-        return const SettingsWidget();
+        return _tabCache.putIfAbsent(TabItem.settings, () => const SettingsWidget());
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Listen to Isar songListProvider
+    ref.listen<AsyncValue<List<Song>>>(songListProvider, (previous, next) {
+      next.whenData((songs) {
+        // If lengths are different, or it's first load, update
+        if (previous?.value?.length != songs.length || _songs.isEmpty) {
+          _handleSongsUpdate(songs);
+        }
+      });
+    });
+
     // On Android, also listen for native PiP mode changes
     return ValueListenableBuilder<bool>(
       valueListenable: sl<PipService>().isInPipNotifier,
@@ -571,7 +623,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const MiniPlayerScreen(),
               );
             }
-            return Scaffold(
+            return PopScope(
+              canPop: _currentTab == TabItem.home && _selectedPlaylistName == null,
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) return;
+                // Android back: nếu đang xem playlist -> về playlist grid
+                // Nếu đang ở tab khác -> về Home
+                if (_selectedPlaylistName != null) {
+                  setState(() => _selectedPlaylistName = null);
+                } else if (_currentTab != TabItem.home) {
+                  setState(() => _currentTab = TabItem.home);
+                }
+              },
+              child: Scaffold(
               backgroundColor: Colors.transparent,
               body: Stack(
                 children: [
@@ -579,90 +643,67 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Uses ImageFiltered instead of BackdropFilter for performance:
                   // BackdropFilter re-blurs every pixel every frame (GPU killer).
                   // ImageFiltered blurs only its child; result is cached by compositor.
+                  // P-1 fix: Single ListenableBuilder with merged listenable
+                  // replaces 5 nested ValueListenableBuilder levels.
                   Positioned.fill(
                     child: RepaintBoundary(
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: sl<SettingsManager>().useNativeWindowEffectNotifier,
-                        builder: (context, useNative, _) {
+                      child: ListenableBuilder(
+                        listenable: _backgroundListenable,
+                        builder: (context, _) {
+                          final settings = sl<SettingsManager>();
+                          final useNative = settings.useNativeWindowEffectNotifier.value;
                           if (useNative) return const SizedBox.shrink();
-                          return ValueListenableBuilder<bool>(
-                            valueListenable: sl<SettingsManager>().enableBlurNotifier,
-                            builder: (context, enableBlur, _) {
-                              return ValueListenableBuilder<double>(
-                                valueListenable: sl<SettingsManager>().blurLevelNotifier,
-                                builder: (context, blurLevelVal, _) {
-                              final blurLevel = enableBlur ? blurLevelVal : 0.0;
 
-                              return ValueListenableBuilder<String?>(
-                                valueListenable: sl<SettingsManager>()
-                                    .customBackgroundImageNotifier,
-                                builder: (context, customBgPath, _) {
-                                  // Priority 1: Custom background image
-                                  if (customBgPath != null &&
-                                      customBgPath.isNotEmpty) {
-                                    return _BlurredBackground(
-                                      blurLevel: blurLevel,
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 800),
-                                    child: Image.file(
-                                      File(customBgPath),
-                                      key: ValueKey('custom_bg_$customBgPath'),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      filterQuality: FilterQuality.medium,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                color: const Color(0xFF0F0F0F),
-                                              ),
-                                    ),
+                          final enableBlur = settings.enableBlurNotifier.value;
+                          final blurLevelVal = settings.blurLevelNotifier.value;
+                          final blurLevel = enableBlur ? blurLevelVal : 0.0;
+                          final customBgPath = settings.customBackgroundImageNotifier.value;
+
+                          // Priority 1: Custom background image
+                          if (customBgPath != null && customBgPath.isNotEmpty) {
+                            return _BlurredBackground(
+                              blurLevel: blurLevel,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 800),
+                                child: Image.file(
+                                  File(customBgPath),
+                                  key: ValueKey('custom_bg_$customBgPath'),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  filterQuality: FilterQuality.medium,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(color: const Color(0xFF0F0F0F)),
+                                ),
+                              ),
+                            );
+                          }
+
+                          // Priority 2: Cover art of currently playing song
+                          final song = _playlistService.currentSong;
+                          if (song != null) {
+                            return _BlurredBackground(
+                              blurLevel: blurLevel,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 800),
+                                child: CoverArtImage(
+                                  key: ValueKey(song.fileName),
+                                  song: song,
+                                  cacheWidth: 400,
+                                  cacheHeight: 300,
+                                  fallbackBuilder: (context) => Container(
+                                    key: const ValueKey('default_bg'),
+                                    color: const Color(0xFF0F0F0F),
                                   ),
-                                );
-                              }
-
-                              // Priority 2: Cover art of currently playing song
-                              return ValueListenableBuilder<int>(
-                                valueListenable:
-                                    _playlistService.currentIndexNotifier,
-                                builder: (context, currentIndex, child) {
-                                  final song = _playlistService.currentSong;
-                                  if (song != null) {
-                                    return _BlurredBackground(
-                                      blurLevel: blurLevel,
-                                      child: AnimatedSwitcher(
-                                        duration: const Duration(
-                                          milliseconds: 800,
-                                        ),
-                                        child: CoverArtImage(
-                                          key: ValueKey(song.fileName),
-                                          fileName: song.fileName,
-                                          cacheWidth: 400,
-                                          cacheHeight: 300,
-                                          fallbackBuilder: (context) =>
-                                              Container(
-                                                key: const ValueKey(
-                                                  'default_bg',
-                                                ),
-                                                color: const Color(0xFF0F0F0F),
-                                              ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              );
-                            },
-                          );
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
                         },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
+                      ),
+                    ),
+                  ),
 
                   // 2. Main Content
                   Column(
@@ -670,25 +711,43 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: Row(
                           children: [
-                            SidebarWidget(
-                              currentTab: _currentTab,
-                              onTabChanged: (tab) {
-                                setState(() {
-                                  _currentTab = tab;
-                                  if (tab == TabItem.library) {
-                                    _selectedPlaylistName = null;
-                                    _cachedFilteredSongs = null;
-                                  }
-                                });
-                                if (tab == TabItem.library) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    _playlistService.setPlaylist(_songs);
+                            // Sidebar only shown when NOT in mini player mode
+                            // and window has enough height
+                            if (MediaQuery.of(context).size.height > 200)
+                              SidebarWidget(
+                                currentTab: _currentTab,
+                                onTabChanged: (tab) {
+                                  setState(() {
+                                    _currentTab = tab;
+                                    if (tab == TabItem.library) {
+                                      _selectedPlaylistName = null;
+                                      _cachedFilteredSongs = null;
+                                    }
                                   });
-                                }
-                              },
-                            ),
+                                  if (tab == TabItem.library) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      _playlistService.setPlaylist(_songs);
+                                    });
+                                  }
+                                },
+                                onImportMusic: _importLocalSongs,
+                                onManagePlaylists: () => PlaylistManagerWidget.show(context),
+                              ),
+                            // U-1 fix: AnimatedSwitcher adds fade transition between tabs
                             Expanded(
-                              child: RepaintBoundary(child: _buildCurrentTab()),
+                              child: RepaintBoundary(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
+                                  transitionBuilder: (child, animation) =>
+                                      FadeTransition(opacity: animation, child: child),
+                                  child: KeyedSubtree(
+                                    key: ValueKey(_currentTab),
+                                    child: _buildCurrentTab(),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -704,8 +763,51 @@ class _HomeScreenState extends State<HomeScreen> {
                       bottom: 0,
                       child: RepaintBoundary(child: BottomPlayerBarWidget()),
                     ),
+                  
+                  // 4. Standard Lyric Overlay (RepaintBoundary isolates
+                  // lyric repaints from the background blur and song list)
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final showLyrics = ref.watch(lyricVisibilityProvider);
+                      if (!showLyrics || _currentTab == TabItem.ktv) return const SizedBox.shrink();
+                      
+                      // U-4 fix: Subtract sidebar width from available space
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      final isSidebarVisible = _isSidebarVisible(context);
+                      final availableWidth = isSidebarVisible
+                          ? screenWidth - 240 // sidebar width
+                          : screenWidth;
+
+                      return Positioned(
+                        top: 50,
+                        right: 0,
+                        bottom: 90, // Leave space for bottom bar
+                        width: availableWidth / 2.5,
+                        child: RepaintBoundary(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                bottomLeft: Radius.circular(24),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(-5, 0),
+                                ),
+                              ],
+                            ),
+                            child: const LyricView(isFullScreen: false),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
+            ),
             );
           },
         );
@@ -717,15 +819,39 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentIndex = _playlistService.currentIndexNotifier.value;
     if (currentIndex >= 0 && currentIndex < _songs.length) {
       final song = _songs[currentIndex];
-      _extractDominantColor(song.fileName);
+      _extractDominantColor(song);
     }
   }
 
-  Future<void> _extractDominantColor(String fileName) async {
+  Future<void> _extractDominantColor(Song song) async {
     try {
-      final color = await _coverArtRepository.resolveDominantColor(fileName);
+      final color = await _coverArtRepository.resolveDominantColor(song);
       sl<SettingsManager>().dynamicPrimaryColorNotifier.value = color;
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in home_screen: $e\n$stack'); }
+  }
+
+  Future<void> _importLocalSongs() async {
+    final isar = ref.read(isarProvider);
+    final manager = MusicManager(isar);
+    final snackMessenger = ScaffoldMessenger.of(context);
+    try {
+      await manager.importLocalSongs();
+      if (!mounted) return;
+      snackMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Đã import nhạc thành công!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      snackMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Lỗi import nhạc: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 }
 

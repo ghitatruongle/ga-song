@@ -18,6 +18,49 @@ class PlatformCapabilities {
   bool get isDesktop => isWindows || isLinux || isMacOS;
   bool get isMobile => isAndroid;
 
+  // ─── Window effect detection ──────────────────────────────────────────────
+
+  /// Windows 11 build 22000+ supports Mica (lighter, more stable than Acrylic).
+  /// Returns true only on Windows 11+.
+  ///
+  /// Parses the build number from [Platform.operatingSystemVersion] which on
+  /// Windows returns something like `"Windows 10.0.22631"` or `"10.0.22631"`.
+  /// The build number is the numeric value >= 10000 (e.g. 19045 for Win10, 22631 for Win11).
+  bool get supportsMica {
+    if (!isWindows) return false;
+    try {
+      final version = Platform.operatingSystemVersion;
+      // Split on dots and whitespace, then find the first number > 10000
+      // which is the Windows build number (version parts like 10, 0 are smaller).
+      final parts = version.split(RegExp(r'[ .]+'));
+      for (final part in parts) {
+        final num = int.tryParse(part);
+        if (num != null && num > 10000) return num >= 22000;
+      }
+      return false;
+    } catch (e) {
+      debugPrint("PlatformCapabilities version error: $e");
+      return false;
+    }
+  }
+
+  /// Preferred [WindowEffect] for the current platform.
+  /// - Windows 11+: Mica (more performant, less flicker on resize)
+  /// - Windows 10:  Acrylic
+  /// - macOS:       sidebar (NSVisualEffectView material)
+  /// - Linux:       transparent
+  /// - Other:       disabled (no effect)
+  WindowEffectType get preferredWindowEffect {
+    if (isWindows && supportsMica) return WindowEffectType.mica;
+    if (isWindows) return WindowEffectType.acrylic;
+    if (isMacOS) return WindowEffectType.sidebar;
+    if (isLinux) return WindowEffectType.transparent;
+    return WindowEffectType.disabled;
+  }
+  
+  /// Whether native window effects (acrylic/mica) should be used by default.
+  bool get supportsNativeWindowEffect => isWindows || isMacOS || isLinux;
+
   // ─── Linux distro detection ───────────────────────────────────────────────
 
   /// Returns true if running on a Debian/Ubuntu-based Linux distro.
@@ -31,7 +74,7 @@ class PlatformCapabilities {
           osRelease.contains('kali') ||
           osRelease.contains('mint') ||
           osRelease.contains('Chrome OS');
-    } catch (_) {
+    } catch (e, stack) { debugPrint('Error in platform_capabilities: $e\n$stack'); 
       return false;
     }
   }
@@ -42,7 +85,7 @@ class PlatformCapabilities {
     try {
       return File('/etc/os-release').readAsStringSync().contains('Chrome OS') ||
           File('/run/chromeos-config').existsSync();
-    } catch (_) {
+    } catch (e, stack) { debugPrint('Error in platform_capabilities: $e\n$stack'); 
       return false;
     }
   }
@@ -150,6 +193,21 @@ class PlatformCapabilities {
   String toString() =>
       'PlatformCapabilities(tier: $deviceTier, android: $isAndroid, '
       'desktop: $isDesktop, linux: $isLinux, chromeos: $isChromeOS)';
+}
+
+/// Mirrors [WindowEffect] from flutter_acrylic without creating a dependency.
+/// Used by [PlatformCapabilities.preferredWindowEffect] for platform-aware
+/// effect selection.
+enum WindowEffectType {
+  disabled,
+  solid,
+  transparent,
+  acrylic,
+  mica,
+  tabbed,
+  titlebar,
+  sidebar,
+  hudWindow,
 }
 
 enum DeviceTier { high, mid, low }

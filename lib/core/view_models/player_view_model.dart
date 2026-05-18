@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
-import '../../song_model.dart';
+import 'package:ga_song/models/song.dart';
 
 class PlayerViewModel extends ChangeNotifier {
   final AudioEngineService _engineService;
@@ -35,7 +35,7 @@ class PlayerViewModel extends ChangeNotifier {
   }
 
   // --- Playlist State ---
-  SongModel? get currentSong => _playlistService.currentSong;
+  Song? get currentSong => _playlistService.currentSong;
   PlayMode get playMode => _playlistService.playModeNotifier.value;
   bool get hasNext => _playlistService.playlist.isNotEmpty;
   bool get hasPrevious => _playlistService.playlist.isNotEmpty;

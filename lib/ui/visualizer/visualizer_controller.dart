@@ -351,7 +351,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
 
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in visualizer_controller: $e\n$stack'); }
   }
 
   // ── Particle pool: compact in-place, zero allocation ───────────────────────
@@ -491,7 +491,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _ticker.dispose();
     try {
       _audioData?.dispose();
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in visualizer_controller: $e\n$stack'); }
     super.dispose();
   }
 }

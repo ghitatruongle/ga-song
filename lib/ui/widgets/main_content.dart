@@ -1,16 +1,15 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
 
 import '../../core/audio/audio_engine_service.dart';
+import 'desktop_title_bar.dart';
 import '../../core/audio/playlist_service.dart';
 import '../../core/service_locator.dart';
 import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
-import '../../song_model.dart';
+import 'package:ga_song/models/song.dart';
 import 'cover_art_image.dart';
-import 'window_caption_button.dart';
+import 'playlist_manager_widget.dart';
 
 class MainContentWidget extends StatefulWidget {
   const MainContentWidget({
@@ -28,8 +27,8 @@ class MainContentWidget extends StatefulWidget {
 
   final bool isLoading;
   final String? loadingError;
-  final List<SongModel> songs;
-  final List<SongModel> filteredSongs;
+  final List<Song> songs;
+  final List<Song> filteredSongs;
   final Map<String, int> songIndexByFileName;
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
@@ -45,10 +44,33 @@ class _MainContentWidgetState extends State<MainContentWidget> {
   late final TextEditingController _searchController;
   Timer? _debounceTimer;
 
+  // P-8 fix: Single listener at parent level instead of per-tile listeners.
+  late final PlaylistService _playlistService;
+  late final AudioEngineService _engineService;
+  int _currentPlayingIndex = -1;
+  AudioEngineState _engineState = AudioEngineState.stopped;
+
+  void _onPlaybackChanged() {
+    final newIndex = _playlistService.currentIndexNotifier.value;
+    final newState = _engineService.engineState.value;
+    if (newIndex == _currentPlayingIndex && newState == _engineState) return;
+    setState(() {
+      _currentPlayingIndex = newIndex;
+      _engineState = newState;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.searchQuery);
+    // P-8 fix: Register 2 parent-level listeners instead of 200+ per-tile listeners.
+    _playlistService = sl<PlaylistService>();
+    _engineService = sl<AudioEngineService>();
+    _currentPlayingIndex = _playlistService.currentIndexNotifier.value;
+    _engineState = _engineService.engineState.value;
+    _playlistService.currentIndexNotifier.addListener(_onPlaybackChanged);
+    _engineService.engineState.addListener(_onPlaybackChanged);
   }
 
   @override
@@ -65,6 +87,9 @@ class _MainContentWidgetState extends State<MainContentWidget> {
   void dispose() {
     _debounceTimer?.cancel();
     _searchController.dispose();
+    // P-8 fix: Remove parent-level listeners.
+    _playlistService.currentIndexNotifier.removeListener(_onPlaybackChanged);
+    _engineService.engineState.removeListener(_onPlaybackChanged);
     super.dispose();
   }
 
@@ -74,55 +99,8 @@ class _MainContentWidgetState extends State<MainContentWidget> {
       color: Colors.transparent,
       child: Column(
         children: <Widget>[
-          if (widget.showTitleBar &&
-              !kIsWeb &&
-              defaultTargetPlatform != TargetPlatform.android &&
-              defaultTargetPlatform != TargetPlatform.iOS)
-            DragToMoveArea(
-              child: SizedBox(
-                height: 50,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      WindowCaptionButton.minimize(
-                        onPressed: () async => windowManager.minimize(),
-                        iconNormal: Icon(
-                          Icons.remove,
-                          color: context.adaptive,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      WindowCaptionButton.maximize(
-                        onPressed: () async {
-                          if (await windowManager.isMaximized()) {
-                            await windowManager.unmaximize();
-                          } else {
-                            await windowManager.maximize();
-                          }
-                        },
-                        iconNormal: Icon(
-                          Icons.crop_square,
-                          color: context.adaptive,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      WindowCaptionButton.close(
-                        onPressed: () async => windowManager.close(),
-                        iconNormal: Icon(
-                          Icons.close,
-                          color: context.adaptive,
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // Q-3 fix: Use shared DesktopTitleBar widget
+          if (widget.showTitleBar) const DesktopTitleBar(),
           _buildHeader(context),
           Expanded(
             child: widget.isLoading
@@ -143,126 +121,137 @@ class _MainContentWidgetState extends State<MainContentWidget> {
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(40, 10, 40, 30),
-      child: Row(
-        children: <Widget>[
-          Text(
-            'Trang chủ',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: context.adaptive,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: 320,
-            height: 44,
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                _debounceTimer?.cancel();
-                _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-                  widget.onSearchChanged(value);
-                });
-              },
-              style: TextStyle(color: context.adaptive, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Tìm kiếm bài hát...',
-                hintStyle: TextStyle(
-                  color: context.adaptive.withValues(alpha: 0.5),
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: context.adaptive.withValues(alpha: 0.5),
-                  size: 20,
-                ),
-                suffixIcon: widget.searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: context.adaptiveSubtle,
-                          size: 18,
-                        ),
-                        onPressed: () {
-                          _debounceTimer?.cancel();
-                          // #6: Clear both state AND the visible TextField text
-                          _searchController.clear();
-                          widget.onSearchChanged('');
-                        },
-                        splashRadius: 20,
-                      )
-                    : null,
-                filled: true,
-                fillColor: context.adaptive.withValues(alpha: 0.1),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  borderSide: BorderSide(
-                    color: context.adaptive.withValues(alpha: 0.15),
-                    width: 1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final showSearchBox = constraints.maxWidth > 600;
+          return Row(
+            children: <Widget>[
+              Flexible(
+                child: Text(
+                  'Trang chủ',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: context.adaptive,
+                    letterSpacing: -0.5,
                   ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  borderSide: BorderSide(
-                    color: context.adaptive.withValues(alpha: 0.15),
-                    width: 1,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  borderSide: BorderSide(
-                    color: context.adaptive.withValues(alpha: 0.4),
-                    width: 2,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 0,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.adaptive.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: ValueListenableBuilder<bool>(
-              valueListenable: sl<SettingsManager>().isGridViewNotifier,
-              builder: (context, isGrid, _) {
-                return IconButton(
+              if (showSearchBox) ...[
+                const SizedBox(width: 16),
+                Flexible(
+                  child: SizedBox(
+                    width: 320,
+                    height: 44,
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        _debounceTimer?.cancel();
+                        _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+                          widget.onSearchChanged(value);
+                        });
+                      },
+                      style: TextStyle(color: context.adaptive, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm kiếm bài hát...',
+                        hintStyle: TextStyle(
+                          color: context.adaptive.withValues(alpha: 0.5),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: context.adaptive.withValues(alpha: 0.5),
+                          size: 20,
+                        ),
+                        suffixIcon: widget.searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: context.adaptiveSubtle,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  _debounceTimer?.cancel();
+                                  _searchController.clear();
+                                  widget.onSearchChanged('');
+                                },
+                                splashRadius: 20,
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: context.adaptive.withValues(alpha: 0.1),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(
+                            color: context.adaptive.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(
+                            color: context.adaptive.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(
+                            color: context.adaptive.withValues(alpha: 0.4),
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 16),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.adaptive.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: sl<SettingsManager>().isGridViewNotifier,
+                  builder: (context, isGrid, _) {
+                    return IconButton(
+                      icon: Icon(
+                        isGrid ? Icons.list_rounded : Icons.grid_view_rounded,
+                        color: context.adaptive,
+                        size: 20,
+                      ),
+                      onPressed: () => sl<SettingsManager>().setIsGridView(!isGrid),
+                      tooltip: isGrid ? 'Chế độ danh sách' : 'Chế độ lưới',
+                      splashRadius: 24,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.adaptive.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
                   icon: Icon(
-                    isGrid ? Icons.list_rounded : Icons.grid_view_rounded,
+                    Icons.refresh_rounded,
                     color: context.adaptive,
                     size: 20,
                   ),
-                  onPressed: () => sl<SettingsManager>().setIsGridView(!isGrid),
-                  tooltip: isGrid ? 'Chế độ danh sách' : 'Chế độ lưới',
+                  onPressed: widget.onRefresh,
+                  tooltip: 'Làm mới danh sách',
                   splashRadius: 24,
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.adaptive.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.refresh_rounded,
-                color: context.adaptive,
-                size: 20,
+                ),
               ),
-              onPressed: widget.onRefresh,
-              tooltip: 'Làm mới danh sách',
-              splashRadius: 24,
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -345,165 +334,53 @@ class _MainContentWidgetState extends State<MainContentWidget> {
   }
 
   Widget _buildSongList(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: sl<SettingsManager>().isGridViewNotifier,
-      builder: (context, isGrid, _) {
-        final itemCount = widget.filteredSongs.length;
-        if (isGrid) {
+    // P-8 fix: Wrap with _SongPlaybackInheritedWidget so tiles can read
+    // playback state via context instead of registering individual listeners.
+    return _SongPlaybackInheritedWidget(
+      currentIndex: _currentPlayingIndex,
+      isPlaying: _engineState == AudioEngineState.playing,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: sl<SettingsManager>().isGridViewNotifier,
+        builder: (context, isGrid, _) {
+          final itemCount = widget.filteredSongs.length;
+          if (isGrid) {
+            return RepaintBoundary(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
+                cacheExtent: 500,
+                addAutomaticKeepAlives: false,
+                addRepaintBoundaries: false, // items have manual RepaintBoundary
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 200,
+                  childAspectRatio: 0.8,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                itemCount: itemCount,
+                itemBuilder: (context, index) {
+                  final song = widget.filteredSongs[index];
+                  final songIndex =
+                      widget.songIndexByFileName[song.fileName] ?? index;
+                  return _SongGridTile(song: song, songIndex: songIndex);
+                },
+              ),
+            );
+          }
+
           return RepaintBoundary(
-            child: GridView.builder(
+            child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
+              itemExtent: 86.0,
+              cacheExtent: 500,
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: false, // items have manual RepaintBoundary
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 200,
-                childAspectRatio: 0.8,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
               itemCount: itemCount,
               itemBuilder: (context, index) {
                 final song = widget.filteredSongs[index];
                 final songIndex =
                     widget.songIndexByFileName[song.fileName] ?? index;
-                return _SongGridTile(song: song, songIndex: songIndex);
+                return _SongListTile(song: song, songIndex: songIndex);
               },
-            ),
-          );
-        }
-
-        return RepaintBoundary(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
-            itemExtent: 86.0,
-            addAutomaticKeepAlives: false,
-            addRepaintBoundaries: false, // items have manual RepaintBoundary
-            itemCount: itemCount,
-            itemBuilder: (context, index) {
-              final song = widget.filteredSongs[index];
-              final songIndex =
-                  widget.songIndexByFileName[song.fileName] ?? index;
-              return _SongListTile(song: song, songIndex: songIndex);
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SongGridTile extends StatelessWidget {
-  const _SongGridTile({required this.song, required this.songIndex});
-
-  final SongModel song;
-  final int songIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: _SongPlaybackAware(
-        songIndex: songIndex,
-        builder: (context, isContext, isPlaying) {
-          return InkWell(
-            onTap: () {
-              if (sl<PlaylistService>().playMode == PlayMode.playOneStop) {
-                sl<PlaylistService>().setPlayMode(PlayMode.sequential);
-              }
-              sl<PlaylistService>().playSongByFileName(song.fileName);
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isContext
-                    ? context.adaptive.withValues(alpha: 0.15)
-                    : context.adaptive.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isContext
-                      ? context.adaptive.withValues(alpha: 0.3)
-                      : context.adaptive.withValues(alpha: 0.05),
-                  width: 1,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: ColoredBox(
-                  color: context.adaptive.withValues(alpha: 0.02),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Expanded(
-                        flex: 3,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: <Widget>[
-                            CoverArtImage(
-                              fileName: song.fileName,
-                              cacheWidth: 320,
-                              cacheHeight: 320,
-                              fallbackBuilder: (context) => Center(
-                                child: Icon(
-                                  Icons.music_note_rounded,
-                                  color: context.adaptiveSecondary,
-                                  size: 40,
-                                ),
-                              ),
-                            ),
-                            if (isPlaying)
-                              IgnorePointer(
-                                child: ColoredBox(
-                                  color: Colors.black.withValues(alpha: 0.5),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.equalizer_rounded,
-                                      color: Colors.white,
-                                      size: 40,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                song.name,
-                                style: TextStyle(
-                                  color: context.adaptive,
-                                  fontWeight: isContext
-                                      ? FontWeight.bold
-                                      : FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                song.artist ?? 'Unknown',
-                                style: TextStyle(
-                                  color: context.adaptive.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           );
         },
@@ -512,111 +389,256 @@ class _SongGridTile extends StatelessWidget {
   }
 }
 
-class _SongListTile extends StatelessWidget {
-  const _SongListTile({required this.song, required this.songIndex});
+class _SongGridTile extends StatelessWidget {
+  const _SongGridTile({required this.song, required this.songIndex});
 
-  final SongModel song;
+  final Song song;
   final int songIndex;
 
   @override
   Widget build(BuildContext context) {
+    // P-8 fix: Read playback state from InheritedWidget instead of per-tile listener.
+    final playback = _SongPlaybackInheritedWidget.of(context);
+    final isContext = playback.currentIndex == songIndex;
+    final isPlaying = isContext && playback.isPlaying;
+
     return RepaintBoundary(
-      child: _SongPlaybackAware(
-        songIndex: songIndex,
-        builder: (context, isContext, isPlaying) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
+      child: InkWell(
+        onTap: () {
+          if (sl<PlaylistService>().playMode == PlayMode.playOneStop) {
+            sl<PlaylistService>().setPlayMode(PlayMode.sequential);
+          }
+          sl<PlaylistService>().playSongByFileName(song.fileName);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isContext
+                ? context.adaptive.withValues(alpha: 0.15)
+                : context.adaptive.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
               color: isContext
-                  ? context.adaptive.withValues(alpha: 0.15)
-                  : context.adaptive.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isContext
-                    ? context.adaptive.withValues(alpha: 0.3)
-                    : context.adaptive.withValues(alpha: 0.05),
-                width: 1,
-              ),
+                  ? context.adaptive.withValues(alpha: 0.3)
+                  : context.adaptive.withValues(alpha: 0.05),
+              width: 1,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              // #9: Removed per-item BackdropFilter (was 26 blur pass/frame).
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                hoverColor: context.adaptive.withValues(alpha: 0.08),
-                leading: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: context.adaptive.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    children: <Widget>[
-                      Positioned.fill(
-                        child: CoverArtImage(
-                          fileName: song.fileName,
-                          cacheWidth: 104,
-                          cacheHeight: 104,
-                          fallbackBuilder: (context) => Icon(
-                            isPlaying
-                                ? Icons.equalizer_rounded
-                                : Icons.music_note_rounded,
-                            color: isPlaying
-                                ? Colors.black
-                                : context.adaptiveSecondary,
-                            size: 26,
-                          ),
-                        ),
-                      ),
-                      if (isPlaying)
-                        Positioned.fill(
-                          child: ColoredBox(
-                            color: context.adaptive.withValues(alpha: 0.7),
-                            child: const Icon(
-                              Icons.equalizer_rounded,
-                              color: Colors.black,
-                              size: 26,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: ColoredBox(
+              color: context.adaptive.withValues(alpha: 0.02),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    flex: 3,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: <Widget>[
+                        CoverArtImage(
+                          song: song,
+                          cacheWidth: 320,
+                          cacheHeight: 320,
+                          fallbackBuilder: (context) => Center(
+                            child: Icon(
+                              Icons.music_note_rounded,
+                              color: context.adaptiveSecondary,
+                              size: 40,
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                title: Text(
-                  song.name,
-                  style: TextStyle(
-                    color: context.adaptive,
-                    fontWeight: isPlaying ? FontWeight.bold : FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    song.artist ?? 'Unknown Artist',
-                    style: TextStyle(
-                      color: context.adaptive.withValues(alpha: 0.6),
-                      fontSize: 14,
+                        if (isPlaying)
+                          IgnorePointer(
+                            child: ColoredBox(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.equalizer_rounded,
+                                  color: Colors.white,
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            song.name,
+                            style: TextStyle(
+                              color: context.adaptive,
+                              fontWeight: isContext
+                                  ? FontWeight.bold
+                                  : FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  song.artist ?? 'Unknown',
+                                  style: TextStyle(
+                                    color: context.adaptive.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.playlist_add),
+                                onPressed: () => PlaylistManagerWidget.showAddToPlaylist(context, song),
+                                iconSize: 18,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                color: context.adaptive.withValues(alpha: 0.5),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SongListTile extends StatelessWidget {
+  const _SongListTile({required this.song, required this.songIndex});
+
+  final Song song;
+  final int songIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    // P-8 fix: Read playback state from InheritedWidget instead of per-tile listener.
+    final playback = _SongPlaybackInheritedWidget.of(context);
+    final isContext = playback.currentIndex == songIndex;
+    final isPlaying = isContext && playback.isPlaying;
+
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: isContext
+              ? context.adaptive.withValues(alpha: 0.15)
+              : context.adaptive.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isContext
+                ? context.adaptive.withValues(alpha: 0.3)
+                : context.adaptive.withValues(alpha: 0.05),
+            width: 1,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          // #9: Removed per-item BackdropFilter (was 26 blur pass/frame).
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 10,
+            ),
+            hoverColor: context.adaptive.withValues(alpha: 0.08),
+            leading: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: context.adaptive.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: CoverArtImage(
+                      song: song,
+                      cacheWidth: 104,
+                      cacheHeight: 104,
+                      fallbackBuilder: (context) => Icon(
+                        isPlaying
+                            ? Icons.equalizer_rounded
+                            : Icons.music_note_rounded,
+                        color: isPlaying
+                            ? Colors.black
+                            : context.adaptiveSecondary,
+                        size: 26,
+                      ),
+                    ),
+                  ),
+                  if (isPlaying)
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: context.adaptive.withValues(alpha: 0.7),
+                        child: const Icon(
+                          Icons.equalizer_rounded,
+                          color: Colors.black,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            title: Text(
+              song.name,
+              style: TextStyle(
+                color: context.adaptive,
+                fontWeight: isPlaying ? FontWeight.bold : FontWeight.w600,
+                fontSize: 16,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                song.artist ?? 'Unknown Artist',
+                style: TextStyle(
+                  color: context.adaptive.withValues(alpha: 0.6),
+                  fontSize: 14,
                 ),
-                trailing: Text(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.playlist_add),
+                  color: context.adaptive.withValues(alpha: 0.5),
+                  onPressed: () => PlaylistManagerWidget.showAddToPlaylist(context, song),
+                ),
+                const SizedBox(width: 8),
+                Text(
                   (songIndex + 1).toString().padLeft(2, '0'),
                   style: TextStyle(
                     color: isContext
@@ -626,18 +648,43 @@ class _SongListTile extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                onTap: () {
-                  if (sl<PlaylistService>().playMode == PlayMode.playOneStop) {
-                    sl<PlaylistService>().setPlayMode(PlayMode.sequential);
-                  }
-                  sl<PlaylistService>().playSongByFileName(song.fileName);
-                },
-              ),
+              ],
             ),
-          );
-        },
+            onTap: () {
+              if (sl<PlaylistService>().playMode == PlayMode.playOneStop) {
+                sl<PlaylistService>().setPlayMode(PlayMode.sequential);
+              }
+              sl<PlaylistService>().playSongByFileName(song.fileName);
+            },
+          ),
+        ),
       ),
     );
+  }
+}
+
+/// P-8 fix: InheritedWidget that provides playback state to all song tiles.
+/// Replaces per-tile listener registration (200+ listeners → 2 parent listeners).
+class _SongPlaybackInheritedWidget extends InheritedWidget {
+  const _SongPlaybackInheritedWidget({
+    required this.currentIndex,
+    required this.isPlaying,
+    required super.child,
+  });
+
+  final int currentIndex;
+  final bool isPlaying;
+
+  static _SongPlaybackInheritedWidget of(BuildContext context) {
+    final widget = context.dependOnInheritedWidgetOfExactType<_SongPlaybackInheritedWidget>();
+    assert(widget != null, 'No _SongPlaybackInheritedWidget found in context');
+    return widget!;
+  }
+
+  @override
+  bool updateShouldNotify(_SongPlaybackInheritedWidget oldWidget) {
+    return currentIndex != oldWidget.currentIndex ||
+           isPlaying != oldWidget.isPlaying;
   }
 }
 

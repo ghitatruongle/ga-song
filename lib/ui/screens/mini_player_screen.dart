@@ -1,12 +1,16 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
 import '../../core/service_locator.dart';
 import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
+import '../../core/utils/time_utils.dart';
 import '../../core/view_models/player_view_model.dart';
 import '../../core/pip_service.dart';
+import '../../models/song.dart';
+import '../../providers/lyric_provider.dart';
 import '../widgets/cover_art_image.dart';
 
 /// Whether the current platform is desktop (Windows/macOS/Linux).
@@ -41,6 +45,30 @@ class MiniPlayerScreen extends StatelessWidget {
 // Desktop: compact 350×100 strip (existing design)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Restores the window from mini player mode to normal size.
+Future<void> _restoreFromMiniPlayer(BuildContext context) async {
+  final screenSize = MediaQuery.sizeOf(context);
+  sl<SettingsManager>().setIsMiniPlayer(false);
+  await windowManager.setMinimumSize(const Size(800, 600));
+  await windowManager.setMaximumSize(const Size(32000, 32000));
+  final savedSize = sl<SettingsManager>().savedWindowSize;
+  final targetSize = savedSize ?? const Size(1000, 700);
+  final maxWidth = (screenSize.width * 0.9).clamp(800.0, 32000.0);
+  final maxHeight = (screenSize.height * 0.9).clamp(600.0, 32000.0);
+  final clampedSize = Size(
+    targetSize.width.clamp(800.0, maxWidth),
+    targetSize.height.clamp(600.0, maxHeight),
+  );
+  await windowManager.setSize(clampedSize);
+  if (sl<SettingsManager>().savedWindowMaximized) {
+    await windowManager.maximize();
+  }
+  if (sl<SettingsManager>().savedWindowFullScreen) {
+    await windowManager.setFullScreen(true);
+  }
+  await windowManager.setAlwaysOnTop(false);
+}
+
 class _DesktopMiniPlayer extends StatelessWidget {
   const _DesktopMiniPlayer();
 
@@ -72,7 +100,7 @@ class _DesktopMiniPlayer extends StatelessWidget {
                           .clamp(1, maxCacheSize)
                           .round();
                       return CoverArtImage(
-                        fileName: song.fileName,
+                        song: song,
                         cacheWidth: cacheWidth,
                         cacheHeight: cacheHeight,
                         fallbackBuilder: (context) =>
@@ -84,20 +112,32 @@ class _DesktopMiniPlayer extends StatelessWidget {
                 ),
               ),
 
-              // Blur overlay
+              // Blur overlay — RepaintBoundary isolates blur from content repaints
               Positioned.fill(
                 child: IgnorePointer(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                    child:
-                        Container(color: Colors.black.withValues(alpha: 0.4)),
+                  child: RepaintBoundary(
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      child: Container(
+                          color: Colors.black.withValues(alpha: 0.4)),
+                    ),
                   ),
                 ),
               ),
 
               // Drag Window Area (desktop only)
-              const Positioned.fill(
-                child: DragToMoveArea(child: SizedBox.expand()),
+              Positioned.fill(
+                child: GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity == null) return;
+                    if (details.primaryVelocity! < -300) {
+                      viewModel.next();
+                    } else if (details.primaryVelocity! > 300) {
+                      viewModel.previous();
+                    }
+                  },
+                  child: const DragToMoveArea(child: SizedBox.expand()),
+                ),
               ),
 
               // Content
@@ -112,17 +152,17 @@ class _DesktopMiniPlayer extends StatelessWidget {
                       children: [
                         // Album Art
                         Container(
-                          margin: const EdgeInsets.all(12),
-                          width: 56,
-                          height: 56,
+                          margin: const EdgeInsets.all(10),
+                          width: 64,
+                          height: 64,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: CoverArtImage(
-                            fileName: song.fileName,
-                            cacheWidth: 112,
-                            cacheHeight: 112,
+                            song: song,
+                            cacheWidth: 128,
+                            cacheHeight: 128,
                             fallbackBuilder: (context) => DecoratedBox(
                               decoration: BoxDecoration(
                                 color: Theme.of(context)
@@ -139,7 +179,7 @@ class _DesktopMiniPlayer extends StatelessWidget {
                           ),
                         ),
 
-                        // Info
+                        // Info + Lyric compact
                         Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -165,6 +205,9 @@ class _DesktopMiniPlayer extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              const SizedBox(height: 4),
+                              // Compact lyric scroll
+                              _MiniPlayerLyricLine(song: song),
                             ],
                           ),
                         ),
@@ -176,14 +219,14 @@ class _DesktopMiniPlayer extends StatelessWidget {
                             IconButton(
                               icon: const Icon(
                                 Icons.skip_previous_rounded,
-                                size: 24,
+                                size: 22,
                               ),
                               color: textColor,
                               onPressed: viewModel.previous,
                             ),
                             Container(
-                              width: 36,
-                              height: 36,
+                              width: 32,
+                              height: 32,
                               decoration: BoxDecoration(
                                 color: textColor,
                                 shape: BoxShape.circle,
@@ -196,7 +239,7 @@ class _DesktopMiniPlayer extends StatelessWidget {
                                       : Icons.play_arrow_rounded,
                                   color: Theme.of(context)
                                       .scaffoldBackgroundColor,
-                                  size: 20,
+                                  size: 18,
                                 ),
                                 onPressed: viewModel.togglePlayPause,
                               ),
@@ -204,11 +247,21 @@ class _DesktopMiniPlayer extends StatelessWidget {
                             IconButton(
                               icon: const Icon(
                                 Icons.skip_next_rounded,
-                                size: 24,
+                                size: 22,
                               ),
                               color: textColor,
                               onPressed: viewModel.next,
                             ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.close_rounded,
+                                size: 20,
+                              ),
+                              color: textColor.withValues(alpha: 0.6),
+                              tooltip: 'Đóng mini player',
+                              onPressed: () => _restoreFromMiniPlayer(context),
+                            ),
+                            const SizedBox(width: 4),
                             IconButton(
                               icon: const Icon(
                                 Icons.open_in_full_rounded,
@@ -216,32 +269,7 @@ class _DesktopMiniPlayer extends StatelessWidget {
                               ),
                               color: textColor.withValues(alpha: 0.6),
                               tooltip: 'Trở lại bình thường',
-                              onPressed: () async {
-                                sl<SettingsManager>().setIsMiniPlayer(false);
-                                // First unlock the size constraints (mini player locks them)
-                                await windowManager.setMinimumSize(
-                                  const Size(800, 600),
-                                );
-                                await windowManager.setMaximumSize(
-                                  const Size(32000, 32000), // effectively no limit
-                                );
-                                final savedSize =
-                                    sl<SettingsManager>().savedWindowSize;
-                                if (savedSize != null) {
-                                  await windowManager.setSize(savedSize);
-                                } else {
-                                  await windowManager.setSize(
-                                    const Size(1000, 700),
-                                  );
-                                }
-                                if (sl<SettingsManager>().savedWindowMaximized) {
-                                  await windowManager.maximize();
-                                }
-                                if (sl<SettingsManager>().savedWindowFullScreen) {
-                                  await windowManager.setFullScreen(true);
-                                }
-                                await windowManager.setAlwaysOnTop(false);
-                              },
+                              onPressed: () => _restoreFromMiniPlayer(context),
                             ),
                           ],
                         ),
@@ -283,7 +311,7 @@ class _MobileMiniPlayer extends StatelessWidget {
                   builder: (context) {
                     if (song != null) {
                       return CoverArtImage(
-                        fileName: song.fileName,
+                        song: song,
                         cacheWidth: 256,
                         cacheHeight: 256,
                         fallbackBuilder: (context) =>
@@ -295,33 +323,45 @@ class _MobileMiniPlayer extends StatelessWidget {
                 ),
               ),
 
-              // Blur + dark scrim
+              // Blur + dark scrim — RepaintBoundary isolates blur from content repaints
               Positioned.fill(
                 child: IgnorePointer(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                    child:
-                        Container(color: Colors.black.withValues(alpha: 0.5)),
+                  child: RepaintBoundary(
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                      child: Container(
+                          color: Colors.black.withValues(alpha: 0.5)),
+                    ),
                   ),
                 ),
               ),
 
               // Content
               SafeArea(
-                child: song == null
-                    ? Center(
-                        child: Text(
-                          'Chưa chọn bài hát',
-                          style: TextStyle(
-                            color: context.adaptive.withValues(alpha: 0.4),
-                            fontSize: 16,
+                child: GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity == null) return;
+                    if (details.primaryVelocity! < -300) {
+                      viewModel.next();
+                    } else if (details.primaryVelocity! > 300) {
+                      viewModel.previous();
+                    }
+                  },
+                  child: song == null
+                      ? Center(
+                          child: Text(
+                            'Chưa chọn bài hát',
+                            style: TextStyle(
+                              color: context.adaptive.withValues(alpha: 0.4),
+                              fontSize: 16,
+                            ),
                           ),
+                        )
+                      : _MobileMiniPlayerContent(
+                          song: song,
+                          viewModel: viewModel,
                         ),
-                      )
-                    : _MobileMiniPlayerContent(
-                        song: song,
-                        viewModel: viewModel,
-                      ),
+                ),
               ),
             ],
           );
@@ -337,7 +377,7 @@ class _MobileMiniPlayerContent extends StatelessWidget {
     required this.viewModel,
   });
 
-  final dynamic song;
+  final Song song;
   final PlayerViewModel viewModel;
 
   @override
@@ -395,7 +435,7 @@ class _MobileMiniPlayerContent extends StatelessWidget {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: CoverArtImage(
-                    fileName: song.fileName,
+                    song: song,
                     cacheWidth: 512,
                     cacheHeight: 512,
                     fallbackBuilder: (context) => Container(
@@ -494,7 +534,7 @@ class _MobileMiniPlayerContent extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _formatDuration(position),
+                          formatDuration(position),
                           style: TextStyle(
                             color: textColor.withValues(alpha: 0.5),
                             fontSize: 12,
@@ -502,7 +542,7 @@ class _MobileMiniPlayerContent extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          _formatDuration(duration),
+                          formatDuration(duration),
                           style: TextStyle(
                             color: textColor.withValues(alpha: 0.5),
                             fontSize: 12,
@@ -563,14 +603,6 @@ class _MobileMiniPlayerContent extends StatelessWidget {
       ],
     );
   }
-
-  String _formatDuration(Duration duration) {
-    final minutes =
-        duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds =
-        duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -596,7 +628,7 @@ class _PipCompactPlayer extends StatelessWidget {
               // Full-bleed cover art background
               if (song != null)
                 CoverArtImage(
-                  fileName: song.fileName,
+                  song: song,
                   cacheWidth: 256,
                   cacheHeight: 144,
                   fallbackBuilder: (context) =>
@@ -608,23 +640,33 @@ class _PipCompactPlayer extends StatelessWidget {
               // Dark scrim for readability
               Container(color: Colors.black.withValues(alpha: 0.35)),
 
-              // Centered play/pause button
-              Center(
+              // Centered play/pause button & swipe
+              Positioned.fill(
                 child: GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity == null) return;
+                    if (details.primaryVelocity! < -300) {
+                      viewModel.next();
+                    } else if (details.primaryVelocity! > 300) {
+                      viewModel.previous();
+                    }
+                  },
                   onTap: viewModel.togglePlayPause,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      viewModel.isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      color: Colors.black,
-                      size: 28,
+                  child: Center(
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        viewModel.isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: Colors.black,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ),
@@ -656,5 +698,70 @@ class _PipCompactPlayer extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// Compact lyric line for the desktop mini player.
+/// Uses the shared LyricProvider via Riverpod to show the current line.
+class _MiniPlayerLyricLine extends ConsumerStatefulWidget {
+  final Song? song;
+  const _MiniPlayerLyricLine({required this.song});
+
+  @override
+  ConsumerState<_MiniPlayerLyricLine> createState() =>
+      _MiniPlayerLyricLineState();
+}
+
+class _MiniPlayerLyricLineState extends ConsumerState<_MiniPlayerLyricLine> {
+  final ScrollController _scrollController = ScrollController();
+  String _currentLine = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final song = widget.song;
+    if (song == null) return const SizedBox.shrink();
+
+    // Watch the current lyric line provider
+    final line = ref.watch(currentLyricLineProvider);
+
+    // Auto-scroll horizontally when line changes
+    if (line != _currentLine) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+      _currentLine = line;
+    }
+
+    if (line.isEmpty) return const SizedBox.shrink();
+
+    final textColor = context.adaptive;
+    return SizedBox(
+      height: 18,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        child: Text(
+          line,
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.8),
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+          ),
+          maxLines: 1,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 }

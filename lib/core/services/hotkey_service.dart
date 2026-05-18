@@ -19,8 +19,9 @@ class HotkeyService {
   };
 
   bool _isDisposed = false;
-  bool _isRegistering = false;
+  Completer<void>? _registrationLock;
   final _registerCompleters = <Completer<void>>[];
+  DateTime _lastActionTime = DateTime(2000);
 
   Future<void> init() async {
     if (kIsWeb ||
@@ -53,15 +54,22 @@ class HotkeyService {
       _onHotkeysSettingsChanged,
     );
     for (final completer in _registerCompleters) {
-      completer.complete();
+      if (!completer.isCompleted) completer.complete();
     }
     _registerCompleters.clear();
+    if (_registrationLock != null && !_registrationLock!.isCompleted) {
+      _registrationLock!.complete();
+    }
+    _registrationLock = null;
     hotKeyManager.unregisterAll();
   }
 
   Future<void> _registerGlobalHotkeys() async {
-    if (_isRegistering) return;
-    _isRegistering = true;
+    // Wait for any in-flight registration to complete
+    if (_registrationLock != null && !_registrationLock!.isCompleted) {
+      await _registrationLock!.future;
+    }
+    _registrationLock = Completer<void>();
 
     Completer<void>? currentCompleter;
     _registerCompleters.add(currentCompleter = Completer<void>());
@@ -86,21 +94,29 @@ class HotkeyService {
     } catch (error) {
       debugPrint('Global HotKey error: $error');
     } finally {
-      _isRegistering = false;
       _registerCompleters.remove(currentCompleter);
       currentCompleter.complete();
+      if (!_registrationLock!.isCompleted) {
+        _registrationLock!.complete();
+      }
+      _registrationLock = null;
     }
   }
 
   void _handleAction(String action) {
     if (_isDisposed) return;
 
+    // Debounce: tránh trigger liên tục khi giữ phím (tối thiểu 150ms giữa mỗi lần)
+    final now = DateTime.now();
+    if (now.difference(_lastActionTime).inMilliseconds < 150) return;
+    _lastActionTime = now;
+
     AudioEngineService engineService;
     PlaylistService playlistService;
     try {
       engineService = sl<AudioEngineService>();
       playlistService = sl<PlaylistService>();
-    } catch (_) {
+    } catch (e, stack) { debugPrint('Error in hotkey_service: $e\n$stack'); 
       return;
     }
 
@@ -164,7 +180,7 @@ class HotkeyService {
               : HotKeyScope.system,
         );
       }
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in hotkey_service: $e\n$stack'); }
     return null;
   }
 
@@ -181,14 +197,63 @@ class HotkeyService {
       'ArrowDown': PhysicalKeyboardKey.arrowDown,
       'Enter': PhysicalKeyboardKey.enter,
       'Escape': PhysicalKeyboardKey.escape,
+      'Page Up': PhysicalKeyboardKey.pageUp,
+      'PageUp': PhysicalKeyboardKey.pageUp,
+      'Page Down': PhysicalKeyboardKey.pageDown,
+      'PageDown': PhysicalKeyboardKey.pageDown,
+      'Home': PhysicalKeyboardKey.home,
+      'End': PhysicalKeyboardKey.end,
     };
-
+    
     if (keyMap.containsKey(keyLabel)) return keyMap[keyLabel];
-
-    // For single letters (A-Z) and numbers (0-9)
-    if (keyLabel.length == 1) {
-      // Simplification: We only support the explicitly mapped keys above for now.
-      return null;
+    
+    final label = keyLabel.toLowerCase();
+    if (label.length == 1) {
+      final charCode = label.codeUnitAt(0);
+      if (charCode >= 97 && charCode <= 122) { // a-z
+        switch (label) {
+          case 'a': return PhysicalKeyboardKey.keyA;
+          case 'b': return PhysicalKeyboardKey.keyB;
+          case 'c': return PhysicalKeyboardKey.keyC;
+          case 'd': return PhysicalKeyboardKey.keyD;
+          case 'e': return PhysicalKeyboardKey.keyE;
+          case 'f': return PhysicalKeyboardKey.keyF;
+          case 'g': return PhysicalKeyboardKey.keyG;
+          case 'h': return PhysicalKeyboardKey.keyH;
+          case 'i': return PhysicalKeyboardKey.keyI;
+          case 'j': return PhysicalKeyboardKey.keyJ;
+          case 'k': return PhysicalKeyboardKey.keyK;
+          case 'l': return PhysicalKeyboardKey.keyL;
+          case 'm': return PhysicalKeyboardKey.keyM;
+          case 'n': return PhysicalKeyboardKey.keyN;
+          case 'o': return PhysicalKeyboardKey.keyO;
+          case 'p': return PhysicalKeyboardKey.keyP;
+          case 'q': return PhysicalKeyboardKey.keyQ;
+          case 'r': return PhysicalKeyboardKey.keyR;
+          case 's': return PhysicalKeyboardKey.keyS;
+          case 't': return PhysicalKeyboardKey.keyT;
+          case 'u': return PhysicalKeyboardKey.keyU;
+          case 'v': return PhysicalKeyboardKey.keyV;
+          case 'w': return PhysicalKeyboardKey.keyW;
+          case 'x': return PhysicalKeyboardKey.keyX;
+          case 'y': return PhysicalKeyboardKey.keyY;
+          case 'z': return PhysicalKeyboardKey.keyZ;
+        }
+      }
+      if (charCode >= 48 && charCode <= 57) { // 0-9
+        switch (label) {
+          case '0': return PhysicalKeyboardKey.digit0;
+          case '1': return PhysicalKeyboardKey.digit1;
+          case '2': return PhysicalKeyboardKey.digit2;
+          case '3': return PhysicalKeyboardKey.digit3;
+          case '4': return PhysicalKeyboardKey.digit4;
+          case '5': return PhysicalKeyboardKey.digit5;
+          case '6': return PhysicalKeyboardKey.digit6;
+          case '7': return PhysicalKeyboardKey.digit7;
+          case '8': return PhysicalKeyboardKey.digit8;
+          case '9': return PhysicalKeyboardKey.digit9;
+        }
+      }
     }
     return null;
   }
@@ -202,15 +267,20 @@ class HotkeyService {
         }
         _handleAction('playPause');
         return true;
-      } else if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause) {
-        _handleAction('playPause');
-        return true;
-      } else if (event.logicalKey == LogicalKeyboardKey.mediaTrackNext) {
-        sl<PlaylistService>().next();
-        return true;
-      } else if (event.logicalKey == LogicalKeyboardKey.mediaTrackPrevious) {
-        sl<PlaylistService>().previous();
-        return true;
+      }
+      // Media keys: chỉ xử lý khi setting mediaKeyEnabled bật
+      final mediaKeyEnabled = sl<SettingsManager>().mediaKeyEnabledNotifier.value;
+      if (mediaKeyEnabled) {
+        if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause) {
+          _handleAction('playPause');
+          return true;
+        } else if (event.logicalKey == LogicalKeyboardKey.mediaTrackNext) {
+          _handleAction('next');
+          return true;
+        } else if (event.logicalKey == LogicalKeyboardKey.mediaTrackPrevious) {
+          _handleAction('previous');
+          return true;
+        }
       }
     }
     return false;

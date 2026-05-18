@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-import '../../song_model.dart';
+import 'package:ga_song/models/song.dart';
 import '../audio_source_cache_policy.dart';
 import '../platform_capabilities.dart';
 import 'audio_engine_service.dart';
@@ -17,7 +17,7 @@ class PlaylistService {
   final AudioEffectService _effectService;
   final AudioSourceCachePolicy _cachePolicy = const AudioSourceCachePolicy();
 
-  List<SongModel> _playlist = [];
+  List<Song> _playlist = [];
   int _currentIndex = -1;
   PlayMode _playMode = PlayMode.sequential;
   SortMode _sortMode = SortMode.name;
@@ -25,6 +25,7 @@ class PlaylistService {
 
   int? _plannedShuffleIndex;
   final List<int> _shuffleHistory = [];
+  int _historyOffset = 0;
   bool _isPreparingCache = false;
 
   final ValueNotifier<int> currentIndexNotifier = ValueNotifier(-1);
@@ -46,23 +47,24 @@ class PlaylistService {
 
   // ─── Getters ───────────────────────────────────────────────────────────────
 
-  List<SongModel> get playlist => _playlist;
+  List<Song> get playlist => _playlist;
   int get currentIndex => _currentIndex;
   PlayMode get playMode => _playMode;
-  SongModel? get currentSong =>
+  Song? get currentSong =>
       _currentIndex >= 0 && _currentIndex < _playlist.length
       ? _playlist[_currentIndex]
       : null;
 
   // ─── Setup ─────────────────────────────────────────────────────────────────
 
-  Future<void> setPlaylist(List<SongModel> songs, {int startIndex = 0}) async {
+  Future<void> setPlaylist(List<Song> songs, {int startIndex = 0}) async {
     await _engineService.stop();
 
     _playlist = songs;
     // C2 fix: Always reset shuffle state when playlist changes
     _shuffleHistory.clear();
     _plannedShuffleIndex = null;
+    _historyOffset = 0;
 
     if (_playlist.isEmpty) {
       _currentIndex = -1;
@@ -78,13 +80,14 @@ class PlaylistService {
 
   /// Updates the playlist order without stopping the current playback.
   /// Used when the user changes sort mode while music is playing.
-  void reorderPlaylist(List<SongModel> songs) {
+  void reorderPlaylist(List<Song> songs) {
     final currentFileName = currentSong?.fileName;
     _playlist = songs;
 
     // Reset shuffle state for new order
     _shuffleHistory.clear();
     _plannedShuffleIndex = null;
+    _historyOffset = 0;
 
     // Relocate current song in the new order
     if (currentFileName != null) {
@@ -128,10 +131,13 @@ class PlaylistService {
     await _prepareCacheWindow();
   }
 
-  Future<void> playSongAt(int index) async {
+  Future<void> playSongAt(int index, {bool isHistoryNavigation = false}) async {
     if (index < 0 || index >= _playlist.length) return;
     _currentIndex = index;
     currentIndexNotifier.value = _currentIndex;
+    if (!isHistoryNavigation) {
+      _historyOffset = 0;
+    }
     await _playCurrentSong();
   }
 
@@ -186,7 +192,7 @@ class PlaylistService {
         await _engineService.seek(Duration.zero);
         break;
       case PlayMode.shuffle:
-        await _playNextShuffle();
+        await _playPreviousShuffle();
         break;
     }
   }
@@ -245,6 +251,7 @@ class PlaylistService {
       _shuffleHistory.clear();
     }
     _plannedShuffleIndex = null;
+    _historyOffset = 0;
     playModeNotifier.value = mode;
     unawaited(_prepareCacheWindow());
   }
@@ -264,6 +271,7 @@ class PlaylistService {
       case PlayMode.shuffle:
         _playMode = PlayMode.sequential;
         _plannedShuffleIndex = null;
+        _historyOffset = 0;
         break;
     }
     playModeNotifier.value = _playMode;
@@ -275,15 +283,38 @@ class PlaylistService {
       await _playCurrentSong();
       return;
     }
+    if (_historyOffset > 0) {
+      _historyOffset--;
+      final idx = _shuffleHistory[_shuffleHistory.length - 1 - _historyOffset];
+      await playSongAt(idx, isHistoryNavigation: true);
+      return;
+    }
     final nextIdx = _plannedShuffleIndex ?? _selectNextShuffleIndex();
     _plannedShuffleIndex = null;
     await playSongAt(nextIdx);
+  }
+
+  Future<void> _playPreviousShuffle() async {
+    if (_playlist.length <= 1) {
+      await _engineService.seek(Duration.zero);
+      return;
+    }
+    if (_historyOffset < _shuffleHistory.length - 1) {
+      _historyOffset++;
+      final idx = _shuffleHistory[_shuffleHistory.length - 1 - _historyOffset];
+      await playSongAt(idx, isHistoryNavigation: true);
+    } else {
+      await _engineService.seek(Duration.zero);
+    }
   }
 
   void _markShufflePlayback(int index) {
     if (_playMode != PlayMode.shuffle || index < 0) return;
     // C2 fix: Bounds-check before adding to history
     if (index >= _playlist.length) return;
+    // Do not modify history if we are navigating backwards
+    if (_historyOffset > 0) return;
+    
     _shuffleHistory.remove(index);
     _shuffleHistory.add(index);
     if (_shuffleHistory.length > _playlist.length) {
@@ -424,8 +455,8 @@ class PlaylistService {
     }
   }
 
-  List<SongModel> getSortedPlaylist(List<SongModel> songs) {
-    final sorted = List<SongModel>.from(songs);
+  List<Song> getSortedPlaylist(List<Song> songs) {
+    final sorted = List<Song>.from(songs);
     switch (_sortMode) {
       case SortMode.name:
         sorted.sort(
@@ -457,16 +488,12 @@ class PlaylistService {
         );
         break;
       case SortMode.dateAdded:
-        final indexMap = <String, int>{};
-        for (int i = 0; i < _playlist.length; i++) {
-          indexMap[_playlist[i].fileName] = i;
-        }
         sorted.sort(
           (a, b) => _sortAscending
-              ? (indexMap[a.fileName] ?? 0).compareTo(indexMap[b.fileName] ?? 0)
-              : (indexMap[b.fileName] ?? 0).compareTo(
-                  indexMap[a.fileName] ?? 0,
-                ),
+              ? (a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0))
+                    .compareTo(b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0))
+              : (b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0))
+                    .compareTo(a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0)),
         );
         break;
     }

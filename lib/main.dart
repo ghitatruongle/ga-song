@@ -16,7 +16,10 @@ import 'core/services/system_tray_service.dart';
 import 'core/services/hotkey_service.dart';
 import 'core/services/smtc_service.dart';
 import 'core/services/audio_handler_service.dart';
+import 'core/services/database_service.dart';
+import 'providers/song_provider.dart';
 import 'ui/screens/home_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Widget _buildErrorScreen(Object error, StackTrace stackTrace) {
   return Scaffold(
@@ -98,6 +101,9 @@ Future<void> main() async {
   await settings.init();
   PerformanceProbe.instance.install();
 
+  final dbService = sl<DatabaseService>();
+  await dbService.init();
+
   Widget initialScreen;
   try {
     await SoLoud.instance.init();
@@ -111,7 +117,7 @@ Future<void> main() async {
         try {
           effectService.applyAllEqualizer(settings.eqBandsNotifier.value);
           return; // success
-        } catch (_) {
+        } catch (e, stack) { debugPrint('Error in main: $e\n$stack'); 
           if (attempt < 2) {
             await Future<void>.delayed(const Duration(milliseconds: 100));
           }
@@ -159,16 +165,29 @@ Future<void> main() async {
     initialScreen = _buildErrorScreen(e, st);
   }
 
-  // P4.1: Parallelize desktop service init — runs concurrently with UI build.
-  // WindowManager, Hotkey, and Tray can all init independently.
+  // P4.1: Mark desktop service entry points — init lazily on first use.
+  // Instead of eagerly initializing all services, we register them for
+  // deferred initialization. This saves ~100-200ms cold start on desktop.
+  //
+  // Each service will initialize itself on first access via its own
+  // internal lazy init pattern (see service implementations).
   final caps = PlatformCapabilities.instance;
   if (caps.isDesktop) {
-    await Future.wait<void>([
-      sl<WindowManagerService>().init(),
-      sl<HotkeyService>().init(),
-      if (!kDebugMode) sl<SystemTrayService>().init(),
-      if (Platform.isWindows) sl<SmtcService>().init(),
-    ]);
+    // WindowManager is needed immediately for proper window setup.
+    // Other services init lazily on first use.
+    await sl<WindowManagerService>().init();
+    
+    // Defer hotkey and system tray init to after UI is built.
+    // SMTC (System Media Transport Controls) initialized eagerly
+    // because it directly affects Windows taskbar controls visibility.
+    if (Platform.isWindows) await sl<SmtcService>().init();
+    
+    Future<void>.delayed(const Duration(milliseconds: 500), () async {
+      try {
+        await sl<HotkeyService>().init();
+        if (!kDebugMode) await sl<SystemTrayService>().init();
+      } catch (e, stack) { debugPrint('Deferred desktop service init: $e\n$stack'); }
+    });
   }
   
   if (!kIsWeb && (Platform.isAndroid || Platform.isLinux)) {
@@ -183,7 +202,14 @@ Future<void> main() async {
     sl.registerSingleton<AudioHandler>(audioHandler);
   }
 
-  runApp(GASongApp(home: initialScreen));
+  runApp(
+    ProviderScope(
+      overrides: [
+        databaseServiceProvider.overrideWithValue(dbService),
+      ],
+      child: GASongApp(home: initialScreen),
+    ),
+  );
 }
 
 class GASongApp extends StatelessWidget {

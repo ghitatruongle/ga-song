@@ -3,18 +3,23 @@ import 'audio/audio_engine_service.dart';
 import 'audio/audio_effect_service.dart';
 import 'audio/playlist_service.dart';
 import 'cover_art_repository.dart';
+import 'performance_probe.dart';
 import 'settings_manager.dart';
 import 'view_models/player_view_model.dart';
 import 'services/window_manager_service.dart';
 import 'services/system_tray_service.dart';
 import 'services/hotkey_service.dart';
 import 'services/smtc_service.dart';
+import 'services/database_service.dart';
 import 'pip_service.dart';
 import 'platform_capabilities.dart';
 
 final sl = GetIt.instance;
 
 void setupServiceLocator() {
+  if (!sl.isRegistered<DatabaseService>()) {
+    sl.registerLazySingleton<DatabaseService>(() => DatabaseService());
+  }
   if (!sl.isRegistered<AudioEngineService>()) {
     sl.registerLazySingleton<AudioEngineService>(
       () => AudioEngineService(),
@@ -70,7 +75,8 @@ void setupServiceLocator() {
   }
 }
 
-/// D3 fix: Gracefully shut down all services and clean up listeners
+/// Gracefully shut down all services and clean up listeners
 Future<void> teardownServices() async {
+  PerformanceProbe.instance.dispose();
   await sl.reset();
 }

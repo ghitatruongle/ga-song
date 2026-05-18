@@ -1,13 +1,57 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import '../service_locator.dart';
 import '../settings_manager.dart';
+import '../platform_capabilities.dart';
+
+/// Converts [WindowEffectType] (platform-caps enum) to [WindowEffect] (flutter_acrylic).
+WindowEffect _toWindowEffect(WindowEffectType type) {
+  switch (type) {
+    case WindowEffectType.disabled:
+      return WindowEffect.disabled;
+    case WindowEffectType.solid:
+      return WindowEffect.solid;
+    case WindowEffectType.transparent:
+      return WindowEffect.transparent;
+    case WindowEffectType.acrylic:
+      return WindowEffect.acrylic;
+    case WindowEffectType.mica:
+      return WindowEffect.mica;
+    case WindowEffectType.tabbed:
+      return WindowEffect.tabbed;
+    case WindowEffectType.titlebar:
+      return WindowEffect.titlebar;
+    case WindowEffectType.sidebar:
+      return WindowEffect.sidebar;
+    case WindowEffectType.hudWindow:
+      return WindowEffect.hudWindow;
+  }
+}
 
 class WindowManagerService with WindowListener {
+  // ─── Debounce & resize state ──────────────────────────────────────────────
+
+  Timer? _effectDebounce;
+  Timer? _resizeDebounce;
+  bool _isResizing = false;
+
+  // ─── Effect state cache — avoids redundant DWM calls ─────────────────────
+
+  WindowEffectType? _cachedEffectType;
+  Color? _cachedColor;
+  bool? _cachedDark;
+
+  // ─── Init ────────────────────────────────────────────────────────────────
+
   Future<void> init() async {
-    if (kIsWeb || (!kIsWeb && !(defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS))) {
+    if (kIsWeb ||
+        (!kIsWeb &&
+            !(defaultTargetPlatform == TargetPlatform.windows ||
+                defaultTargetPlatform == TargetPlatform.linux ||
+                defaultTargetPlatform == TargetPlatform.macOS))) {
       return;
     }
 
@@ -29,10 +73,11 @@ class WindowManagerService with WindowListener {
           try {
             await windowManager.setPreventClose(true);
           } catch (e) {
-            debugPrint('Wayland/Linux fallback: setPreventClose not supported. $e');
+            debugPrint(
+                'Wayland/Linux fallback: setPreventClose not supported. $e');
           }
         }
-        
+
         // Restore previous window position if available
         final savedPosition = sl<SettingsManager>().savedWindowPosition;
         if (savedPosition != null) {
@@ -42,8 +87,8 @@ class WindowManagerService with WindowListener {
             debugPrint('Failed to restore window position: $e');
           }
         }
-        
-        // C3 fix: also restore the saved window size
+
+        // Restore the saved window size
         final savedSize = sl<SettingsManager>().savedWindowSize;
         if (savedSize != null) {
           try {
@@ -59,34 +104,146 @@ class WindowManagerService with WindowListener {
         } catch (e) {
           debugPrint('Failed to show/focus window: $e');
         }
-        
+
         _applyWindowEffect();
       });
     } catch (e) {
-      debugPrint('Window manager initialization failed (possible Wayland unsupported feature): $e');
+      debugPrint(
+          'Window manager initialization failed (possible Wayland unsupported feature): $e');
     }
 
-    if (!kDebugMode) {
-      windowManager.addListener(this);
-    }
-    
-    sl<SettingsManager>().useNativeWindowEffectNotifier.addListener(_applyWindowEffect);
-    sl<SettingsManager>().themeModeNotifier.addListener(_applyWindowEffect);
+    // Always listen to window events for resize handling
+    windowManager.addListener(this);
+
+    // Subscribe to settings changes — debounced to avoid flicker
+    sl<SettingsManager>()
+        .useNativeWindowEffectNotifier
+        .addListener(_scheduleApplyEffect);
+    sl<SettingsManager>()
+        .windowOpacityNotifier
+        .addListener(_scheduleApplyEffect);
+    sl<SettingsManager>()
+        .themeModeNotifier
+        .addListener(_scheduleApplyEffect);
   }
 
-  void _applyWindowEffect() {
-    final useNative = sl<SettingsManager>().useNativeWindowEffectNotifier.value;
-    final theme = sl<SettingsManager>().themeModeNotifier.value;
-    final isDark = theme == ThemeMode.dark || (theme == ThemeMode.system && PlatformDispatcher.instance.platformBrightness == Brightness.dark);
-    
+  // ─── Debounced effect application ────────────────────────────────────────
+
+  /// Schedules [Window.setEffect] with a 100ms debounce.
+  /// Prevents flicker when multiple settings change in rapid succession
+  /// (e.g., dragging opacity slider, toggling theme + native effect at once).
+  void _scheduleApplyEffect() {
+    _effectDebounce?.cancel();
+    _effectDebounce = Timer(const Duration(milliseconds: 100), () {
+      _applyWindowEffect();
+    });
+  }
+
+  // ─── Core effect application with state caching ──────────────────────────
+
+  Future<void> _applyWindowEffect() async {
+    final settings = sl<SettingsManager>();
+    final useNative = settings.useNativeWindowEffectNotifier.value;
+    final theme = settings.themeModeNotifier.value;
+    final opacity = settings.windowOpacityNotifier.value;
+    final isDark = theme == ThemeMode.dark ||
+        (theme == ThemeMode.system &&
+            PlatformDispatcher.instance.platformBrightness == Brightness.dark);
+
+    final effectType = useNative
+        ? PlatformCapabilities.instance.preferredWindowEffect
+        : WindowEffectType.disabled;
+
+    // Compute background color
+    Color bgColor;
     if (useNative) {
-      Window.setEffect(effect: WindowEffect.mica, dark: isDark).catchError((_) {
-        Window.setEffect(effect: WindowEffect.acrylic, dark: isDark).catchError((_) {});
-      });
+      final int alpha = (opacity * 255).toInt();
+      bgColor = isDark
+          ? Color.fromARGB(alpha, 18, 18, 18)
+          : Color.fromARGB(alpha, 245, 245, 245);
     } else {
-      Window.setEffect(effect: WindowEffect.disabled);
+      bgColor = Colors.transparent;
+    }
+
+    // Effect state caching — skip if nothing changed
+    if (effectType == _cachedEffectType &&
+        bgColor == _cachedColor &&
+        isDark == _cachedDark) {
+      return;
+    }
+
+    _cachedEffectType = effectType;
+    _cachedColor = bgColor;
+    _cachedDark = isDark;
+
+    try {
+      if (useNative) {
+        await Window.setEffect(
+          effect: _toWindowEffect(effectType),
+          color: bgColor,
+          dark: isDark,
+        );
+      } else {
+        await Window.setEffect(effect: WindowEffect.disabled);
+      }
+    } catch (_) {
+      // Fallback to transparent if effect unsupported
+      try {
+        await Window.setEffect(
+          effect: WindowEffect.transparent,
+          color: bgColor,
+          dark: isDark,
+        );
+      } catch (_) {}
     }
   }
+
+  // ─── Resize handling — prevent acrylic flicker ───────────────────────────
+
+  @override
+  void onWindowResize() {
+    if (!_isResizing) {
+      _isResizing = true;
+      _setSolidBackgroundDuringResize();
+    }
+    _resizeDebounce?.cancel();
+    _resizeDebounce = Timer(const Duration(milliseconds: 400), () {
+      _onResizeEnd();
+    });
+  }
+
+  /// Temporarily switches to a solid background during resize to prevent DWM
+  /// compositor flicker. Uses [WindowEffect.solid] which paints a solid color
+  /// without the blur/transparency pipeline that causes flicker.
+  Future<void> _setSolidBackgroundDuringResize() async {
+    final theme = sl<SettingsManager>().themeModeNotifier.value;
+    final isDark = theme == ThemeMode.dark ||
+        (theme == ThemeMode.system &&
+            PlatformDispatcher.instance.platformBrightness == Brightness.dark);
+    final solidColor = isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F5);
+
+    // Invalidate cache so the next _applyWindowEffect actually fires
+    _cachedEffectType = null;
+    _cachedColor = null;
+    _cachedDark = null;
+
+    // Switch to solid effect — this bypasses the DWM compositor blur pipeline
+    // that causes visible flicker during resize.
+    try {
+      await Window.setEffect(
+        effect: WindowEffect.solid,
+        color: solidColor,
+      );
+    } catch (_) {}
+  }
+
+  /// Restores the native window effect after a resize completes.
+  Future<void> _onResizeEnd() async {
+    _isResizing = false;
+    await _applyWindowEffect();
+  }
+
+  // ─── Window close ────────────────────────────────────────────────────────
 
   @override
   void onWindowClose() async {
@@ -101,11 +258,22 @@ class WindowManagerService with WindowListener {
     }
   }
 
+  // ─── Cleanup ─────────────────────────────────────────────────────────────
+
   void dispose() {
-    sl<SettingsManager>().useNativeWindowEffectNotifier.removeListener(_applyWindowEffect);
-    sl<SettingsManager>().themeModeNotifier.removeListener(_applyWindowEffect);
-    if (!kDebugMode) {
-      windowManager.removeListener(this);
-    }
+    _effectDebounce?.cancel();
+    _resizeDebounce?.cancel();
+
+    sl<SettingsManager>()
+        .useNativeWindowEffectNotifier
+        .removeListener(_scheduleApplyEffect);
+    sl<SettingsManager>()
+        .windowOpacityNotifier
+        .removeListener(_scheduleApplyEffect);
+    sl<SettingsManager>()
+        .themeModeNotifier
+        .removeListener(_scheduleApplyEffect);
+
+    windowManager.removeListener(this);
   }
 }

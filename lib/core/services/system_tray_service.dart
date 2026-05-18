@@ -11,6 +11,7 @@ class SystemTrayService {
   SystemTray? _systemTray;
   final AppWindow _appWindow = AppWindow();
   final Menu _menu = Menu();
+  DateTime _lastMenuUpdate = DateTime(2000);
 
   Future<void> init() async {
     if (kIsWeb || (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux)) {
@@ -32,6 +33,21 @@ class SystemTrayService {
             await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
           } catch (e) {
             debugPrint("System tray icon extraction failed: $e");
+          }
+        }
+        path = iconFile.path;
+      }
+
+      // Linux: cần copy icon từ assets vào temp giống Windows
+      if (Platform.isLinux) {
+        final iconFile = File('${Directory.systemTemp.path}/ga_song_app_icon.png');
+        final needsWrite = !iconFile.existsSync() || iconFile.lengthSync() == 0;
+        if (needsWrite) {
+          try {
+            final byteData = await rootBundle.load(path);
+            await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
+          } catch (e) {
+            debugPrint("System tray icon extraction failed (Linux): $e");
           }
         }
         path = iconFile.path;
@@ -116,11 +132,21 @@ class SystemTrayService {
   }
 
   void _updateMenu() {
+    // Throttle: chỉ rebuild menu tối đa 1 lần/giây
+    final now = DateTime.now();
+    if (now.difference(_lastMenuUpdate).inMilliseconds < 1000) return;
+    _lastMenuUpdate = now;
     _buildMenu();
   }
 
   void dispose() {
-    sl<AudioEngineService>().engineState.removeListener(_updateMenu);
-    _systemTray?.destroy();
+    try {
+      sl<AudioEngineService>().engineState.removeListener(_updateMenu);
+    } catch (e, stack) { debugPrint('Error in system_tray_service: $e\n$stack'); }
+    try {
+      _systemTray?.destroy();
+    } catch (e) {
+      debugPrint('SystemTray dispose error: $e');
+    }
   }
 }

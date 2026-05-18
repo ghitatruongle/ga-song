@@ -16,9 +16,9 @@ class SettingsManager {
   final ValueNotifier<bool> enableBlurNotifier = ValueNotifier(true);
   final ValueNotifier<double> blurLevelNotifier = ValueNotifier(30.0);
   final ValueNotifier<bool> isMiniPlayerNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> miniPlayerModeNotifier = ValueNotifier(false);
 
   final ValueNotifier<bool> useNativeWindowEffectNotifier = ValueNotifier(false);
+  final ValueNotifier<double> windowOpacityNotifier = ValueNotifier(0.7);
 
   final ValueNotifier<bool> isGridViewNotifier = ValueNotifier(false);
   final ValueNotifier<String?> customBackgroundImageNotifier = ValueNotifier(
@@ -34,6 +34,9 @@ class SettingsManager {
     const Color(0xFF1DB954),
   );
   final ValueNotifier<Color?> dynamicPrimaryColorNotifier = ValueNotifier(null);
+
+  // Current tab index (0=home, 1=library, 2=online, 3=ktv, 4=personal, 5=settings)
+  final ValueNotifier<int> currentTabIndexNotifier = ValueNotifier(0);
 
   // Equalizer
   final ValueNotifier<List<double>> eqBandsNotifier = ValueNotifier([
@@ -115,6 +118,7 @@ class SettingsManager {
 
     // Load feature settings
     useNativeWindowEffectNotifier.value = _prefs.getBool('useNativeWindowEffect') ?? false;
+    windowOpacityNotifier.value = _prefs.getDouble('windowOpacity') ?? 0.7;
     enableBlurNotifier.value = _prefs.getBool('enableBlur') ?? true;
     blurLevelNotifier.value = _prefs.getDouble('blurLevel') ?? 30.0;
     minimizeToTrayNotifier.value = _prefs.getBool('minimizeToTray') ?? true;
@@ -192,7 +196,7 @@ class SettingsManager {
         final Map<String, dynamic> decoded = jsonDecode(hotkeysJson);
         final hotkeys = decoded.map((key, value) => MapEntry(key, value.toString()));
         customHotkeysNotifier.value = hotkeys;
-      } catch (_) {
+      } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); 
         // Fallback to old format
         try {
           final hotkeys = Map<String, String>.from(
@@ -205,18 +209,17 @@ class SettingsManager {
             }),
           );
           customHotkeysNotifier.value = hotkeys;
-        } catch (_) {}
+        } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); }
       }
     }
 
     // Load Media Key
     mediaKeyEnabledNotifier.value = _prefs.getBool('mediaKeyEnabled') ?? true;
 
-    // Áp dụng ngay cài đặt SoLoud
-    try {
-      // Tránh lỗi chưa khởi tạo engine bên main
-      SoLoud.instance.setVisualizationEnabled(visualizerEnabledNotifier.value);
-    } catch (_) {}
+    // Áp dụng ngay cài đặt SoLoud (chỉ khi engine đã khởi tạo)
+    // Lưu ý: SoLoud được khởi tạo trong main.dart sau khi SettingsManager.init() chạy
+    // Nên ta không thể áp dụng ở đây. Việc áp dụng sẽ được thực hiện trong main.dart
+    // sau khi SoLoud.instance.init() hoàn tất.
   }
 
   Future<void> setIsGridView(bool isGrid) async {
@@ -289,6 +292,11 @@ class SettingsManager {
     await _prefs.setBool('useNativeWindowEffect', enable);
   }
 
+  Future<void> setWindowOpacity(double opacity) async {
+    windowOpacityNotifier.value = opacity.clamp(0.1, 1.0);
+    await _prefs.setDouble('windowOpacity', windowOpacityNotifier.value);
+  }
+
   Future<void> setMinimizeToTray(bool minimize) async {
     minimizeToTrayNotifier.value = minimize;
     await _prefs.setBool('minimizeToTray', minimize);
@@ -299,7 +307,7 @@ class SettingsManager {
     await _prefs.setBool('visualizerEnabled', enable);
     try {
       SoLoud.instance.setVisualizationEnabled(enable);
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); }
   }
 
   Future<void> setSensitivity(double value) async {
@@ -489,8 +497,10 @@ class SettingsManager {
 
   void dispose() {
     useNativeWindowEffectNotifier.dispose();
+    windowOpacityNotifier.dispose();
     themeModeNotifier.dispose();
     enableBlurNotifier.dispose();
+    blurLevelNotifier.dispose();
     isMiniPlayerNotifier.dispose();
     isGridViewNotifier.dispose();
     customBackgroundImageNotifier.dispose();

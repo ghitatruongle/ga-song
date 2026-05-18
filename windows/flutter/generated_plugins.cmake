@@ -3,10 +3,13 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audiotags
   flutter_acrylic
   hotkey_manager_windows
+  isar_flutter_libs
   screen_retriever_windows
   system_tray
+  url_launcher_windows
   window_manager
 )
 

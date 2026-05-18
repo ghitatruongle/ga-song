@@ -1,19 +1,24 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/service_locator.dart';
 import '../../core/view_models/player_view_model.dart';
 import '../../core/theme_utils.dart';
 
-enum TabItem { home, library, personal, settings }
+enum TabItem { home, library, online, ktv, personal, settings }
 
 class SidebarWidget extends StatelessWidget {
   final TabItem currentTab;
   final ValueChanged<TabItem> onTabChanged;
+  final VoidCallback? onImportMusic;
+  final VoidCallback? onManagePlaylists;
 
   const SidebarWidget({
     super.key,
     required this.currentTab,
     required this.onTabChanged,
+    this.onImportMusic,
+    this.onManagePlaylists,
   });
 
   @override
@@ -66,62 +71,148 @@ class SidebarWidget extends StatelessWidget {
           // Menu Items
           Expanded(
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                _SidebarMenuItem(
-                  icon: Icons.home_filled,
-                  title: 'Trang chủ',
-                  tab: TabItem.home,
-                  currentTab: currentTab,
-                  onTabChanged: onTabChanged,
-                ),
-                _SidebarMenuItem(
-                  icon: Icons.library_music_outlined,
-                  title: 'Thư viện',
-                  tab: TabItem.library,
-                  currentTab: currentTab,
-                  onTabChanged: onTabChanged,
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, bottom: 8),
-                  child: Text(
-                    'PHÒNG NGHE NHẠC',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: textColor.withValues(alpha: 0.5),
-                      letterSpacing: 1.2,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SidebarMenuItem(
+                    icon: Icons.home_filled,
+                    title: 'Trang chủ',
+                    tab: TabItem.home,
+                    currentTab: currentTab,
+                    onTabChanged: onTabChanged,
+                  ),
+                  _SidebarMenuItem(
+                    icon: Icons.library_music_outlined,
+                    title: 'Thư viện',
+                    tab: TabItem.library,
+                    currentTab: currentTab,
+                    onTabChanged: onTabChanged,
+                  ),
+                  // Online tab: chỉ hiện trên Android (youtube_player_iframe không hỗ trợ desktop)
+                  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                    _SidebarMenuItem(
+                      icon: Icons.language_rounded,
+                      title: 'Online (YouTube)',
+                      tab: TabItem.online,
+                      currentTab: currentTab,
+                      onTabChanged: onTabChanged,
+                    ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, bottom: 8),
+                    child: Text(
+                      'PHÒNG NGHE NHẠC',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: textColor.withValues(alpha: 0.5),
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
+                  _SidebarMenuItem(
+                    icon: Icons.mic_external_on_rounded,
+                    title: 'Phòng Hát (KTV)',
+                    tab: TabItem.ktv,
+                    currentTab: currentTab,
+                    onTabChanged: onTabChanged,
+                  ),
+                  _SidebarMenuItem(
+                    icon: Icons.graphic_eq_rounded,
+                    title: 'Cá nhân (Visualizer)',
+                    tab: TabItem.personal,
+                    currentTab: currentTab,
+                    onTabChanged: onTabChanged,
+                    showNowPlaying: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Footer actions
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              children: [
+                // Import music button
+                _SidebarActionButton(
+                  icon: Icons.add_rounded,
+                  title: 'Import nhạc',
+                  onPressed: onImportMusic,
                 ),
+                // Manage playlists button
+                _SidebarActionButton(
+                  icon: Icons.playlist_add_rounded,
+                  title: 'Quản lý Playlist',
+                  onPressed: onManagePlaylists,
+                ),
+                const SizedBox(height: 8),
                 _SidebarMenuItem(
-                  icon: Icons.graphic_eq_rounded,
-                  title: 'Cá nhân (Visualizer)',
-                  tab: TabItem.personal,
+                  icon: Icons.settings_outlined,
+                  title: 'Cài đặt',
+                  tab: TabItem.settings,
                   currentTab: currentTab,
                   onTabChanged: onTabChanged,
-                  showNowPlaying: true,
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
-          // Footer Menu
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: _SidebarMenuItem(
-              icon: Icons.settings_outlined,
-              title: 'Cài đặt',
-              tab: TabItem.settings,
-              currentTab: currentTab,
-              onTabChanged: onTabChanged,
+    );
+  }
+}
+
+/// A compact action button for sidebar (Import, Manage Playlist, etc.)
+class _SidebarActionButton extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback? onPressed;
+
+  const _SidebarActionButton({
+    required this.icon,
+    required this.title,
+    this.onPressed,
+  });
+
+  @override
+  State<_SidebarActionButton> createState() => _SidebarActionButtonState();
+}
+
+class _SidebarActionButtonState extends State<_SidebarActionButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = context.adaptive;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          color: _isHovered
+              ? textColor.withValues(alpha: 0.08)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          leading: Icon(widget.icon, color: textColor.withValues(alpha: 0.6), size: 20),
+          title: Text(
+            widget.title,
+            style: TextStyle(
+              color: textColor.withValues(alpha: 0.6),
+              fontWeight: FontWeight.normal,
+              fontSize: 13,
             ),
           ),
-        ],
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          onTap: widget.onPressed,
+        ),
       ),
     );
   }

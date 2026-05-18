@@ -5,13 +5,17 @@ import 'package:window_manager/window_manager.dart';
 
 
 import '../../core/audio/audio_effect_service.dart';
+import '../../core/utils/time_utils.dart';
 import '../../core/audio/playlist_service.dart';
 import '../../core/service_locator.dart';
 import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
-import '../../song_model.dart';
+import 'package:ga_song/models/song.dart';
 import '../../core/view_models/player_view_model.dart';
 import '../../core/pip_service.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/lyric_provider.dart';
 
 import 'cover_art_image.dart';
 import 'equalizer_widget.dart';
@@ -22,14 +26,21 @@ class BottomPlayerBarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: sl<PlayerViewModel>(),
-      builder: (context, _) {
+    // P-2 fix: Only listen to currentIndexNotifier instead of entire PlayerViewModel.
+    // This prevents unnecessary rebuilds when volume/playMode changes.
+    // _CenterControls and _VolumeControl handle their own rebuilds internally.
+    return ValueListenableBuilder<int>(
+      valueListenable: sl<PlaylistService>().currentIndexNotifier,
+      builder: (context, idx, child) {
         final song = sl<PlayerViewModel>().currentSong;
-        
+
+        // U-8 fix: Responsive height — 10% of screen, clamped between 64-84
+        final screenHeight = MediaQuery.of(context).size.height;
+        final barHeight = (screenHeight * 0.1).clamp(64.0, 84.0);
+
         return Container(
           margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          height: 84,
+          height: barHeight,
           decoration: BoxDecoration(
             color: context.adaptive.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(20),
@@ -67,22 +78,22 @@ class BottomPlayerBarWidget extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: _SongInfo(song: song),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 4,
+                          child: const RepaintBoundary(
+                            child: _CenterControls(),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: const RepaintBoundary(
+                            child: _RightControls(),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Expanded(
-                    flex: 4,
-                    child: const RepaintBoundary(
-                      child: _CenterControls(),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: const RepaintBoundary(
-                      child: _RightControls(),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         );
@@ -94,7 +105,7 @@ class BottomPlayerBarWidget extends StatelessWidget {
 class _SongInfo extends StatelessWidget {
   const _SongInfo({required this.song});
 
-  final SongModel song;
+  final Song song;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +127,7 @@ class _SongInfo extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: CoverArtImage(
-            fileName: song.fileName,
+            song: song,
             cacheWidth: 104,
             cacheHeight: 104,
             fallbackBuilder: (context) =>
@@ -257,7 +268,7 @@ class _ProgressBar extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  _formatDuration(position),
+                  formatDuration(position),
                   style: TextStyle(
                     color: context.adaptive.withValues(alpha: 0.5),
                     fontSize: 11,
@@ -302,7 +313,7 @@ class _ProgressBar extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _formatDuration(duration),
+                  formatDuration(duration),
                   style: TextStyle(
                     color: context.adaptive.withValues(alpha: 0.5),
                     fontSize: 11,
@@ -316,12 +327,6 @@ class _ProgressBar extends StatelessWidget {
       },
     );
   }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 }
 
 class _RightControls extends StatelessWidget {
@@ -334,11 +339,15 @@ class _RightControls extends StatelessWidget {
       children: <Widget>[
         IconButton(
           icon: Icon(
-            Icons.picture_in_picture_alt_rounded,
+            (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                ? Icons.picture_in_picture_alt_rounded
+                : Icons.open_in_new_rounded,
             color: context.adaptiveSecondary,
             size: 22,
           ),
-          tooltip: 'Trình phát thu nhỏ (Mini Player)',
+          tooltip: (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+              ? 'Picture-in-Picture'
+              : 'Trình phát thu nhỏ (Mini Player)',
           onPressed: () async {
             // Android: use native Picture-in-Picture
             if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
@@ -362,11 +371,27 @@ class _RightControls extends StatelessWidget {
               final currentSize = await windowManager.getSize();
               await sl<SettingsManager>().setSavedWindowState(currentSize, isMaximized, isFullScreen);
               // Lock to exactly the mini player dimensions (prevent resizing/distortion)
-              await windowManager.setMinimumSize(const Size(350, 100));
-              await windowManager.setMaximumSize(const Size(350, 100));
-              await windowManager.setSize(const Size(350, 100));
+              await windowManager.setMinimumSize(const Size(500, 120));
+              await windowManager.setMaximumSize(const Size(500, 120));
+              await windowManager.setSize(const Size(500, 120));
               await windowManager.setAlwaysOnTop(true);
             }
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final showLyrics = ref.watch(lyricVisibilityProvider);
+            return IconButton(
+              icon: Icon(
+                Icons.mic_rounded,
+                color: showLyrics ? context.adaptive : context.adaptiveSecondary,
+                size: 22,
+              ),
+              tooltip: 'Lời bài hát',
+              onPressed: () {
+                ref.read(lyricVisibilityProvider.notifier).state = !showLyrics;
+              },
+            );
           },
         ),
         const Expanded(child: _VolumeControl()),
