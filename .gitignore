@@ -54,3 +54,16 @@ app.*.map.json
 /*.deb
 /deb_build/
 /dist/
+
+# Unofficial test project (scratch/test harness)
+/test_project/
+
+# Tooling artifacts
+/.kilo/
+/.openclaude/
+/.vscode/
+/Plan/
+/fix_plan*.py
+/docs/superpowers/
+/test_project/
+/nul
