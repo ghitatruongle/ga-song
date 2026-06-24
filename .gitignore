@@ -64,11 +64,26 @@ app.*.map.json
 /.vscode/
 /Plan/
 /fix_plan*.py
-/docs/superpowers/
-/test_project/
 /nul
 
 # Temp scripts and logs
 *.py
 *.txt
+*.backup
+*.log
+!.metadata
 !pubspec.yaml
+
+# Build artifacts
+/build/
+**/build/
+/deb_build/
+/dist/
+
+# Platform-specific
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Test projects
+/test_project/
