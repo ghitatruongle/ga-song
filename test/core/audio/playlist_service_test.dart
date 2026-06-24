@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/audio_effect_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
+import 'package:ga_song/core/services/database_service.dart';
 import 'package:ga_song/models/song.dart';
 
 class MockAudioEngineService implements AudioEngineService {
@@ -40,7 +41,7 @@ class MockAudioEngineService implements AudioEngineService {
   @override
   void setNormalizationGain(double gain) {}
   @override
-  Future<void> crossfadeTo(String nextAssetPath, double crossfadeDuration, {double? nextNormalizationGain}) async {}
+  Future<void> crossfadeTo(String nextAssetPath, double crossfadeDuration, {double? nextNormalizationGain, CrossfadeCurve curve = CrossfadeCurve.linear}) async {}
   @override
   Future<void> preload(String assetPath) async {}
   @override
@@ -66,21 +67,29 @@ class MockAudioEffectService implements AudioEffectService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class MockDatabaseService implements DatabaseService {
+  @override
+  Future<void> incrementPlayCount(int songId) async {}
+  
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late MockAudioEngineService mockEngine;
   late MockAudioEffectService mockEffect;
   late PlaylistService playlistService;
 
   final testSongs = [
-    Song()..name = 'Song A'..sourcePath = 'song_a.mp3'..artist = 'Artist 1',
-    Song()..name = 'Song C'..sourcePath = 'song_c.mp3'..artist = 'Artist 2',
-    Song()..name = 'Song B'..sourcePath = 'song_b.mp3'..artist = 'Artist 1',
+    Song(name: 'Song A', sourcePath: 'song_a.mp3', artist: 'Artist 1'),
+    Song(name: 'Song C', sourcePath: 'song_c.mp3', artist: 'Artist 2'),
+    Song(name: 'Song B', sourcePath: 'song_b.mp3', artist: 'Artist 1'),
   ];
 
   setUp(() {
     mockEngine = MockAudioEngineService();
     mockEffect = MockAudioEffectService();
-    playlistService = PlaylistService(mockEngine, mockEffect);
+    playlistService = PlaylistService(mockEngine, mockEffect, MockDatabaseService());
   });
 
   tearDown(() {
@@ -149,9 +158,9 @@ void main() {
 
     test('Sorting by duration works correctly', () async {
       final songsWithDuration = [
-        Song()..name = 'Long'..sourcePath = 'long.mp3'..durationMs = 300000,
-        Song()..name = 'Short'..sourcePath = 'short.mp3'..durationMs = 120000,
-        Song()..name = 'Medium'..sourcePath = 'medium.mp3'..durationMs = 200000,
+        Song(name: 'Long', sourcePath: 'long.mp3', durationMs: 300000),
+        Song(name: 'Short', sourcePath: 'short.mp3', durationMs: 120000),
+        Song(name: 'Medium', sourcePath: 'medium.mp3', durationMs: 200000),
       ];
 
       playlistService.setSortMode(SortMode.duration);
@@ -163,9 +172,9 @@ void main() {
 
     test('Sorting by duration descending toggles correctly', () async {
       final songsWithDuration = [
-        Song()..name = 'Long'..sourcePath = 'long.mp3'..durationMs = 300000,
-        Song()..name = 'Short'..sourcePath = 'short.mp3'..durationMs = 120000,
-        Song()..name = 'Medium'..sourcePath = 'medium.mp3'..durationMs = 200000,
+        Song(name: 'Long', sourcePath: 'long.mp3', durationMs: 300000),
+        Song(name: 'Short', sourcePath: 'short.mp3', durationMs: 120000),
+        Song(name: 'Medium', sourcePath: 'medium.mp3', durationMs: 200000),
       ];
 
       // First call sets ascending
@@ -180,9 +189,9 @@ void main() {
 
     test('Sorting by duration handles null durationMs', () async {
       final songsMixed = [
-        Song()..name = 'Has Duration'..sourcePath = 'a.mp3'..durationMs = 200000,
-        Song()..name = 'No Duration'..sourcePath = 'b.mp3', // durationMs is null
-        Song()..name = 'Short'..sourcePath = 'c.mp3'..durationMs = 60000,
+        Song(name: 'Has Duration', sourcePath: 'a.mp3', durationMs: 200000),
+        Song(name: 'No Duration', sourcePath: 'b.mp3'), // durationMs is null
+        Song(name: 'Short', sourcePath: 'c.mp3', durationMs: 60000),
       ];
 
       playlistService.setSortMode(SortMode.duration);
@@ -195,9 +204,9 @@ void main() {
 
     test('Sorting by dateAdded works correctly', () async {
       final songsWithDates = [
-        Song()..name = 'Old'..sourcePath = 'old.mp3'..dateAdded = DateTime(2026, 1, 1),
-        Song()..name = 'New'..sourcePath = 'new.mp3'..dateAdded = DateTime(2026, 5, 18),
-        Song()..name = 'Mid'..sourcePath = 'mid.mp3'..dateAdded = DateTime(2026, 3, 10),
+        Song(name: 'Old', sourcePath: 'old.mp3', dateAdded: DateTime(2026, 1, 1)),
+        Song(name: 'New', sourcePath: 'new.mp3', dateAdded: DateTime(2026, 5, 18)),
+        Song(name: 'Mid', sourcePath: 'mid.mp3', dateAdded: DateTime(2026, 3, 10)),
       ];
 
       playlistService.setSortMode(SortMode.dateAdded);
@@ -209,9 +218,9 @@ void main() {
 
     test('Sorting by dateAdded handles null dates', () async {
       final songsMixedDates = [
-        Song()..name = 'Has Date'..sourcePath = 'a.mp3'..dateAdded = DateTime(2026, 5, 1),
-        Song()..name = 'No Date'..sourcePath = 'b.mp3', // dateAdded is null
-        Song()..name = 'Old'..sourcePath = 'c.mp3'..dateAdded = DateTime(2026, 1, 1),
+        Song(name: 'Has Date', sourcePath: 'a.mp3', dateAdded: DateTime(2026, 5, 1)),
+        Song(name: 'No Date', sourcePath: 'b.mp3'), // dateAdded is null
+        Song(name: 'Old', sourcePath: 'c.mp3', dateAdded: DateTime(2026, 1, 1)),
       ];
 
       playlistService.setSortMode(SortMode.dateAdded);

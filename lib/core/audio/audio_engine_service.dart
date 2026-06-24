@@ -15,7 +15,41 @@ class _CacheEntry {
   int accessOrder;
 }
 
-/// Handles low-level audio playback, caching, and SoLoud interactions.
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/// Number of crossfade volume-stepping iterations.
+const int _kCrossfadeSteps = 20;
+
+/// Crossfade curve types for volume interpolation.
+enum CrossfadeCurve {
+  /// Linear interpolation (equal power)
+  linear,
+  
+  /// Exponential curve (faster start, slower end)
+  exponential,
+  
+  /// S-curve (smooth start and end)
+  sCurve,
+}
+
+/// Maximum diff (ms) before positionNotifier fires an update.
+/// Windows: 50ms tolerance; other platforms: 80ms.
+const int _kPositionEpsilonDesktop = 50;
+const int _kPositionEpsilonMobile = 80;
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
+/// Handles low-level audio playback, source caching, and SoLoud interactions.
+///
+/// This service manages:
+/// - Audio source loading and LRU caching with platform-aware limits
+/// - Playback controls (play, pause, resume, stop, seek)
+/// - Volume control with normalization gain support
+/// - Crossfade between tracks
+/// - Position tracking with adaptive timer intervals
+///
+/// The LRU cache evicts least-recently-used sources when the cache exceeds
+/// the platform limit (50 on desktop, 20 on Android).
 class AudioEngineService {
   final _soloud = SoLoud.instance;
 
@@ -87,10 +121,11 @@ class AudioEngineService {
 
     try {
       final pos = _soloud.getPosition(handle);
-      // P2: Epsilon check — chỉ notify khi delta > 80ms
+      // P2: Epsilon check — chỉ notify khi delta > threshold
       // Giảm ~50% rebuild cho position listeners
-      // On Windows (250ms interval), allow up to 50ms jitter
-      final epsilon = PlatformCapabilities.instance.isWindows ? 50 : 80;
+      final epsilon = PlatformCapabilities.instance.isWindows
+          ? _kPositionEpsilonDesktop
+          : _kPositionEpsilonMobile;
       final delta = (pos.inMilliseconds - positionNotifier.value.inMilliseconds).abs();
       if (delta > epsilon) {
         positionNotifier.value = pos;
@@ -333,6 +368,7 @@ class AudioEngineService {
     String nextAssetPath,
     double crossfadeDuration, {
     double? nextNormalizationGain,
+    CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {
     if (_isCrossfading) return;
     if (crossfadeDuration <= 0) {
@@ -341,9 +377,8 @@ class AudioEngineService {
     }
 
     _isCrossfading = true;
-    const fadeSteps = 20;
     final stepDuration = Duration(
-      milliseconds: (crossfadeDuration * 1000 / fadeSteps).round(),
+      milliseconds: (crossfadeDuration * 1000 / _kCrossfadeSteps).round(),
     );
     final targetVolume = _volume * (nextNormalizationGain ?? 1.0);
     final currentFullVolume = _volume * _normalizationGain;
@@ -356,8 +391,6 @@ class AudioEngineService {
       }
 
       _crossfadeHandle = _soloud.play(nextSource, volume: 0.0);
-      final fadeOutStep = currentFullVolume / fadeSteps;
-      final fadeInStep = targetVolume / fadeSteps;
 
       // Use a Completer so the caller can await crossfade completion
       final completer = Completer<void>();
@@ -377,21 +410,31 @@ class AudioEngineService {
 
         currentStep++;
         try {
+          // Calculate progress (0.0 → 1.0)
+          final progress = currentStep / _kCrossfadeSteps;
+          
+          // Apply curve transformation
+          final curvedProgress = _applyCrossfadeCurve(progress, curve);
+          
           if (_currentHandle != null) {
+            // Fade out current song
+            final fadeOutVolume = currentFullVolume * (1.0 - curvedProgress);
             _soloud.setVolume(
               _currentHandle!,
-              (currentFullVolume - (fadeOutStep * currentStep)).clamp(0.0, 1.0),
+              fadeOutVolume.clamp(0.0, 1.0),
             );
           }
           if (_crossfadeHandle != null) {
+            // Fade in next song
+            final fadeInVolume = targetVolume * curvedProgress;
             _soloud.setVolume(
               _crossfadeHandle!,
-              (fadeInStep * currentStep).clamp(0.0, 1.0),
+              fadeInVolume.clamp(0.0, 1.0),
             );
           }
         } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
 
-        if (currentStep >= fadeSteps) {
+        if (currentStep >= _kCrossfadeSteps) {
           timer.cancel();
           _crossfadeTimer = null;
           if (!completer.isCompleted) completer.complete();
@@ -479,6 +522,29 @@ class AudioEngineService {
     }
     _sourceCache.clear();
     _sourceLoadFutures.clear();
+  }
+
+  // ─── Crossfade Curve ──────────────────────────────────────────────────────
+
+  /// Apply crossfade curve transformation to progress value.
+  ///
+  /// Input: progress (0.0 → 1.0, linear)
+  /// Output: curved value (0.0 → 1.0)
+  double _applyCrossfadeCurve(double progress, CrossfadeCurve curve) {
+    switch (curve) {
+      case CrossfadeCurve.linear:
+        return progress;
+      
+      case CrossfadeCurve.exponential:
+        // Exponential: faster start, slower end
+        // Uses x² curve for smoother transition
+        return progress * progress;
+      
+      case CrossfadeCurve.sCurve:
+        // S-curve: smooth start and end
+        // Uses smoothstep function: 3x² - 2x³
+        return progress * progress * (3.0 - 2.0 * progress);
+    }
   }
 
   // ─── Diagnostics ───────────────────────────────────────────────────────────

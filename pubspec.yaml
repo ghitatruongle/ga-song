@@ -15,7 +15,6 @@ dependencies:
   path: ^1.9.0
   flutter_soloud: ^4.0.5
   window_manager: ^0.5.1
-  get_it: ^9.2.1
   system_tray: ^2.0.3
   shared_preferences: ^2.5.5
   flutter_colorpicker: ^1.1.0
@@ -27,22 +26,28 @@ dependencies:
   path_provider: ^2.1.5
   audio_service_mpris: ^0.2.1
   flutter_riverpod: ^3.0.0
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  sqflite: ^2.4.2
   palette_generator: ^0.3.3+7
   youtube_player_iframe: ^5.2.2
   audiotags: ^1.4.5
+  http: ^1.2.0
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
   flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.3.4+4
   flutter_launcher_icons: ^0.14.4
   msix: ^3.16.13
   debian: ^1.0.0
   build_runner: ^2.4.13
-  isar_generator: ^3.1.0+1
+  freezed: ^2.5.8
+  json_serializable: ^6.8.0
 
 flutter:
   uses-material-design: true

@@ -4,17 +4,29 @@ import 'package:flutter/foundation.dart';
 import 'package:ga_song/models/song.dart';
 import '../audio_source_cache_policy.dart';
 import '../platform_capabilities.dart';
+import '../services/database_service.dart';
+import '../utils/sort_utils.dart';
 import 'audio_engine_service.dart';
 import 'audio_effect_service.dart';
 
 enum PlayMode { sequential, repeatOne, playOneStop, shuffle }
 
-enum SortMode { name, artist, dateAdded, duration }
+enum SortMode { name, artist, dateAdded, duration, playCount, lastPlayed }
 
 /// Manages playlist, playback order, shuffle logic, and cache eviction.
+///
+/// This service handles:
+/// - Playlist setup and song ordering
+/// - Play modes: sequential, repeat-one, play-one-stop, shuffle
+/// - Sort modes: by name, artist, date added, duration
+/// - Shuffle with history-aware randomization (avoids recent repeats)
+/// - Sleep timer with countdown
+/// - Crossfade coordination with [AudioEngineService]
+/// - Audio source cache window management via [AudioSourceCachePolicy]
 class PlaylistService {
   final AudioEngineService _engineService;
   final AudioEffectService _effectService;
+  final DatabaseService _databaseService;
   final AudioSourceCachePolicy _cachePolicy = const AudioSourceCachePolicy();
 
   List<Song> _playlist = [];
@@ -39,7 +51,7 @@ class PlaylistService {
   Timer? _sleepTimer;
   StreamSubscription<void>? _songCompletedSub;
 
-  PlaylistService(this._engineService, this._effectService) {
+  PlaylistService(this._engineService, this._effectService, this._databaseService) {
     _songCompletedSub = _engineService.onSongCompleted.listen((_) {
       _onSongCompleted();
     });
@@ -198,6 +210,12 @@ class PlaylistService {
   }
 
   void _onSongCompleted() {
+    // Track play count for the song that just completed
+    final song = currentSong;
+    if (song?.id != null) {
+      unawaited(_databaseService.incrementPlayCount(song!.id!));
+    }
+
     switch (_playMode) {
       case PlayMode.sequential:
         if (_currentIndex < _playlist.length - 1) {
@@ -230,11 +248,16 @@ class PlaylistService {
 
     final nextSong = _playlist[nextIndex];
     final gain = _effectService.calculateNormalizationGain(nextSong.peakDb);
+    
+    // Get crossfade curve from settings
+    final curveIndex = _effectService.crossfadeCurveNotifier.value;
+    final curve = CrossfadeCurve.values[curveIndex.clamp(0, CrossfadeCurve.values.length - 1)];
 
     await _engineService.crossfadeTo(
       nextSong.assetPath,
       _effectService.crossfadeDurationNotifier.value,
       nextNormalizationGain: gain,
+      curve: curve,
     );
 
     _currentIndex = nextIndex;
@@ -456,48 +479,7 @@ class PlaylistService {
   }
 
   List<Song> getSortedPlaylist(List<Song> songs) {
-    final sorted = List<Song>.from(songs);
-    switch (_sortMode) {
-      case SortMode.name:
-        sorted.sort(
-          (a, b) => _sortAscending
-              ? a.name.toLowerCase().compareTo(b.name.toLowerCase())
-              : b.name.toLowerCase().compareTo(a.name.toLowerCase()),
-        );
-        break;
-      case SortMode.artist:
-        sorted.sort(
-          (a, b) => _sortAscending
-              ? (a.artist ?? '').toLowerCase().compareTo(
-                  (b.artist ?? '').toLowerCase(),
-                )
-              : (b.artist ?? '').toLowerCase().compareTo(
-                  (a.artist ?? '').toLowerCase(),
-                ),
-        );
-        break;
-      case SortMode.duration:
-        sorted.sort(
-          (a, b) => _sortAscending
-              ? (a.duration ?? Duration.zero).compareTo(
-                  b.duration ?? Duration.zero,
-                )
-              : (b.duration ?? Duration.zero).compareTo(
-                  a.duration ?? Duration.zero,
-                ),
-        );
-        break;
-      case SortMode.dateAdded:
-        sorted.sort(
-          (a, b) => _sortAscending
-              ? (a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0))
-                    .compareTo(b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0))
-              : (b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0))
-                    .compareTo(a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0)),
-        );
-        break;
-    }
-    return sorted;
+    return SongSortUtils.sorted(songs, _sortMode, ascending: _sortAscending);
   }
 
   void dispose() {

@@ -1,8 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../core/service_locator.dart';
+import '../../providers/service_providers.dart';
 import '../../core/audio/playlist_service.dart';
+import '../../core/utils/sort_utils.dart';
 import 'package:ga_song/models/song.dart';
 import '../../core/cover_art_repository.dart';
 import '../../core/performance_probe.dart';
@@ -17,7 +17,6 @@ import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
 import 'mini_player_screen.dart';
 import 'dart:io';
-import '../../core/pip_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/lyric_provider.dart';
 import '../../providers/song_provider.dart';
@@ -26,6 +25,7 @@ import 'ktv_screen.dart';
 import 'online_screen.dart';
 import '../../core/services/music_manager.dart';
 import '../widgets/playlist_manager_widget.dart';
+import 'blurred_background.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -35,9 +35,20 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final PlaylistService _playlistService = sl<PlaylistService>();
-  final CoverArtRepository _coverArtRepository = sl<CoverArtRepository>();
-  final SettingsManager _settingsManager = sl<SettingsManager>();
+  // ─── Layout Constants ──────────────────────────────────────────────────────
+  static const double _kSidebarWidth = 240.0;
+  static const double _kBottomBarHeight = 90.0;
+  static const double _kTitleBarTopOffset = 50.0;
+  static const int _kPreloadNextSongCount = 3;
+  static const double _kMinHeightForSidebar = 200.0;
+  static const int _kBackgroundCoverWidth = 400;
+  static const int _kBackgroundCoverHeight = 300;
+  static const Duration _kBackgroundTransition = Duration(milliseconds: 800);
+  static const Duration _kTabSwitchDuration = Duration(milliseconds: 200);
+
+  late final PlaylistService _playlistService = ref.read(playlistServiceProvider);
+  late final CoverArtRepository _coverArtRepository = ref.read(coverArtRepositoryProvider);
+  late final SettingsManager _settingsManager = ref.read(settingsManagerProvider);
 
   List<Song> _songs = [];
   Map<String, int> _songIndexByFileName = <String, int>{};
@@ -83,15 +94,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // P-1 fix: Merge all background-related notifiers into one listenable.
     // This eliminates 5 nested ValueListenableBuilder levels.
     _backgroundListenable = Listenable.merge(<Listenable>[
-      sl<SettingsManager>().useNativeWindowEffectNotifier,
-      sl<SettingsManager>().enableBlurNotifier,
-      sl<SettingsManager>().blurLevelNotifier,
-      sl<SettingsManager>().customBackgroundImageNotifier,
+      _settingsManager.useNativeWindowEffectNotifier,
+      _settingsManager.enableBlurNotifier,
+      _settingsManager.blurLevelNotifier,
+      _settingsManager.customBackgroundImageNotifier,
       _playlistService.currentIndexNotifier,
     ]);
     _playlistService.currentIndexNotifier.addListener(_onSongChanged);
-    sl<SettingsManager>().sortModeNotifier.addListener(_applySort);
-    sl<SettingsManager>().sortAscendingNotifier.addListener(_applySort);
+    _settingsManager.sortModeNotifier.addListener(_applySort);
+    _settingsManager.sortAscendingNotifier.addListener(_applySort);
     // Listen for external tab changes (e.g. KTV back button)
     _tabListener = () {
       final tabIndex = _settingsManager.currentTabIndexNotifier.value;
@@ -109,8 +120,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _playlistService.currentIndexNotifier.removeListener(_onSongChanged);
-    sl<SettingsManager>().sortModeNotifier.removeListener(_applySort);
-    sl<SettingsManager>().sortAscendingNotifier.removeListener(_applySort);
+    _settingsManager.sortModeNotifier.removeListener(_applySort);
+    _settingsManager.sortAscendingNotifier.removeListener(_applySort);
     if (_tabListener != null) {
       _settingsManager.currentTabIndexNotifier.removeListener(_tabListener!);
     }
@@ -122,7 +133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _loadDominantColor();
     final currentIndex = _playlistService.currentIndexNotifier.value;
     if (currentIndex >= 0 && currentIndex < _songs.length) {
-      _coverArtRepository.preloadNextSongs(_songs, currentIndex, 3);
+      _coverArtRepository.preloadNextSongs(_songs, currentIndex, _kPreloadNextSongCount);
     }
     // No setState here — child widgets observe currentIndexNotifier
     // via ValueListenableBuilder directly. Calling setState({}) was
@@ -131,46 +142,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// Q-10 fix: Convert int mode to SortMode enum for consistency with PlaylistService.
-  static SortMode _sortModeFromInt(int mode) {
-    switch (mode) {
-      case 0: return SortMode.name;
-      case 1: return SortMode.artist;
-      case 2: return SortMode.dateAdded;
-      case 3: return SortMode.duration;
-      default: return SortMode.name;
-    }
-  }
+  static SortMode _sortModeFromInt(int mode) =>
+      SongSortUtils.sortModeFromInt(mode);
 
   void _applySort() {
     if (_songs.isEmpty) return;
 
-    final settings = sl<SettingsManager>();
+    final settings = _settingsManager;
     final sortMode = _sortModeFromInt(settings.sortModeNotifier.value);
     final asc = settings.sortAscendingNotifier.value;
-    final int dir = asc ? 1 : -1;
-
-    final sorted = List<Song>.from(_songs);
-    sorted.sort((a, b) {
-      switch (sortMode) {
-        case SortMode.name:
-          return dir * a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case SortMode.artist:
-          final aArtist = a.artist?.toLowerCase() ?? '';
-          final bArtist = b.artist?.toLowerCase() ?? '';
-          if (aArtist.isEmpty && bArtist.isEmpty) return 0;
-          if (aArtist.isEmpty) return dir;
-          if (bArtist.isEmpty) return -dir;
-          return dir * aArtist.compareTo(bArtist);
-        case SortMode.dateAdded:
-          final aDate = a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final bDate = b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return dir * aDate.compareTo(bDate);
-        case SortMode.duration:
-          final aDur = a.durationMs ?? 0;
-          final bDur = b.durationMs ?? 0;
-          return dir * aDur.compareTo(bDur);
-      }
-    });
+    final sorted = SongSortUtils.sorted(_songs, sortMode, ascending: asc);
 
     final indexByFileName = <String, int>{
       for (int i = 0; i < sorted.length; i++) sorted[i].fileName: i,
@@ -384,7 +365,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           final playlistSongs = _songs
                               .where((s) => s.album == albumName)
                               .toList();
-                          await sl<PlaylistService>().setPlaylist(
+                          await _playlistService.setPlaylist(
                             playlistSongs,
                           );
                           if (albumName == 'Mắt Nhắm Mắt Mở') {
@@ -392,10 +373,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               (s) => s.fileName.contains('trailer'),
                             );
                             if (trailerIdx != -1) {
-                              sl<PlaylistService>().setPlayMode(
+                              _playlistService.setPlayMode(
                                 PlayMode.playOneStop,
                               );
-                              sl<PlaylistService>().playSongAt(trailerIdx);
+                              _playlistService.playSongAt(trailerIdx);
                             }
                           }
                           // Lưu active playlist và rebuild cached index map
@@ -538,7 +519,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// U-4 fix: Whether the sidebar is currently visible.
   bool _isSidebarVisible(BuildContext context) {
-    return MediaQuery.of(context).size.height > 200;
+    return MediaQuery.of(context).size.height > _kMinHeightForSidebar;
   }
 
   Widget _buildCurrentTab() {
@@ -603,14 +584,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // On Android, also listen for native PiP mode changes
     return ValueListenableBuilder<bool>(
-      valueListenable: sl<PipService>().isInPipNotifier,
+      valueListenable: ref.read(pipServiceProvider).isInPipNotifier,
       builder: (context, isInPip, _) {
         if (isInPip) {
           PerformanceProbe.instance.markSurface('Mini Player (PiP)');
           return const MiniPlayerScreen();
         }
         return ValueListenableBuilder<bool>(
-          valueListenable: sl<SettingsManager>().isMiniPlayerNotifier,
+          valueListenable: _settingsManager.isMiniPlayerNotifier,
           builder: (context, isMiniPlayer, _) {
             if (isMiniPlayer) {
               PerformanceProbe.instance.markSurface('Mini Player');
@@ -618,7 +599,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 canPop: false,
                 onPopInvokedWithResult: (didPop, result) {
                   if (didPop) return;
-                  sl<SettingsManager>().setIsMiniPlayer(false);
+                  _settingsManager.setIsMiniPlayer(false);
                 },
                 child: const MiniPlayerScreen(),
               );
@@ -650,7 +631,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: ListenableBuilder(
                         listenable: _backgroundListenable,
                         builder: (context, _) {
-                          final settings = sl<SettingsManager>();
+                          final settings = _settingsManager;
                           final useNative = settings.useNativeWindowEffectNotifier.value;
                           if (useNative) return const SizedBox.shrink();
 
@@ -661,11 +642,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                           // Priority 1: Custom background image
                           if (customBgPath != null && customBgPath.isNotEmpty) {
-                            return _BlurredBackground(
+                            return BlurredBackground(
                               blurLevel: blurLevel,
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 800),
-                                child: Image.file(
+                          child: AnimatedSwitcher(
+                            duration: _kBackgroundTransition,
+                            child: Image.file(
                                   File(customBgPath),
                                   key: ValueKey('custom_bg_$customBgPath'),
                                   fit: BoxFit.cover,
@@ -682,15 +663,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           // Priority 2: Cover art of currently playing song
                           final song = _playlistService.currentSong;
                           if (song != null) {
-                            return _BlurredBackground(
+                            return BlurredBackground(
                               blurLevel: blurLevel,
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 800),
+                          child: AnimatedSwitcher(
+                            duration: _kBackgroundTransition,
                                 child: CoverArtImage(
                                   key: ValueKey(song.fileName),
                                   song: song,
-                                  cacheWidth: 400,
-                                  cacheHeight: 300,
+                                  cacheWidth: _kBackgroundCoverWidth,
+                                  cacheHeight: _kBackgroundCoverHeight,
                                   fallbackBuilder: (context) => Container(
                                     key: const ValueKey('default_bg'),
                                     color: const Color(0xFF0F0F0F),
@@ -737,7 +718,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Expanded(
                               child: RepaintBoundary(
                                 child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
+                                  duration: _kTabSwitchDuration,
                                   switchInCurve: Curves.easeOut,
                                   switchOutCurve: Curves.easeIn,
                                   transitionBuilder: (child, animation) =>
@@ -772,16 +753,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       if (!showLyrics || _currentTab == TabItem.ktv) return const SizedBox.shrink();
                       
                       // U-4 fix: Subtract sidebar width from available space
-                      final screenWidth = MediaQuery.of(context).size.width;
-                      final isSidebarVisible = _isSidebarVisible(context);
-                      final availableWidth = isSidebarVisible
-                          ? screenWidth - 240 // sidebar width
-                          : screenWidth;
+                          final screenWidth = MediaQuery.of(context).size.width;
+                          final isSidebarVisible = _isSidebarVisible(context);
+                          final availableWidth = isSidebarVisible
+                              ? screenWidth - _kSidebarWidth
+                              : screenWidth;
 
                       return Positioned(
-                        top: 50,
+                        top: _kTitleBarTopOffset,
                         right: 0,
-                        bottom: 90, // Leave space for bottom bar
+                        bottom: _kBottomBarHeight,
                         width: availableWidth / 2.5,
                         child: RepaintBoundary(
                           child: Container(
@@ -826,13 +807,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _extractDominantColor(Song song) async {
     try {
       final color = await _coverArtRepository.resolveDominantColor(song);
-      sl<SettingsManager>().dynamicPrimaryColorNotifier.value = color;
+      _settingsManager.dynamicPrimaryColorNotifier.value = color;
     } catch (e, stack) { debugPrint('Error in home_screen: $e\n$stack'); }
   }
 
   Future<void> _importLocalSongs() async {
-    final isar = ref.read(isarProvider);
-    final manager = MusicManager(isar);
+    final db = ref.read(databaseServiceProvider);
+    final manager = MusicManager(db);
     final snackMessenger = ScaffoldMessenger.of(context);
     try {
       await manager.importLocalSongs();
@@ -852,43 +833,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
-  }
-}
-
-/// Wraps [child] with an [ImageFiltered] blur and a dark tint.
-///
-/// Unlike [BackdropFilter], this only blurs the image itself (not the entire
-/// scene behind it), and the result is cached by the compositor between frames.
-/// This eliminates the per-frame GPU cost that made the old approach a
-/// performance bottleneck.
-class _BlurredBackground extends StatelessWidget {
-  const _BlurredBackground({required this.blurLevel, required this.child});
-
-  final double blurLevel;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Blurred image layer
-        if (blurLevel > 0)
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(
-              sigmaX: blurLevel,
-              sigmaY: blurLevel,
-              tileMode: TileMode.clamp,
-            ),
-            child: child,
-          )
-        else
-          child,
-        // Dark tint overlay
-        IgnorePointer(
-          child: ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
-        ),
-      ],
-    );
   }
 }

@@ -9,6 +9,7 @@ class AudioEffectService {
 
   final ValueNotifier<int> bassLevelNotifier = ValueNotifier(0);
   final ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3.0);
+  final ValueNotifier<int> crossfadeCurveNotifier = ValueNotifier(0); // 0=linear, 1=exponential, 2=sCurve
   final ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(0.0);
   final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1.0);
   final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0.0);

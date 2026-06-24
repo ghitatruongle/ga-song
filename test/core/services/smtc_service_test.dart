@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
@@ -122,6 +123,7 @@ class MockAudioEngineService implements AudioEngineService {
     String nextAssetPath,
     double crossfadeDuration, {
     double? nextNormalizationGain,
+    CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {}
 
   @override
@@ -230,6 +232,12 @@ class MockPlaylistService implements PlaylistService {
 }
 
 void main() {
+  // SMTC is Windows-only — skip all tests on non-Windows platforms.
+  if (!Platform.isWindows) {
+    test('SMTC tests require Windows', () {});
+    return;
+  }
+
   late MockAudioEngineService mockEngine;
   late MockPlaylistService mockPlaylist;
   late MockSmtcPlatform mockSmtc;
