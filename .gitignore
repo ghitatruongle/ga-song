@@ -1,89 +1,60 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# ─── OS / Editor ──────────────────────────────────────────────
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
 
-# IntelliJ related
+# ─── IDE ──────────────────────────────────────────────────────
+.idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ─── Flutter / Dart ───────────────────────────────────────────
 .dart_tool/
-.flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
+**/build/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.flutter-plugins-dependencies
 /coverage/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# Local execution logs
-/*_log.txt
-/*_log*.txt
-/pubget*.txt
-/analyze*.txt
-
-# Packaging
-/*.deb
-/deb_build/
-/dist/
-
-# Unofficial test project (scratch/test harness)
-/test_project/
-
-# Tooling artifacts
-/.kilo/
-/.openclaude/
-/.vscode/
-/Plan/
-/fix_plan*.py
-/nul
-
-# Temp scripts and logs
+# ─── Python / Logs / Temp ─────────────────────────────────────
 *.py
 *.txt
 *.backup
 *.log
-!.metadata
+*.sh
+*.bat
+!build_all.bat
 !pubspec.yaml
+!.metadata
 
-# Build artifacts
-/build/
-**/build/
-/deb_build/
-/dist/
-
-# Platform-specific
+# ─── Android ──────────────────────────────────────────────────
 /android/app/debug
 /android/app/profile
 /android/app/release
+local.properties
+*.keystore
+*.jks
+google-services.json
 
-# Test projects
+# ─── Packaging ────────────────────────────────────────────────
+*.deb
+*.rpm
+*.dmg
+*.exe
+/deb_build/
+/dist/
+
+# ─── Tooling artifacts ────────────────────────────────────────
+/.kilo/
+/.openclaude/
+/Plan/
+/nul
 /test_project/
