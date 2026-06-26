@@ -39,7 +39,7 @@ class PlatformCapabilities {
       }
       return false;
     } catch (e) {
-      debugPrint("PlatformCapabilities version error: $e");
+      debugPrint('PlatformCapabilities version error: $e');
       return false;
     }
   }

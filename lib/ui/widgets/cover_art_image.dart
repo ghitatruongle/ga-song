@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cover_art_repository.dart';
-import '../../core/service_locator.dart';
-import 'package:ga_song/models/song.dart';
+import '../../providers/service_providers.dart';
+import '../../models/song.dart';
 
-class CoverArtImage extends StatefulWidget {
+class CoverArtImage extends ConsumerStatefulWidget {
   const CoverArtImage({
     super.key,
     required this.song,
@@ -23,11 +24,11 @@ class CoverArtImage extends StatefulWidget {
   final FilterQuality filterQuality;
 
   @override
-  State<CoverArtImage> createState() => _CoverArtImageState();
+  ConsumerState<CoverArtImage> createState() => _CoverArtImageState();
 }
 
-class _CoverArtImageState extends State<CoverArtImage> {
-  final CoverArtRepository _repository = sl<CoverArtRepository>();
+class _CoverArtImageState extends ConsumerState<CoverArtImage> {
+  late final CoverArtRepository _repository = ref.read(coverArtRepositoryProvider);
   CoverArtEntry? _entry;
   Object? _requestToken;
 

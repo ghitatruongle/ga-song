@@ -1,29 +1,32 @@
 import 'dart:typed_data';
-
-import 'package:isar/isar.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'cover_art_cache.g.dart';
 
-/// Persists cover art image bytes in Isar for fast disk cache across sessions.
+/// Cached cover art image bytes for a song, persisted in SQLite.
 ///
-/// After the first run, all cover art images are stored here so subsequent
-/// launches avoid file I/O for built-in assets and local .png files.
-/// Entries are LRU-evicted on write when the cache exceeds [maxDiskCacheEntries].
-@Collection()
+/// The [fileName] is the unique key (matches [Song.fileName]). The [bytes]
+/// contain the raw image data (PNG/JPEG). Entries are evicted LRU when the
+/// cache exceeds [maxDiskCacheEntries].
+@JsonSerializable()
 class CoverArtCache {
-  Id id = Isar.autoIncrement;
+  CoverArtCache({
+    this.id,
+    this.fileName = '',
+    this.bytes = const [],
+    DateTime? lastAccessed,
+  }) : lastAccessed = lastAccessed ?? DateTime.now();
 
-  @Index(unique: true)
-  String fileName = '';
+  int? id;
+  String fileName;
+  List<int> bytes;
+  DateTime lastAccessed;
 
-  /// Raw image bytes stored as [List<int>] (Isar-compatible).
-  /// Convert to/from [Uint8List] in repository code.
-  List<int> bytes = [];
+  Uint8List get bytesAsUint8List => Uint8List.fromList(bytes);
 
-  /// Timestamp used for LRU eviction (oldest entries removed first).
-  DateTime lastAccessed = DateTime.now();
-
-  /// Maximum number of entries to keep in the disk cache.
-  /// Desktop (60) mirrors the in-memory provider cache; Android (24) saves space.
   static int maxDiskCacheEntries(bool isAndroid) => isAndroid ? 24 : 60;
+
+  factory CoverArtCache.fromJson(Map<String, dynamic> json) => _$CoverArtCacheFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CoverArtCacheToJson(this);
 }

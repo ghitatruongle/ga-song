@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audio/playlist_service.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
-import 'package:ga_song/models/song.dart';
+import '../../models/song.dart';
 import 'cover_art_image.dart';
 import 'playlist_manager_widget.dart';
 

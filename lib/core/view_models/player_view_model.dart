@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
-import 'package:ga_song/models/song.dart';
+import '../../models/song.dart';
 
 class PlayerViewModel extends ChangeNotifier {
   final AudioEngineService _engineService;

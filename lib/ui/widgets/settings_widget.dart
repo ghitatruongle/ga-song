@@ -1,20 +1,20 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
 import 'desktop_title_bar.dart';
 import 'sleep_timer_dialog.dart';
 import 'audio_effects_dialog.dart';
 import 'sort_filter_dialog.dart';
 import 'custom_hotkeys_dialog.dart';
 
-class SettingsWidget extends StatelessWidget {
+class SettingsWidget extends ConsumerWidget {
   const SettingsWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final settings = sl<SettingsManager>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.read(settingsManagerProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
 

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/playlist.dart';
 import '../../models/song.dart';
-import '../../providers/song_provider.dart';
+import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
-import 'package:isar/isar.dart';
 
 class PlaylistManagerWidget {
   static void show(BuildContext context) {
@@ -36,12 +35,9 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    final isar = ref.read(isarProvider);
-    final playlist = Playlist()..name = name;
-    
-    await isar.writeTxn(() async {
-      await isar.playlists.put(playlist);
-    });
+    final db = ref.read(databaseServiceProvider);
+    final playlist = Playlist(name: name);
+    await db.putPlaylist(playlist);
 
     if (mounted) {
       _nameController.clear();
@@ -50,17 +46,14 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
   }
 
   Future<void> _deletePlaylist(int id) async {
-    final isar = ref.read(isarProvider);
-    await isar.writeTxn(() async {
-      await isar.playlists.delete(id);
-    });
+    final db = ref.read(databaseServiceProvider);
+    await db.deletePlaylist(id);
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final isar = ref.watch(isarProvider);
-    final playlists = isar.playlists.where().findAllSync();
+    final db = ref.watch(databaseServiceProvider);
     final textColor = context.adaptive;
 
     return AlertDialog(
@@ -93,22 +86,29 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: playlists.isEmpty
-                  ? Center(child: Text('Chưa có playlist', style: TextStyle(color: textColor.withValues(alpha: 0.5))))
-                  : ListView.builder(
-                      itemCount: playlists.length,
-                      itemBuilder: (context, index) {
-                        final pl = playlists[index];
-                        return ListTile(
-                          title: Text(pl.name, style: TextStyle(color: textColor)),
-                          subtitle: Text('${pl.songs.length} bài hát', style: TextStyle(color: textColor.withValues(alpha: 0.5))),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                            onPressed: () => _deletePlaylist(pl.id),
-                          ),
-                        );
-                      },
-                    ),
+              child: FutureBuilder<List<Playlist>>(
+                future: db.getAllPlaylists(),
+                builder: (context, snapshot) {
+                  final playlists = snapshot.data ?? [];
+                  if (playlists.isEmpty) {
+                    return Center(child: Text('Chưa có playlist', style: TextStyle(color: textColor.withValues(alpha: 0.5))));
+                  }
+                  return ListView.builder(
+                    itemCount: playlists.length,
+                    itemBuilder: (context, index) {
+                      final pl = playlists[index];
+                      return ListTile(
+                        title: Text(pl.name, style: TextStyle(color: textColor)),
+                        subtitle: Text('${pl.songIds.length} bài hát', style: TextStyle(color: textColor.withValues(alpha: 0.5))),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.redAccent),
+                          onPressed: () => _deletePlaylist(pl.id!),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -143,14 +143,13 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
   }
 
   Future<void> _loadPlaylists() async {
-    final isar = ref.read(isarProvider);
-    final playlists = await isar.playlists.where().findAll();
-    
+    final db = ref.read(databaseServiceProvider);
+    final playlists = await db.getAllPlaylists();
+
     final addedIds = <int>{};
     for (final pl in playlists) {
-      await pl.songs.load();
-      if (pl.songs.any((s) => s.id == widget.song.id)) {
-        addedIds.add(pl.id);
+      if (pl.songIds.contains(widget.song.id)) {
+        addedIds.add(pl.id!);
       }
     }
 
@@ -164,25 +163,21 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
   }
 
   Future<void> _toggleSongInPlaylist(Playlist playlist) async {
-    final isar = ref.read(isarProvider);
+    final db = ref.read(databaseServiceProvider);
     final isAdded = _addedPlaylistIds.contains(playlist.id);
 
-    await isar.writeTxn(() async {
-      await playlist.songs.load();
-      if (isAdded) {
-        playlist.songs.remove(widget.song);
-      } else {
-        playlist.songs.add(widget.song);
-      }
-      await playlist.songs.save();
-    });
+    if (isAdded) {
+      await db.removeSongFromPlaylist(playlist.id!, widget.song.id!);
+    } else {
+      await db.addSongToPlaylist(playlist.id!, widget.song.id!);
+    }
 
     if (mounted) {
       setState(() {
         if (isAdded) {
           _addedPlaylistIds.remove(playlist.id);
         } else {
-          _addedPlaylistIds.add(playlist.id);
+          _addedPlaylistIds.add(playlist.id!);
         }
       });
     }

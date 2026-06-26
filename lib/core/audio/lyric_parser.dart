@@ -107,7 +107,7 @@ class LyricParser {
             final content = await rootBundle.loadString(path);
             return parse(content);
           } catch (e) {
-            debugPrint("LyricParser: $e");
+            debugPrint('LyricParser: $e');
             // Keep looking
           }
         }

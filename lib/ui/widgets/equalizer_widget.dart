@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
-import '../../core/audio/audio_effect_service.dart';
 
 /// Premium equalizer dialog with 5-band control and preset selector
 class EqualizerWidget {
@@ -15,16 +14,16 @@ class EqualizerWidget {
   }
 }
 
-class _EqualizerDialog extends StatefulWidget {
+class _EqualizerDialog extends ConsumerStatefulWidget {
   const _EqualizerDialog();
 
   @override
-  State<_EqualizerDialog> createState() => _EqualizerDialogState();
+  ConsumerState<_EqualizerDialog> createState() => _EqualizerDialogState();
 }
 
-class _EqualizerDialogState extends State<_EqualizerDialog> {
-  final _effectService = sl<AudioEffectService>();
-  final _settings = sl<SettingsManager>();
+class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
+  late final _effectService = ref.read(audioEffectServiceProvider);
+  late final _settings = ref.read(settingsManagerProvider);
 
   // Band labels
   static const _bandLabels = ['60Hz', '230Hz', '910Hz', '3.6kHz', '14kHz'];

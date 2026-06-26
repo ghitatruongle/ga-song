@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-import 'package:ga_song/models/song.dart';
+import '../../models/song.dart';
 import '../audio_source_cache_policy.dart';
 import '../platform_capabilities.dart';
 import '../services/database_service.dart';

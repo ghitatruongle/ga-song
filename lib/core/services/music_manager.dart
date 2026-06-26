@@ -1,17 +1,17 @@
 import 'dart:io';
-import 'package:isar/isar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:audiotags/audiotags.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
 import '../../models/song.dart';
+import 'database_service.dart';
 
-/// Quản lý import/xóa bài hát local
+/// Quan ly import/xoa bai hat local
 class MusicManager {
-  final Isar isar;
+  final DatabaseService _db;
 
-  MusicManager(this.isar);
+  MusicManager(this._db);
 
   Future<void> importLocalSongs() async {
     try {
@@ -32,20 +32,20 @@ class MusicManager {
       for (final file in result.files) {
         if (file.path == null) continue;
         final sourceFile = File(file.path!);
-        
+
         final newPath = '${localSongsDir.path}/${file.name}';
         final targetFile = File(newPath);
-        
-        // Bỏ qua nếu đã tồn tại file cùng tên trong thư mục app
+
+        // Bo qua neu da ton tai file cung ten trong thu muc app
         if (await targetFile.exists()) continue;
 
         await sourceFile.copy(newPath);
 
-        // Trích xuất metadata
+        // Trich xuat metadata
         String name = p.basenameWithoutExtension(file.name);
         String? artist;
         String? album;
-        
+
         try {
           final tag = await AudioTags.read(newPath);
           if (tag != null) {
@@ -58,89 +58,44 @@ class MusicManager {
             if (tag.album != null && tag.album!.isNotEmpty) {
               album = tag.album!;
             }
-            
-            // Trích xuất ảnh bìa nếu có
-            final pictures = tag.pictures;
-            if (pictures.isNotEmpty) {
-              final pic = pictures.first;
-              final coverPath = '${localSongsDir.path}/${file.name}.png';
-              final coverFile = File(coverPath);
-              await coverFile.writeAsBytes(pic.bytes);
-            }
           }
         } catch (e) {
-          debugPrint('Error reading metadata for ${file.name}: $e');
+          debugPrint('Error reading audio tags: $e');
         }
 
-        // Copy lyric file nếu có (cùng tên, đuôi .srt hoặc .lrc)
-        final sourceDir = sourceFile.parent.path;
-        final baseName = p.basenameWithoutExtension(file.name);
-        
-        final possibleLyrics = [
-          '$sourceDir/$baseName.lrc',
-          '$sourceDir/$baseName.srt',
-          '$sourceDir/${baseName}_lyric.srt',
-        ];
-        
-        for (final lrcPath in possibleLyrics) {
-          final lrcFile = File(lrcPath);
-          if (await lrcFile.exists()) {
-            final targetLrc = File('${localSongsDir.path}/${p.basename(lrcPath)}');
-            await lrcFile.copy(targetLrc.path);
-            break; // Chỉ copy 1 file lyric
-          }
-        }
+        final song = Song(
+          name: name,
+          artist: artist,
+          album: album,
+          sourcePath: newPath,
+          isBuiltIn: false,
+          dateAdded: DateTime.now(),
+        );
 
-        final song = Song()
-          ..name = name
-          ..artist = artist
-          ..album = album
-          ..sourcePath = newPath
-          ..isBuiltIn = false
-          ..dateAdded = DateTime.now();
-
-        await isar.writeTxn(() async {
-          await isar.songs.put(song);
-        });
+        await _db.putSong(song);
       }
     } catch (e) {
       debugPrint('Error importing local songs: $e');
+      rethrow;
     }
   }
-  
+
   Future<void> deleteSong(Song song) async {
-    if (song.isBuiltIn) return; // Không cho xóa nhạc built-in
-
-    // Delete physical file
-    final file = File(song.sourcePath);
-    if (await file.exists()) {
-      await file.delete();
-    }
-    
-    // Delete cover art if exists
-    final coverFile = File('${song.sourcePath}.png');
-    if (await coverFile.exists()) {
-      await coverFile.delete();
-    }
-
-    // Xóa file lyric nếu có
-    final baseName = p.basenameWithoutExtension(song.fileName);
-    final dir = file.parent.path;
-    final possibleLyrics = [
-      '$dir/$baseName.lrc',
-      '$dir/$baseName.srt',
-      '$dir/${baseName}_lyric.srt',
-    ];
-    for (final lrcPath in possibleLyrics) {
-      final lrcFile = File(lrcPath);
-      if (await lrcFile.exists()) {
-        await lrcFile.delete();
+    try {
+      if (song.id != null) {
+        await _db.deleteSong(song.id!);
       }
-    }
 
-    // Delete from database
-    await isar.writeTxn(() async {
-      await isar.songs.delete(song.id);
-    });
+      // Delete the actual file if it exists and is not a built-in asset
+      if (!song.isBuiltIn) {
+        final file = File(song.sourcePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting song: $e');
+      rethrow;
+    }
   }
 }

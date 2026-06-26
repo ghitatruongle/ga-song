@@ -7,7 +7,7 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 
 import '../../core/audio/audio_engine_service.dart';
 import '../../core/platform_capabilities.dart';
-import '../../core/service_locator.dart';
+
 import '../../core/settings_manager.dart';
 
 @immutable
@@ -74,10 +74,10 @@ class Star {
 class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   VisualizerController({
     required TickerProvider vsync,
-    AudioEngineService? audioService,
-    SettingsManager? settings,
-  }) : _audioService = audioService ?? sl<AudioEngineService>(),
-       _settings = settings ?? sl<SettingsManager>() {
+    required AudioEngineService audioService,
+    required SettingsManager settings,
+  }) : _audioService = audioService,
+       _settings = settings {
     _audioData = null; // D2 fix: deferred to lazy init in _updateAudioFrame
 
     _initStars();

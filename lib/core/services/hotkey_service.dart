@@ -4,12 +4,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
-import '../service_locator.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 import '../settings_manager.dart';
 
 class HotkeyService {
+  HotkeyService({
+    required SettingsManager settingsManager,
+    AudioEngineService? audioEngineService,
+    PlaylistService? playlistService,
+  }) : _settings = settingsManager,
+       _engine = audioEngineService,
+       _playlist = playlistService;
+
+  final SettingsManager _settings;
+  final AudioEngineService? _engine;
+  final PlaylistService? _playlist;
   final Map<String, String> _defaultHotkeys = {
     'playPause': 'Alt + Space',
     'next': 'Alt + Arrow Right',
@@ -31,7 +41,7 @@ class HotkeyService {
     }
     HardwareKeyboard.instance.addHandler(_handleLocalKey);
     await _registerGlobalHotkeys();
-    sl<SettingsManager>().customHotkeysNotifier.addListener(
+    _settings.customHotkeysNotifier.addListener(
       _onHotkeysSettingsChanged,
     );
   }
@@ -50,7 +60,7 @@ class HotkeyService {
     }
     _isDisposed = true;
     HardwareKeyboard.instance.removeHandler(_handleLocalKey);
-    sl<SettingsManager>().customHotkeysNotifier.removeListener(
+    _settings.customHotkeysNotifier.removeListener(
       _onHotkeysSettingsChanged,
     );
     for (final completer in _registerCompleters) {
@@ -77,7 +87,7 @@ class HotkeyService {
     try {
       await hotKeyManager.unregisterAll();
 
-      final customHotkeys = sl<SettingsManager>().customHotkeysNotifier.value;
+      final customHotkeys = _settings.customHotkeysNotifier.value;
 
       for (final entry in _defaultHotkeys.entries) {
         final action = entry.key;
@@ -111,14 +121,9 @@ class HotkeyService {
     if (now.difference(_lastActionTime).inMilliseconds < 150) return;
     _lastActionTime = now;
 
-    AudioEngineService engineService;
-    PlaylistService playlistService;
-    try {
-      engineService = sl<AudioEngineService>();
-      playlistService = sl<PlaylistService>();
-    } catch (e, stack) { debugPrint('Error in hotkey_service: $e\n$stack'); 
-      return;
-    }
+    final AudioEngineService? engineService = _engine;
+    final PlaylistService? playlistService = _playlist;
+    if (engineService == null || playlistService == null) return;
 
     switch (action) {
       case 'playPause':
@@ -269,7 +274,7 @@ class HotkeyService {
         return true;
       }
       // Media keys: chỉ xử lý khi setting mediaKeyEnabled bật
-      final mediaKeyEnabled = sl<SettingsManager>().mediaKeyEnabledNotifier.value;
+      final mediaKeyEnabled = _settings.mediaKeyEnabledNotifier.value;
       if (mediaKeyEnabled) {
         if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause) {
           _handleAction('playPause');

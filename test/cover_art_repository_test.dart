@@ -9,7 +9,7 @@ void main() {
     () async {
       final repository = CoverArtRepository();
 
-      final entry = await repository.resolveEntry((Song()..id = 1..name = 'test'..sourcePath = 'assets/song/test.mp3'..isBuiltIn = true));
+      final entry = await repository.resolveEntry((Song(id: 1, name: 'test', sourcePath: 'assets/song/test.mp3', isBuiltIn: true)));
 
       expect(entry.imagePath, 'assets/pic/test.png');
       expect(entry.isAsset, isTrue);
@@ -22,7 +22,7 @@ void main() {
     () async {
       final repository = CoverArtRepository();
 
-      final entry = await repository.resolveEntry((Song()..id = 2..name = 'het yeu'..sourcePath = 'assets/song/mat_nham_mat_mo/het_yeu.mp3'..isBuiltIn = true));
+      final entry = await repository.resolveEntry((Song(id: 2, name: 'het yeu', sourcePath: 'assets/song/mat_nham_mat_mo/het_yeu.mp3', isBuiltIn: true)));
 
       expect(entry.imagePath, 'assets/pic/mat_nham_mat_mo/het_yeu.png');
       expect(entry.isAsset, isTrue);
@@ -35,11 +35,12 @@ void main() {
     () async {
       final repository = CoverArtRepository();
 
-      final entry = await repository.resolveEntry((Song()
-        ..id = 3
-        ..name = 'local song'
-        ..sourcePath = '/data/user/0/local_songs/test.mp3'
-        ..isBuiltIn = false));
+      final entry = await repository.resolveEntry(Song(
+        id: 3,
+        name: 'local song',
+        sourcePath: '/data/user/0/local_songs/test.mp3',
+        isBuiltIn: false,
+      ));
 
       expect(entry.imagePath, '/data/user/0/local_songs/test.mp3.png');
       expect(entry.isAsset, isFalse);

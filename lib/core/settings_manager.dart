@@ -21,7 +21,7 @@ const double _kDefaultNormalizationLevel = -12.0;
 const int _kEqBandCount = 5;
 
 /// Number of sort modes defined in the app.
-const int _kSortModeCount = 4;
+const int _kSortModeCount = 6;
 
 /// Manages all application settings with persistence via [SharedPreferences].
 ///

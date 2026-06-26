@@ -222,7 +222,7 @@ class SmtcService {
     if (_smtc != null) {
       try {
         _buttonSubscription?.cancel();
-      } catch (e) { debugPrint("SmtcService dispose error: $e"); }
+      } catch (e) { debugPrint('SmtcService dispose error: $e'); }
       try {
         _engineService.engineState.removeListener(_onEngineStateChanged);
         _playlistService.currentIndexNotifier.removeListener(_onPlaylistIndexChanged);

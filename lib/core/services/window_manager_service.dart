@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
-import '../service_locator.dart';
 import '../settings_manager.dart';
 import '../platform_capabilities.dart';
 
@@ -32,6 +31,10 @@ WindowEffect _toWindowEffect(WindowEffectType type) {
 }
 
 class WindowManagerService with WindowListener {
+  WindowManagerService({SettingsManager? settingsManager})
+      : _settings = settingsManager;
+
+  final SettingsManager? _settings;
   // ─── Debounce & resize state ──────────────────────────────────────────────
 
   Timer? _effectDebounce;
@@ -79,7 +82,7 @@ class WindowManagerService with WindowListener {
         }
 
         // Restore previous window position if available
-        final savedPosition = sl<SettingsManager>().savedWindowPosition;
+        final savedPosition = _settings?.savedWindowPosition;
         if (savedPosition != null) {
           try {
             await windowManager.setPosition(savedPosition);
@@ -89,7 +92,7 @@ class WindowManagerService with WindowListener {
         }
 
         // Restore the saved window size
-        final savedSize = sl<SettingsManager>().savedWindowSize;
+        final savedSize = _settings?.savedWindowSize;
         if (savedSize != null) {
           try {
             await windowManager.setSize(savedSize);
@@ -116,14 +119,14 @@ class WindowManagerService with WindowListener {
     windowManager.addListener(this);
 
     // Subscribe to settings changes — debounced to avoid flicker
-    sl<SettingsManager>()
-        .useNativeWindowEffectNotifier
+    _settings
+        ?.useNativeWindowEffectNotifier
         .addListener(_scheduleApplyEffect);
-    sl<SettingsManager>()
-        .windowOpacityNotifier
+    _settings
+        ?.windowOpacityNotifier
         .addListener(_scheduleApplyEffect);
-    sl<SettingsManager>()
-        .themeModeNotifier
+    _settings
+        ?.themeModeNotifier
         .addListener(_scheduleApplyEffect);
   }
 
@@ -142,7 +145,8 @@ class WindowManagerService with WindowListener {
   // ─── Core effect application with state caching ──────────────────────────
 
   Future<void> _applyWindowEffect() async {
-    final settings = sl<SettingsManager>();
+    final settings = _settings;
+    if (settings == null) return;
     final useNative = settings.useNativeWindowEffectNotifier.value;
     final theme = settings.themeModeNotifier.value;
     final opacity = settings.windowOpacityNotifier.value;
@@ -216,7 +220,7 @@ class WindowManagerService with WindowListener {
   /// compositor flicker. Uses [WindowEffect.solid] which paints a solid color
   /// without the blur/transparency pipeline that causes flicker.
   Future<void> _setSolidBackgroundDuringResize() async {
-    final theme = sl<SettingsManager>().themeModeNotifier.value;
+    final theme = _settings?.themeModeNotifier.value ?? ThemeMode.system;
     final isDark = theme == ThemeMode.dark ||
         (theme == ThemeMode.system &&
             PlatformDispatcher.instance.platformBrightness == Brightness.dark);
@@ -247,12 +251,11 @@ class WindowManagerService with WindowListener {
 
   @override
   void onWindowClose() async {
-    bool isPreventClose = await windowManager.isPreventClose();
+    final bool isPreventClose = await windowManager.isPreventClose();
     if (isPreventClose) {
-      if (sl<SettingsManager>().minimizeToTrayNotifier.value) {
+      if ((_settings?.minimizeToTrayNotifier.value) ?? false) {
         await windowManager.hide();
       } else {
-        await teardownServices();
         await windowManager.destroy();
       }
     }
@@ -264,14 +267,14 @@ class WindowManagerService with WindowListener {
     _effectDebounce?.cancel();
     _resizeDebounce?.cancel();
 
-    sl<SettingsManager>()
-        .useNativeWindowEffectNotifier
+    _settings
+        ?.useNativeWindowEffectNotifier
         .removeListener(_scheduleApplyEffect);
-    sl<SettingsManager>()
-        .windowOpacityNotifier
+    _settings
+        ?.windowOpacityNotifier
         .removeListener(_scheduleApplyEffect);
-    sl<SettingsManager>()
-        .themeModeNotifier
+    _settings
+        ?.themeModeNotifier
         .removeListener(_scheduleApplyEffect);
 
     windowManager.removeListener(this);

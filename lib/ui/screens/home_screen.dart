@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import '../../providers/service_providers.dart';
 import '../../core/audio/playlist_service.dart';
 import '../../core/utils/sort_utils.dart';
-import 'package:ga_song/models/song.dart';
+import '../../models/song.dart';
 import '../../core/cover_art_repository.dart';
 import '../../core/performance_probe.dart';
-import '../widgets/desktop_title_bar.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/main_content.dart';
 import '../widgets/bottom_player_bar.dart';
@@ -24,8 +23,11 @@ import '../widgets/lyric_view.dart';
 import 'ktv_screen.dart';
 import 'online_screen.dart';
 import '../../core/services/music_manager.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/playlist_manager_widget.dart';
 import 'blurred_background.dart';
+import '../widgets/album_grid_widget.dart';
+import '../widgets/playlist_songs_view_widget.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -106,7 +108,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Listen for external tab changes (e.g. KTV back button)
     _tabListener = () {
       final tabIndex = _settingsManager.currentTabIndexNotifier.value;
-      final tabs = TabItem.values;
+      const tabs = TabItem.values;
       if (tabIndex >= 0 && tabIndex < tabs.length) {
         final newTab = tabs[tabIndex];
         if (newTab != _currentTab) {
@@ -237,7 +239,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       setState(() {
         _songs = <Song>[];
         _songIndexByFileName = <String, int>{};
-        _loadingError = 'Không thể nạp danh sách bài hát từ Database.';
+        _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
       });
     } finally {
       if (mounted) {
@@ -301,225 +303,107 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  // Q-3 fix: Use shared DesktopTitleBar widget
-  Widget _buildTitleBar() => const DesktopTitleBar();
-
   Widget _buildPlaylistsGrid() {
-    final adaptiveColor = context.adaptive;
-    // Use cached album list — rebuilt only when _songs changes (in _rebuildAlbumCache)
-    final albums = _cachedAlbums;
-
-    return Column(
-      children: [
-        _buildTitleBar(),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(40, 10, 40, 40),
-            child: albums.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.album_rounded,
-                          size: 64,
-                          color: adaptiveColor.withValues(alpha: 0.3),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Chưa có playlist nào',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: adaptiveColor.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Thêm trường "album" vào songs.json để tạo playlist',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: adaptiveColor.withValues(alpha: 0.4),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  )
-                : GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 200,
-                          childAspectRatio: 1.0,
-                          crossAxisSpacing: 24,
-                          mainAxisSpacing: 24,
-                        ),
-                    itemCount: albums.length,
-                    itemBuilder: (context, index) {
-                      final albumName = albums[index];
-                      // O(1) lookup from cached map instead of O(n) scan
-                      final count = _cachedAlbumSongCount[albumName] ?? 0;
-
-
-                      return GestureDetector(
-                        onTap: () async {
-                          final playlistSongs = _songs
-                              .where((s) => s.album == albumName)
-                              .toList();
-                          await _playlistService.setPlaylist(
-                            playlistSongs,
-                          );
-                          if (albumName == 'Mắt Nhắm Mắt Mở') {
-                            final trailerIdx = playlistSongs.indexWhere(
-                              (s) => s.fileName.contains('trailer'),
-                            );
-                            if (trailerIdx != -1) {
-                              _playlistService.setPlayMode(
-                                PlayMode.playOneStop,
-                              );
-                              _playlistService.playSongAt(trailerIdx);
-                            }
-                          }
-                          // Lưu active playlist và rebuild cached index map
-                          final indexMap = <String, int>{};
-                          for (int i = 0; i < playlistSongs.length; i++) {
-                            indexMap[playlistSongs[i].fileName] = i;
-                          }
-                          setState(() {
-                            _selectedPlaylistName = albumName;
-                            _activePlaylistSongs = playlistSongs;
-                            _cachedPlaylistIndexMap = indexMap;
-                            _cachedFilteredSongs =
-                                null; // Invalidate filter cache
-                          });
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: adaptiveColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: adaptiveColor.withValues(alpha: 0.2),
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (albumName == 'Mắt Nhắm Mắt Mở')
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.asset(
-                                    'assets/pic/mat_nham_mat_mo/mat_nham_mat_mo_trailer.png',
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              else
-                                Icon(
-                                  Icons.album_rounded,
-                                  size: 64,
-                                  color: adaptiveColor.withValues(alpha: 0.8),
-                                ),
-                              const SizedBox(height: 16),
-                              Flexible(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Text(
-                                    albumName,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: adaptiveColor.withValues(alpha: 0.9),
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '$count bài hát',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: adaptiveColor.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ),
-      ],
+    return AlbumGridWidget(
+      albums: _cachedAlbums,
+      albumSongCount: _cachedAlbumSongCount,
+      songs: _songs,
+      onAlbumTap: _onAlbumTap,
     );
   }
 
   Widget _buildPlaylistSongsView() {
-    return Column(
-      children: [
-        _buildTitleBar(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 10, 40, 10),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedPlaylistName = null;
-                  });
-                },
-                icon: Icon(
-                  Icons.arrow_back_rounded,
-                  color: context.adaptive.withValues(alpha: 0.8),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _selectedPlaylistName ?? '',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: context.adaptive.withValues(alpha: 0.9),
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: MainContentWidget(
-            showTitleBar: false,
-            isLoading: _isLoading,
-            loadingError: _loadingError,
-            songs: _currentViewSongs,
-            filteredSongs: _filteredSongs,
-            // Fix: dùng index cục bộ trong playlist đang active,
-            // không phải index toàn cục. Đảm bảo playSongAt() nhận
-            // đúng index trong PlaylistService._playlist.
-            songIndexByFileName: _cachedPlaylistIndexMap,
-            onSearchChanged: _onSearchChanged,
-            searchQuery: _searchQuery,
-            onRefresh: () {
-              // The stream handles real-time updates, but user can still force reload
-              final asyncValue = ref.read(songListProvider);
-              if (asyncValue.hasValue) {
-                _handleSongsUpdate(asyncValue.value!);
-              }
-            },
-          ),
-        ),
-      ],
+    return PlaylistSongsViewWidget(
+      playlistName: _selectedPlaylistName,
+      currentViewSongs: _currentViewSongs,
+      filteredSongs: _filteredSongs,
+      songIndexByFileName: _cachedPlaylistIndexMap,
+      isLoading: _isLoading,
+      loadingError: _loadingError,
+      searchQuery: _searchQuery,
+      onBack: () {
+        setState(() {
+          _selectedPlaylistName = null;
+        });
+      },
+      onSearchChanged: _onSearchChanged,
+      onRefresh: () {
+        final asyncValue = ref.read(songListProvider);
+        if (asyncValue.hasValue) {
+          _handleSongsUpdate(asyncValue.value!);
+        }
+      },
     );
   }
 
   /// U-4 fix: Whether the sidebar is currently visible.
   bool _isSidebarVisible(BuildContext context) {
     return MediaQuery.of(context).size.height > _kMinHeightForSidebar;
+  }
+
+  /// Hiển thị thông báo thân thiện khi tính năng không hỗ trợ platform hiện tại.
+  Widget _buildUnsupportedPlatformMessage(String featureName, String message) {
+    final adaptiveColor = context.adaptive;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.phonelink_off_rounded,
+              size: 80,
+              color: adaptiveColor.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              featureName,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: adaptiveColor.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: adaptiveColor.withValues(alpha: 0.6),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Xử lý khi user chọn một album từ grid.
+  /// Thiết lập playlist, xử lý special case, và cập nhật state.
+  Future<void> _onAlbumTap(String albumName, List<Song> playlistSongs) async {
+    await _playlistService.setPlaylist(playlistSongs);
+    if (albumName == 'Mắt Nhắm Mắt Mở') {
+      final trailerIdx = playlistSongs.indexWhere(
+        (s) => s.fileName.contains('trailer'),
+      );
+      if (trailerIdx != -1) {
+        _playlistService.setPlayMode(PlayMode.playOneStop);
+        _playlistService.playSongAt(trailerIdx);
+      }
+    }
+    // Build cached index map
+    final indexMap = <String, int>{};
+    for (int i = 0; i < playlistSongs.length; i++) {
+      indexMap[playlistSongs[i].fileName] = i;
+    }
+    setState(() {
+      _selectedPlaylistName = albumName;
+      _activePlaylistSongs = playlistSongs;
+      _cachedPlaylistIndexMap = indexMap;
+      _cachedFilteredSongs = null;
+    });
   }
 
   Widget _buildCurrentTab() {
@@ -553,11 +437,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           PerformanceProbe.instance.markSurface('Online Screen');
           return _tabCache.putIfAbsent(TabItem.online, () => const OnlineScreen());
         }
-        // Fallback về Home nếu bằng cách nào đó desktop chọn tab này
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _currentTab = TabItem.home);
-        });
-        return const SizedBox.shrink();
+        // Hiển thị thông báo trên các nền tảng không hỗ trợ
+        return _buildUnsupportedPlatformMessage(
+          'YouTube',
+          AppLocalizations.of(context).androidOnlyFeature,
+        );
       case TabItem.ktv:
         PerformanceProbe.instance.markSurface('KTV Screen');
         return _tabCache.putIfAbsent(TabItem.ktv, () => const KTVScreen());
@@ -819,16 +703,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await manager.importLocalSongs();
       if (!mounted) return;
       snackMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('Đã import nhạc thành công!'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).importSuccess),
+          duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       snackMessenger.showSnackBar(
         SnackBar(
-          content: Text('Lỗi import nhạc: $e'),
+          content: Text(AppLocalizations.of(context).translateWith(
+            'importErrorWithMsg',
+            {'error': e.toString()},
+          )),
           duration: const Duration(seconds: 3),
         ),
       );

@@ -1,31 +1,30 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/service_providers.dart';
 import '../../core/audio/audio_engine_service.dart';
 import 'desktop_title_bar.dart';
-import '../../core/audio/playlist_service.dart';
 import '../../core/performance_probe.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
 import '../painters/visualizer_painters.dart';
 import '../visualizer/visualizer_controller.dart';
 import 'cover_art_image.dart';
 
-class PersonalVisualizerWidget extends StatefulWidget {
+class PersonalVisualizerWidget extends ConsumerStatefulWidget {
   const PersonalVisualizerWidget({super.key});
 
   @override
-  State<PersonalVisualizerWidget> createState() =>
+  ConsumerState<PersonalVisualizerWidget> createState() =>
       _PersonalVisualizerWidgetState();
 }
 
-class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
+class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWidget>
     with TickerProviderStateMixin {
-  final PlaylistService _playlistService = sl<PlaylistService>();
-  final AudioEngineService _engineService = sl<AudioEngineService>();
-  final SettingsManager _settings = sl<SettingsManager>();
+  late final _playlistService = ref.read(playlistServiceProvider);
+  late final _engineService = ref.read(audioEngineServiceProvider);
+  late final _settings = ref.read(settingsManagerProvider);
 
   late final VisualizerController _visualizerController;
   late final AnimationController _rotateController;
@@ -33,8 +32,11 @@ class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
   @override
   void initState() {
     super.initState();
-    _visualizerController = VisualizerController(vsync: this)
-      ..addListener(_syncRotationState);
+    _visualizerController = VisualizerController(
+      vsync: this,
+      audioService: _engineService,
+      settings: _settings,
+    )..addListener(_syncRotationState);
     _rotateController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),

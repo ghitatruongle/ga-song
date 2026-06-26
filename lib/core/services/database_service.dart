@@ -532,29 +532,8 @@ class DatabaseService {
 
   static String? _normalizeText(dynamic value) {
     if (value is! String) return null;
-    String text = value.trim();
-    if (text.isEmpty) return null;
-    return _repairMojibake(text);
-  }
-
-  static String _repairMojibake(String input) {
-    try {
-      final latin1Bytes = latin1.encode(input);
-      final decoded = utf8.decode(latin1Bytes);
-      if (decoded != input) {
-        try {
-          final latin1Bytes2 = latin1.encode(decoded);
-          final doubleDecoded = utf8.decode(latin1Bytes2);
-          if (doubleDecoded != decoded) return doubleDecoded;
-        } catch (e, stack) {
-          debugPrint('Error in database_service: $e\n$stack');
-        }
-        return decoded;
-      }
-    } catch (e, stack) {
-      debugPrint('Error in database_service _repairMojibake: $e\n$stack');
-    }
-    return input;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
   }
 
   void dispose() {

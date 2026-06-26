@@ -50,7 +50,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
     if (query.trim().isEmpty) return;
     // Extract video ID from youtube URL or just load if it's an ID
     // Simplest way is to parse if it's a link:
-    String? videoId = YoutubePlayerController.convertUrlToId(query);
+    final String? videoId = YoutubePlayerController.convertUrlToId(query);
     if (videoId != null) {
       _controller.loadVideoById(videoId: videoId);
     } else {

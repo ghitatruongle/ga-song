@@ -3,11 +3,8 @@ import 'dart:collection';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:isar/isar.dart';
-
-import 'package:ga_song/models/song.dart';
-import 'package:ga_song/models/cover_art_cache.dart';
-import 'service_locator.dart';
+import '../models/song.dart';
+import '../models/cover_art_cache.dart';
 import 'settings_manager.dart';
 import 'platform_capabilities.dart';
 import 'services/database_service.dart';
@@ -36,17 +33,26 @@ int get _maxDominantColorCacheSize =>
     PlatformCapabilities.instance.isAndroid ? 15 : 30;
 
 /// Centralizes cover art existence checks, resized providers, palette cache,
-/// and Isar-backed disk cache for persistence across sessions.
+/// and SQLite-backed disk cache for persistence across sessions.
+///
+/// Dependencies are injected via constructor for testability.
 class CoverArtRepository with WidgetsBindingObserver {
-  	  CoverArtRepository() {
-  	    WidgetsBinding.instance.addObserver(this);
-  	  }
-  
-  	  final Map<String, Future<CoverArtEntry>> _entryFutures =
-  	      <String, Future<CoverArtEntry>>{};
-  	  final Map<String, CoverArtEntry> _entries = <String, CoverArtEntry>{};
-  
-  	  // Use LinkedHashMap for zero-allocation LRU cache
+  CoverArtRepository({
+    DatabaseService? databaseService,
+    SettingsManager? settingsManager,
+  }) : _databaseService = databaseService,
+       _settingsManager = settingsManager {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  final DatabaseService? _databaseService;
+  final SettingsManager? _settingsManager;
+
+  final Map<String, Future<CoverArtEntry>> _entryFutures =
+      <String, Future<CoverArtEntry>>{};
+  final Map<String, CoverArtEntry> _entries = <String, CoverArtEntry>{};
+
+  // Use LinkedHashMap for zero-allocation LRU cache
   	  final LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>> _providerCache =
   	      LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>>();
   	  final LinkedHashMap<String, Future<Color?>> _dominantColorFutures =
@@ -224,37 +230,38 @@ class CoverArtRepository with WidgetsBindingObserver {
     try {
       Uint8List? bytes;
 
-      // 1. Try Isar disk cache first (persisted from a previous session).
+      // 1. Try SQLite disk cache first (persisted from a previous session).
       try {
-        final db = sl<DatabaseService>();
-        final cached = await db.isar.coverArtCaches.getByFileName(fileName);
+        final db = _databaseService;
+        if (db == null) return;
+        final cached = await db.getCoverArtCacheByFileName(fileName);
         if (cached != null) {
           bytes = Uint8List.fromList(cached.bytes);
           // Update LRU access timestamp (fire-and-forget, don't fail the read)
           try {
             cached.lastAccessed = DateTime.now();
-            await db.isar.writeTxn(() => db.isar.coverArtCaches.put(cached));
+            await db.putCoverArtCache(cached);
           } catch (writeError) {
             if (writeError.toString().contains('database is full')) {
               // Evict oldest entries to free space, then retry once
               await _forceEvictDiskCache();
               try {
                 cached.lastAccessed = DateTime.now();
-                await db.isar.writeTxn(() => db.isar.coverArtCaches.put(cached));
+                await db.putCoverArtCache(cached);
               } catch (_) {}
             }
           }
         }
       } catch (e, stack) {
-        debugPrint("CoverArtRepo disk cache error: $e\n$stack");
-        // Isar not ready yet — will fall through to source load
+        debugPrint('CoverArtRepo disk cache error: $e\n$stack');
+        // Database not ready yet — will fall through to source load
       }
 
       // 2. If disk cache missed, load from the original source.
       if (bytes == null) {
         bytes = await _loadCoverBytes(entry);
 
-        // Save to Isar disk cache for future sessions (fire-and-forget).
+        // Save to SQLite disk cache for future sessions (fire-and-forget).
         if (bytes != null) {
           _saveToDiskCache(fileName, bytes);
         }
@@ -298,41 +305,40 @@ class CoverArtRepository with WidgetsBindingObserver {
     return null;
   }
 
-  /// Saves cover bytes to the Isar disk cache, evicting oldest entries first if needed.
+  /// Saves cover bytes to the SQLite disk cache, evicting oldest entries first if needed.
   Future<void> _saveToDiskCache(String fileName, Uint8List bytes) async {
+    final db = _databaseService;
+    if (db == null) return;
     try {
-      final db = sl<DatabaseService>();
-
       // Evict BEFORE saving to ensure there's space.
       await _evictDiskCache();
 
-      final existing = await db.isar.coverArtCaches.getByFileName(fileName);
+      final existing = await db.getCoverArtCacheByFileName(fileName);
 
-      await db.isar.writeTxn(() async {
-        if (existing != null) {
-          existing
-            ..bytes = bytes.toList()
-            ..lastAccessed = DateTime.now();
-          await db.isar.coverArtCaches.put(existing);
-        } else {
-          await db.isar.coverArtCaches.put(CoverArtCache()
-            ..fileName = fileName
-            ..bytes = bytes.toList()
-            ..lastAccessed = DateTime.now());
-        }
-      });
+      if (existing != null) {
+        existing
+          ..bytes = bytes.toList()
+          ..lastAccessed = DateTime.now();
+        await db.putCoverArtCache(existing);
+      } else {
+        await db.putCoverArtCache(CoverArtCache(
+          fileName: fileName,
+          bytes: bytes.toList(),
+          lastAccessed: DateTime.now(),
+        ));
+      }
     } catch (e, stack) {
       // If save failed (e.g. database full), force-evict and retry once.
       if (e.toString().contains('database is full')) {
         await _forceEvictDiskCache();
         try {
-          final db = sl<DatabaseService>();
-          await db.isar.writeTxn(() async {
-            await db.isar.coverArtCaches.put(CoverArtCache()
-              ..fileName = fileName
-              ..bytes = bytes.toList()
-              ..lastAccessed = DateTime.now());
-          });
+          final db = _databaseService;
+          if (db == null) return;
+          await db.putCoverArtCache(CoverArtCache(
+            fileName: fileName,
+            bytes: bytes.toList(),
+            lastAccessed: DateTime.now(),
+          ));
         } catch (retryError, retryStack) {
           debugPrint('Failed to save cover art after eviction: $retryError\n$retryStack');
         }
@@ -344,23 +350,22 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// LRU-evicts oldest disk cache entries if the total exceeds the limit.
   Future<void> _evictDiskCache() async {
+    final db = _databaseService;
+    if (db == null) return;
     try {
       final maxEntries =
           CoverArtCache.maxDiskCacheEntries(PlatformCapabilities.instance.isAndroid);
-      final db = sl<DatabaseService>();
-      final count = await db.isar.coverArtCaches.count();
+      final count = await db.getCoverArtCacheCount();
       if (count <= maxEntries) return;
 
       final toRemove = count - maxEntries;
-      final allEntries = await db.isar.coverArtCaches.where().anyId().findAll();
+      final allEntries = await db.getAllCoverArtCaches();
       allEntries.sort((a, b) => a.lastAccessed.compareTo(b.lastAccessed));
       final oldest = allEntries.take(toRemove).toList();
 
-      await db.isar.writeTxn(() async {
-        for (final entry in oldest) {
-          await db.isar.coverArtCaches.delete(entry.id);
-        }
-      });
+      await db.deleteCoverArtCachesByFileNames(
+        oldest.map((e) => e.fileName).toList(),
+      );
     } catch (e, stack) {
       debugPrint('Failed to evict disk cache: $e\n$stack');
     }
@@ -368,21 +373,20 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// Force-evicts half of the disk cache to free space when database is full.
   Future<void> _forceEvictDiskCache() async {
+    final db = _databaseService;
+    if (db == null) return;
     try {
-      final db = sl<DatabaseService>();
-      final count = await db.isar.coverArtCaches.count();
+      final count = await db.getCoverArtCacheCount();
       if (count == 0) return;
 
       final toRemove = (count / 2).ceil();
-      final allEntries = await db.isar.coverArtCaches.where().anyId().findAll();
+      final allEntries = await db.getAllCoverArtCaches();
       allEntries.sort((a, b) => a.lastAccessed.compareTo(b.lastAccessed));
       final oldest = allEntries.take(toRemove).toList();
 
-      await db.isar.writeTxn(() async {
-        for (final entry in oldest) {
-          await db.isar.coverArtCaches.delete(entry.id);
-        }
-      });
+      await db.deleteCoverArtCachesByFileNames(
+        oldest.map((e) => e.fileName).toList(),
+      );
       debugPrint('Force-evicted $toRemove disk cache entries');
     } catch (e, stack) {
       debugPrint('Failed to force-evict disk cache: $e\n$stack');
@@ -402,13 +406,14 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// Removes a single entry from the disk cache.
   Future<void> _removeFromDiskCache(String fileName) async {
+    final db = _databaseService;
+    if (db == null) return;
     try {
-      final db = sl<DatabaseService>();
-      final cached = await db.isar.coverArtCaches.getByFileName(fileName);
+      final cached = await db.getCoverArtCacheByFileName(fileName);
       if (cached != null) {
-        await db.isar.writeTxn(() => db.isar.coverArtCaches.delete(cached.id));
+        await db.deleteCoverArtCache(fileName);
       }
-    } catch (e, stack) { debugPrint("CoverArtRepo remove disk cache error: $e\n$stack"); }
+    } catch (e, stack) { debugPrint('CoverArtRepo remove disk cache error: $e\n$stack'); }
   }
 
   Future<Color?> resolveDominantColor(
@@ -442,7 +447,7 @@ class CoverArtRepository with WidgetsBindingObserver {
     int paletteHeight,
   ) async {
     // 1. Check persistent cache first — instant return (~0ms)
-    final cachedColor = sl<SettingsManager>().getSongColor(song.fileName);
+    final cachedColor = _settingsManager?.getSongColor(song.fileName);
     if (cachedColor != null) {
       return cachedColor;
     }
@@ -467,7 +472,7 @@ class CoverArtRepository with WidgetsBindingObserver {
       final color = colorScheme.primary;
 
       // 3. Persist to disk so we never compute again
-      await sl<SettingsManager>().saveSongColor(song.fileName, color);
+      await _settingsManager?.saveSongColor(song.fileName, color);
       return color;
     } catch (e, stack) {
       debugPrint('Failed to compute dominant color (image might not exist): $e\n$stack');

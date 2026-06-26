@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/lyric_view.dart';
-import '../../core/service_locator.dart';
-import '../../core/audio/playlist_service.dart';
-import '../../core/settings_manager.dart';
+import '../../providers/service_providers.dart';
 import '../widgets/cover_art_image.dart';
 
-class KTVScreen extends StatelessWidget {
+class KTVScreen extends ConsumerWidget {
   const KTVScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playlistService = ref.read(playlistServiceProvider);
     return ValueListenableBuilder<int>(
-      valueListenable: sl<PlaylistService>().currentIndexNotifier,
+      valueListenable: playlistService.currentIndexNotifier,
       builder: (context, index, _) {
-        final song = sl<PlaylistService>().currentSong;
+        final song = playlistService.currentSong;
         if (song == null) {
           return const Center(
             child: Text(
@@ -67,7 +67,7 @@ class KTVScreen extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
                   tooltip: 'Thoát phòng nhạc',
                   onPressed: () {
-                    sl<SettingsManager>().currentTabIndexNotifier.value = 0;
+                    ref.read(settingsManagerProvider).currentTabIndexNotifier.value = 0;
                   },
                 ),
               ),

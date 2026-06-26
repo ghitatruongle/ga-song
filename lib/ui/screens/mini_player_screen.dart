@@ -3,12 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
-import '../../core/service_locator.dart';
+import '../../providers/service_providers.dart';
 import '../../core/settings_manager.dart';
+import '../../core/view_models/player_view_model.dart';
 import '../../core/theme_utils.dart';
 import '../../core/utils/time_utils.dart';
-import '../../core/view_models/player_view_model.dart';
-import '../../core/pip_service.dart';
 import '../../models/song.dart';
 import '../../providers/lyric_provider.dart';
 import '../widgets/cover_art_image.dart';
@@ -19,18 +18,18 @@ bool get _isDesktopPlatform =>
     defaultTargetPlatform != TargetPlatform.android &&
     defaultTargetPlatform != TargetPlatform.iOS;
 
-class MiniPlayerScreen extends StatelessWidget {
+class MiniPlayerScreen extends ConsumerWidget {
   const MiniPlayerScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (_isDesktopPlatform) {
       return const _DesktopMiniPlayer();
     }
-    // On Android in PiP mode, use a compact layout that fits the tiny window
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final pipService = ref.read(pipServiceProvider);
       return ValueListenableBuilder<bool>(
-        valueListenable: sl<PipService>().isInPipNotifier,
+        valueListenable: pipService.isInPipNotifier,
         builder: (context, isInPip, _) {
           if (isInPip) return const _PipCompactPlayer();
           return const _MobileMiniPlayer();
@@ -46,12 +45,12 @@ class MiniPlayerScreen extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Restores the window from mini player mode to normal size.
-Future<void> _restoreFromMiniPlayer(BuildContext context) async {
+Future<void> _restoreFromMiniPlayer(BuildContext context, SettingsManager settings) async {
   final screenSize = MediaQuery.sizeOf(context);
-  sl<SettingsManager>().setIsMiniPlayer(false);
+  settings.setIsMiniPlayer(false);
   await windowManager.setMinimumSize(const Size(800, 600));
   await windowManager.setMaximumSize(const Size(32000, 32000));
-  final savedSize = sl<SettingsManager>().savedWindowSize;
+  final savedSize = settings.savedWindowSize;
   final targetSize = savedSize ?? const Size(1000, 700);
   final maxWidth = (screenSize.width * 0.9).clamp(800.0, 32000.0);
   final maxHeight = (screenSize.height * 0.9).clamp(600.0, 32000.0);
@@ -60,26 +59,28 @@ Future<void> _restoreFromMiniPlayer(BuildContext context) async {
     targetSize.height.clamp(600.0, maxHeight),
   );
   await windowManager.setSize(clampedSize);
-  if (sl<SettingsManager>().savedWindowMaximized) {
+  if (settings.savedWindowMaximized) {
     await windowManager.maximize();
   }
-  if (sl<SettingsManager>().savedWindowFullScreen) {
+  if (settings.savedWindowFullScreen) {
     await windowManager.setFullScreen(true);
   }
   await windowManager.setAlwaysOnTop(false);
 }
 
-class _DesktopMiniPlayer extends StatelessWidget {
+class _DesktopMiniPlayer extends ConsumerWidget {
   const _DesktopMiniPlayer();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.read(playerViewModelProvider);
+    final settings = ref.read(settingsManagerProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ListenableBuilder(
-        listenable: sl<PlayerViewModel>(),
+        listenable: viewModel,
         builder: (context, _) {
-          final viewModel = sl<PlayerViewModel>();
+          // viewModel captured from outer scope
           final song = viewModel.currentSong;
 
           return Stack(
@@ -259,7 +260,7 @@ class _DesktopMiniPlayer extends StatelessWidget {
                               ),
                               color: textColor.withValues(alpha: 0.6),
                               tooltip: 'Đóng mini player',
-                              onPressed: () => _restoreFromMiniPlayer(context),
+                              onPressed: () => _restoreFromMiniPlayer(context, settings),
                             ),
                             const SizedBox(width: 4),
                             IconButton(
@@ -269,7 +270,7 @@ class _DesktopMiniPlayer extends StatelessWidget {
                               ),
                               color: textColor.withValues(alpha: 0.6),
                               tooltip: 'Trở lại bình thường',
-                              onPressed: () => _restoreFromMiniPlayer(context),
+                              onPressed: () => _restoreFromMiniPlayer(context, settings),
                             ),
                           ],
                         ),
@@ -290,17 +291,18 @@ class _DesktopMiniPlayer extends StatelessWidget {
 // Mobile: full-screen immersive mini player
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _MobileMiniPlayer extends StatelessWidget {
+class _MobileMiniPlayer extends ConsumerWidget {
   const _MobileMiniPlayer();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.read(playerViewModelProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ListenableBuilder(
-        listenable: sl<PlayerViewModel>(),
+        listenable: viewModel,
         builder: (context, _) {
-          final viewModel = sl<PlayerViewModel>();
+          // viewModel captured from outer scope
           final song = viewModel.currentSong;
 
           return Stack(
@@ -371,7 +373,7 @@ class _MobileMiniPlayer extends StatelessWidget {
   }
 }
 
-class _MobileMiniPlayerContent extends StatelessWidget {
+class _MobileMiniPlayerContent extends ConsumerWidget {
   const _MobileMiniPlayerContent({
     required this.song,
     required this.viewModel,
@@ -381,7 +383,7 @@ class _MobileMiniPlayerContent extends StatelessWidget {
   final PlayerViewModel viewModel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textColor = context.adaptive;
 
     return Column(
@@ -396,7 +398,7 @@ class _MobileMiniPlayerContent extends StatelessWidget {
                     color: textColor, size: 32),
                 tooltip: 'Trở lại bình thường',
                 onPressed: () {
-                  sl<SettingsManager>().setIsMiniPlayer(false);
+                  ref.read(settingsManagerProvider).setIsMiniPlayer(false);
                 },
               ),
               const Spacer(),
@@ -609,17 +611,17 @@ class _MobileMiniPlayerContent extends StatelessWidget {
 // Android PiP: ultra-compact layout (cover art + play/pause only)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PipCompactPlayer extends StatelessWidget {
+class _PipCompactPlayer extends ConsumerWidget {
   const _PipCompactPlayer();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.read(playerViewModelProvider);
     return Scaffold(
       backgroundColor: Colors.black,
       body: ListenableBuilder(
-        listenable: sl<PlayerViewModel>(),
+        listenable: viewModel,
         builder: (context, _) {
-          final viewModel = sl<PlayerViewModel>();
           final song = viewModel.currentSong;
 
           return Stack(

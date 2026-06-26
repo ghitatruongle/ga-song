@@ -23,7 +23,7 @@ void main() {
       expect(lines[0].text, 'First line');
       expect(lines[0].startTime, const Duration(seconds: 10));
       expect(lines[1].text, 'Second line');
-      expect(lines[1].startTime, Duration(milliseconds: 20500));
+      expect(lines[1].startTime, const Duration(milliseconds: 20500));
       expect(lines[2].text, 'Third line');
       expect(lines[2].startTime, const Duration(seconds: 30));
     });
@@ -50,7 +50,7 @@ void main() {
 
       expect(lines.length, 1);
       expect(lines[0].text, 'Test line');
-      expect(lines[0].startTime, Duration(minutes: 1, seconds: 23, milliseconds: 456));
+      expect(lines[0].startTime, const Duration(minutes: 1, seconds: 23, milliseconds: 456));
     });
   });
 

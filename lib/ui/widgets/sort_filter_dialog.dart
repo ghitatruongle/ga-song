@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
 
 class SortFilterDialog {
   static void show(BuildContext context) {
@@ -13,15 +13,15 @@ class SortFilterDialog {
   }
 }
 
-class _SortFilterDialog extends StatefulWidget {
+class _SortFilterDialog extends ConsumerStatefulWidget {
   const _SortFilterDialog();
 
   @override
-  State<_SortFilterDialog> createState() => _SortFilterDialogState();
+  ConsumerState<_SortFilterDialog> createState() => _SortFilterDialogState();
 }
 
-class _SortFilterDialogState extends State<_SortFilterDialog> {
-  final _settings = sl<SettingsManager>();
+class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
+  late final _settings = ref.read(settingsManagerProvider);
 
   static const _sortOptions = [
     {'icon': Icons.sort_by_alpha, 'label': 'Tên bài hát', 'value': 0},

@@ -40,7 +40,6 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
-target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::KEYBINDER)
 
 pkg_check_modules(KEYBINDER IMPORTED_TARGET keybinder-3.0)
 if(KEYBINDER_FOUND)

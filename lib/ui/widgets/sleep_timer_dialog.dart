@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/service_locator.dart';
-import '../../core/audio/playlist_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
 
 class SleepTimerDialog {
   static void show(BuildContext context) {
@@ -12,15 +12,15 @@ class SleepTimerDialog {
   }
 }
 
-class _SleepTimerDialog extends StatefulWidget {
+class _SleepTimerDialog extends ConsumerStatefulWidget {
   const _SleepTimerDialog();
 
   @override
-  State<_SleepTimerDialog> createState() => _SleepTimerDialogState();
+  ConsumerState<_SleepTimerDialog> createState() => _SleepTimerDialogState();
 }
 
-class _SleepTimerDialogState extends State<_SleepTimerDialog> {
-  final _playlistService = sl<PlaylistService>();
+class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
+  late final _playlistService = ref.read(playlistServiceProvider);
   int _selectedMinutes = 30;
 
   static const _presetMinutes = [5, 10, 15, 30, 45, 60, 90, 120];
