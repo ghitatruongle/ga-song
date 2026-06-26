@@ -1,34 +1,30 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/service_providers.dart';
 import '../../core/audio/audio_engine_service.dart';
-import '../../core/audio/playlist_service.dart';
+import 'desktop_title_bar.dart';
 import '../../core/performance_probe.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
 import '../painters/visualizer_painters.dart';
 import '../visualizer/visualizer_controller.dart';
 import 'cover_art_image.dart';
 
-import 'window_caption_button.dart';
-
-class PersonalVisualizerWidget extends StatefulWidget {
+class PersonalVisualizerWidget extends ConsumerStatefulWidget {
   const PersonalVisualizerWidget({super.key});
 
   @override
-  State<PersonalVisualizerWidget> createState() =>
+  ConsumerState<PersonalVisualizerWidget> createState() =>
       _PersonalVisualizerWidgetState();
 }
 
-class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
+class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWidget>
     with TickerProviderStateMixin {
-  final PlaylistService _playlistService = sl<PlaylistService>();
-  final AudioEngineService _engineService = sl<AudioEngineService>();
-  final SettingsManager _settings = sl<SettingsManager>();
+  late final _playlistService = ref.read(playlistServiceProvider);
+  late final _engineService = ref.read(audioEngineServiceProvider);
+  late final _settings = ref.read(settingsManagerProvider);
 
   late final VisualizerController _visualizerController;
   late final AnimationController _rotateController;
@@ -36,8 +32,11 @@ class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
   @override
   void initState() {
     super.initState();
-    _visualizerController = VisualizerController(vsync: this)
-      ..addListener(_syncRotationState);
+    _visualizerController = VisualizerController(
+      vsync: this,
+      audioService: _engineService,
+      settings: _settings,
+    )..addListener(_syncRotationState);
     _rotateController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
@@ -225,44 +224,8 @@ class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
     );
   }
 
-  Widget _buildTitleBar(Color textColor) {
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-      return const SizedBox(height: 50);
-    }
-    return DragToMoveArea(
-      child: SizedBox(
-        height: 50,
-        child: Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              WindowCaptionButton.minimize(
-                onPressed: () async => windowManager.minimize(),
-                iconNormal: Icon(Icons.remove, color: textColor, size: 20),
-              ),
-              const SizedBox(width: 8),
-              WindowCaptionButton.maximize(
-                onPressed: () async {
-                  if (await windowManager.isMaximized()) {
-                    await windowManager.unmaximize();
-                  } else {
-                    await windowManager.maximize();
-                  }
-                },
-                iconNormal: Icon(Icons.crop_square, color: textColor, size: 18),
-              ),
-              const SizedBox(width: 8),
-              WindowCaptionButton.close(
-                onPressed: () async => windowManager.close(),
-                iconNormal: Icon(Icons.close, color: textColor, size: 20),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Q-3 fix: Use shared DesktopTitleBar widget
+  Widget _buildTitleBar(Color textColor) => DesktopTitleBar(iconColor: textColor);
 
   Widget _buildAlbumArtOverlay(BuildContext context) {
     return ValueListenableBuilder<int>(
@@ -319,7 +282,7 @@ class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: CoverArtImage(
-                  fileName: song.fileName,
+                  song: song,
                   cacheWidth: imageSize.round() * 2,
                   cacheHeight: imageSize.round() * 2,
                   fallbackBuilder: (context) => DecoratedBox(
@@ -449,159 +412,152 @@ class _PersonalVisualizerWidgetState extends State<PersonalVisualizerWidget>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: textColor.withValues(alpha: 0.1)),
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              'Style: ',
-              style: TextStyle(
-                color: textColor.withValues(alpha: 0.8),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
+      // U-7 fix: Use Wrap instead of FittedBox+Row so buttons wrap on narrow screens
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: <Widget>[
+          Text(
+            'Style: ',
+            style: TextStyle(
+              color: textColor.withValues(alpha: 0.8),
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
             ),
-            const SizedBox(width: 8),
-            ValueListenableBuilder<int>(
-              valueListenable: _settings.visualizerShapeNotifier,
-              builder: (context, shape, _) {
-                return ToggleButtons(
-                  borderRadius: BorderRadius.circular(8),
-                  fillColor: Theme.of(
-                    context,
-                  ).primaryColor.withValues(alpha: 0.3),
-                  selectedColor: Colors.white,
-                  color: textColor.withValues(alpha: 0.6),
-                  borderColor: Colors.transparent,
-                  selectedBorderColor: Colors.transparent,
-                  constraints: const BoxConstraints(
-                    minHeight: 36,
-                    minWidth: 44,
-                  ),
-                  isSelected: <bool>[
-                    shape == 0,
-                    shape == 1,
-                    shape == 2,
-                    shape == 3,
-                    shape == 4,
-                    shape == 5,
-                    shape == 6,
-                  ],
-                  onPressed: _settings.setVisualizerShape,
-                  children: const <Widget>[
-                    Tooltip(
-                      message: 'Vòng đĩa xoay',
-                      child: Icon(Icons.data_usage_rounded, size: 18),
-                    ),
-                    Tooltip(
-                      message: 'Cột Neon',
-                      child: Icon(Icons.bar_chart_rounded, size: 18),
-                    ),
-                    Tooltip(
-                      message: 'Sóng Đại Dương',
-                      child: Icon(Icons.water_rounded, size: 18),
-                    ),
-                    Tooltip(
-                      message: 'Đường hầm Phổ',
-                      child: Icon(Icons.blur_circular_rounded, size: 18),
-                    ),
-                    Tooltip(
-                      message: 'Bầu trời Sao',
-                      child: Icon(Icons.auto_awesome_rounded, size: 18),
-                    ),
-                    Tooltip(
-                      message: 'Máy hiện sóng',
-                      child: Icon(Icons.show_chart, size: 18),
-                    ),
-                    Tooltip(
-                      message: 'Tia Sáng',
-                      child: Icon(Icons.flare, size: 18),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(width: 20),
-            Container(
-              width: 1,
-              height: 30,
-              color: textColor.withValues(alpha: 0.15),
-            ),
-            const SizedBox(width: 16),
-            Icon(Icons.tune, color: textColor.withValues(alpha: 0.6), size: 16),
-            const SizedBox(width: 4),
-            SizedBox(
-              width: 100,
-              child: ValueListenableBuilder<double>(
-                valueListenable: _settings.sensitivityNotifier,
-                builder: (context, value, _) => Slider(
-                  value: value,
-                  min: 0.3,
-                  max: 2.5,
-                  divisions: 22,
-                  label: '${(value * 100).round()}%',
-                  onChanged: _settings.setSensitivity,
+          ),
+          ValueListenableBuilder<int>(
+            valueListenable: _settings.visualizerShapeNotifier,
+            builder: (context, shape, _) {
+              return ToggleButtons(
+                borderRadius: BorderRadius.circular(8),
+                fillColor: Theme.of(
+                  context,
+                ).primaryColor.withValues(alpha: 0.3),
+                selectedColor: Colors.white,
+                color: textColor.withValues(alpha: 0.6),
+                borderColor: Colors.transparent,
+                selectedBorderColor: Colors.transparent,
+                constraints: const BoxConstraints(
+                  minHeight: 36,
+                  minWidth: 40,
                 ),
+                isSelected: <bool>[
+                  shape == 0,
+                  shape == 1,
+                  shape == 2,
+                  shape == 3,
+                  shape == 4,
+                  shape == 5,
+                  shape == 6,
+                ],
+                onPressed: _settings.setVisualizerShape,
+                children: const <Widget>[
+                  Tooltip(
+                    message: 'Vòng đĩa xoay',
+                    child: Icon(Icons.data_usage_rounded, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'Cột Neon',
+                    child: Icon(Icons.bar_chart_rounded, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'Sóng Đại Dương',
+                    child: Icon(Icons.water_rounded, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'Đường hầm Phổ',
+                    child: Icon(Icons.blur_circular_rounded, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'Bầu trời Sao',
+                    child: Icon(Icons.auto_awesome_rounded, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'Máy hiện sóng',
+                    child: Icon(Icons.show_chart, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'Tia Sáng',
+                    child: Icon(Icons.flare, size: 18),
+                  ),
+                ],
+              );
+            },
+          ),
+          Container(
+            width: 1,
+            height: 30,
+            color: textColor.withValues(alpha: 0.15),
+          ),
+          Icon(Icons.tune, color: textColor.withValues(alpha: 0.6), size: 16),
+          SizedBox(
+            width: 100,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _settings.sensitivityNotifier,
+              builder: (context, value, _) => Slider(
+                value: value,
+                min: 0.3,
+                max: 2.5,
+                divisions: 22,
+                label: '${(value * 100).round()}%',
+                onChanged: _settings.setSensitivity,
               ),
             ),
-            const SizedBox(width: 20),
-            Container(
-              width: 1,
-              height: 30,
-              color: textColor.withValues(alpha: 0.15),
-            ),
-            const SizedBox(width: 16),
-            ValueListenableBuilder<AudioEngineState>(
-              valueListenable: _engineService.engineState,
-              builder: (context, playerState, _) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    _miniControlButton(
-                      icon: Icons.skip_previous_rounded,
-                      onPressed: _playlistService.previous,
-                      textColor: textColor,
+          ),
+          Container(
+            width: 1,
+            height: 30,
+            color: textColor.withValues(alpha: 0.15),
+          ),
+          ValueListenableBuilder<AudioEngineState>(
+            valueListenable: _engineService.engineState,
+            builder: (context, playerState, _) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _miniControlButton(
+                    icon: Icons.skip_previous_rounded,
+                    onPressed: _playlistService.previous,
+                    textColor: textColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: textColor,
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: textColor,
-                        shape: BoxShape.circle,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      iconSize: 20,
+                      icon: Icon(
+                        playerState == AudioEngineState.playing
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: context.isDark ? Colors.black : Colors.white,
                       ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        iconSize: 20,
-                        icon: Icon(
-                          playerState == AudioEngineState.playing
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          color: context.isDark ? Colors.black : Colors.white,
-                        ),
-                        onPressed: () {
-                          if (playerState == AudioEngineState.playing) {
-                            _engineService.pause();
-                          } else {
-                            _playlistService.play();
-                          }
-                        },
-                      ),
+                      onPressed: () {
+                        if (playerState == AudioEngineState.playing) {
+                          _engineService.pause();
+                        } else {
+                          _playlistService.play();
+                        }
+                      },
                     ),
-                    const SizedBox(width: 8),
-                    _miniControlButton(
-                      icon: Icons.skip_next_rounded,
-                      onPressed: _playlistService.next,
-                      textColor: textColor,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+                  ),
+                  const SizedBox(width: 8),
+                  _miniControlButton(
+                    icon: Icons.skip_next_rounded,
+                    onPressed: _playlistService.next,
+                    textColor: textColor,
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

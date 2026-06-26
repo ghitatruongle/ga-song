@@ -1,17 +1,66 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import '../performance_probe.dart';
 import '../platform_capabilities.dart';
 
 enum AudioEngineState { idle, loading, playing, paused, stopped, error }
 
-/// Handles low-level audio playback, caching, and SoLoud interactions.
+/// Internal cache entry with LRU access tracking.
+class _CacheEntry {
+  _CacheEntry(this.source, this.accessOrder);
+  final AudioSource source;
+  int accessOrder;
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/// Number of crossfade volume-stepping iterations.
+const int _kCrossfadeSteps = 20;
+
+/// Crossfade curve types for volume interpolation.
+enum CrossfadeCurve {
+  /// Linear interpolation (equal power)
+  linear,
+  
+  /// Exponential curve (faster start, slower end)
+  exponential,
+  
+  /// S-curve (smooth start and end)
+  sCurve,
+}
+
+/// Maximum diff (ms) before positionNotifier fires an update.
+/// Windows: 50ms tolerance; other platforms: 80ms.
+const int _kPositionEpsilonDesktop = 50;
+const int _kPositionEpsilonMobile = 80;
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
+/// Handles low-level audio playback, source caching, and SoLoud interactions.
+///
+/// This service manages:
+/// - Audio source loading and LRU caching with platform-aware limits
+/// - Playback controls (play, pause, resume, stop, seek)
+/// - Volume control with normalization gain support
+/// - Crossfade between tracks
+/// - Position tracking with adaptive timer intervals
+///
+/// The LRU cache evicts least-recently-used sources when the cache exceeds
+/// the platform limit (50 on desktop, 20 on Android).
 class AudioEngineService {
   final _soloud = SoLoud.instance;
 
-  final Map<String, AudioSource> _sourceCache = {};
+  // ─── LRU Cache ───────────────────────────────────────────────────────────
+  final Map<String, _CacheEntry> _sourceCache = {};
   final Map<String, Future<AudioSource?>> _sourceLoadFutures = {};
+  
+  /// Tracks last-access timestamps for LRU eviction.
+  int _cacheAccessCounter = 0;
+  int _totalCacheHits = 0;
+  int _totalCacheMisses = 0;
 
   SoundHandle? _currentHandle;
   SoundHandle? _crossfadeHandle;
@@ -72,8 +121,16 @@ class AudioEngineService {
 
     try {
       final pos = _soloud.getPosition(handle);
-      positionNotifier.value = pos;
-    } catch (_) {}
+      // P2: Epsilon check — chỉ notify khi delta > threshold
+      // Giảm ~50% rebuild cho position listeners
+      final epsilon = PlatformCapabilities.instance.isWindows
+          ? _kPositionEpsilonDesktop
+          : _kPositionEpsilonMobile;
+      final delta = (pos.inMilliseconds - positionNotifier.value.inMilliseconds).abs();
+      if (delta > epsilon) {
+        positionNotifier.value = pos;
+      }
+    } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
   }
 
   // ─── Source Management & Caching ───────────────────────────────────────────
@@ -81,20 +138,44 @@ class AudioEngineService {
   Future<AudioSource?> ensureSource(String assetPath) {
     final cached = _sourceCache[assetPath];
     if (cached != null) {
-      return SynchronousFuture<AudioSource?>(cached);
+      _totalCacheHits++;
+      // Update LRU access order
+      cached.accessOrder = ++_cacheAccessCounter;
+      return SynchronousFuture<AudioSource?>(cached.source);
     }
 
+    _totalCacheMisses++;
     return _sourceLoadFutures.putIfAbsent(assetPath, () async {
       try {
-        final bytes = await rootBundle.load(assetPath);
+        final Uint8List data;
+        if (assetPath.startsWith('assets/')) {
+          // Load asset bytes on main thread (required by rootBundle)
+          final bytes = await rootBundle.load(assetPath);
+          data = bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
+        } else {
+          // Load local file bytes
+          final file = File(assetPath);
+          if (!await file.exists()) {
+            throw Exception('Local file not found at $assetPath');
+          }
+          data = await file.readAsBytes();
+        }
+        
+        // Decode audio via SoLoud (native C++ — runs off main thread internally)
         final source = await _soloud.loadMem(
           assetPath,
-          bytes.buffer.asUint8List(),
+          data,
         );
-        _sourceCache[assetPath] = source;
+        
+        // Enforce LRU cache max size
+        _evictIfNeeded();
+        
+        _sourceCache[assetPath] = _CacheEntry(source, ++_cacheAccessCounter);
+        // Track cache size for performance profiling
+        PerformanceProbe.instance.recordCacheSize(_sourceCache.length);
         return source;
-      } catch (e) {
-        debugPrint('Preload error at $assetPath: $e');
+      } catch (e, stack) {
+        debugPrint('Source load error at $assetPath: $e\n$stack');
         return null;
       } finally {
         _sourceLoadFutures.remove(assetPath);
@@ -102,7 +183,31 @@ class AudioEngineService {
     });
   }
 
+  /// Evict least-recently-used entries when cache exceeds the max limit.
+  void _evictIfNeeded() {
+    final maxEntries = PlatformCapabilities.instance.maxAudioSourceCacheEntries;
+    if (_sourceCache.length <= maxEntries) return;
+    
+    // Sort by access order (oldest first) and remove excess
+    final entries = _sourceCache.entries.toList()
+      ..sort((a, b) => a.value.accessOrder.compareTo(b.value.accessOrder));
+    
+    final toRemove = entries.take(_sourceCache.length - maxEntries);
+    for (final entry in toRemove) {
+      final removed = _sourceCache.remove(entry.key);
+      if (removed != null) {
+        PerformanceProbe.instance.recordEviction();
+        try {
+          _soloud.disposeSource(removed.source);
+        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      }
+    }
+  }
+
   Future<void> preload(String assetPath) async {
+    // Defer to next microtask to avoid blocking UI frames during batch preloads.
+    await Future<void>.delayed(Duration.zero);
+    PerformanceProbe.instance.recordPreload();
     await ensureSource(assetPath);
   }
 
@@ -111,11 +216,12 @@ class AudioEngineService {
         .where((path) => !keepAssetPaths.contains(path))
         .toList();
     for (final path in toRemove) {
-      final source = _sourceCache.remove(path);
-      if (source == null) continue;
+      final entry = _sourceCache.remove(path);
+      if (entry == null) continue;
+      PerformanceProbe.instance.recordEviction();
       try {
-        await _soloud.disposeSource(source);
-      } catch (_) {}
+        await _soloud.disposeSource(entry.source);
+      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
     }
   }
 
@@ -169,8 +275,8 @@ class AudioEngineService {
           }
         }
       });
-    } catch (e) {
-      debugPrint('Play error: $e');
+    } catch (e, stack) {
+      debugPrint('Play error: $e\n$stack');
       engineState.value = AudioEngineState.error;
     } finally {
       _isPlayingNext = false;
@@ -187,14 +293,14 @@ class AudioEngineService {
         if (_soloud.getPause(handle)) {
           _soloud.setPause(handle, false);
         }
-      } catch (_) {}
+      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
     }
     if (crossHandle != null) {
       try {
         if (_soloud.getPause(crossHandle)) {
           _soloud.setPause(crossHandle, false);
         }
-      } catch (_) {}
+      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
     }
     if (hadAnyHandle) {
       engineState.value = AudioEngineState.playing;
@@ -207,13 +313,13 @@ class AudioEngineService {
     if (handle != null) {
       try {
         _soloud.setPause(handle, true);
-      } catch (_) {}
+      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
     }
     final crossHandle = _crossfadeHandle;
     if (crossHandle != null) {
       try {
         _soloud.setPause(crossHandle, true);
-      } catch (_) {}
+      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
     }
     engineState.value = AudioEngineState.paused;
     _pausePositionTimer();
@@ -232,7 +338,7 @@ class AudioEngineService {
     try {
       _soloud.seek(handle, position);
       positionNotifier.value = position;
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
   }
 
   // ─── Volume & Crossfade ────────────────────────────────────────────────────
@@ -253,7 +359,7 @@ class AudioEngineService {
       if (_currentHandle != null) {
         _soloud.setVolume(_currentHandle!, _volume * _normalizationGain);
       }
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
   }
 
   Timer? _crossfadeTimer;
@@ -262,6 +368,7 @@ class AudioEngineService {
     String nextAssetPath,
     double crossfadeDuration, {
     double? nextNormalizationGain,
+    CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {
     if (_isCrossfading) return;
     if (crossfadeDuration <= 0) {
@@ -270,9 +377,8 @@ class AudioEngineService {
     }
 
     _isCrossfading = true;
-    const fadeSteps = 20;
     final stepDuration = Duration(
-      milliseconds: (crossfadeDuration * 1000 / fadeSteps).round(),
+      milliseconds: (crossfadeDuration * 1000 / _kCrossfadeSteps).round(),
     );
     final targetVolume = _volume * (nextNormalizationGain ?? 1.0);
     final currentFullVolume = _volume * _normalizationGain;
@@ -285,8 +391,6 @@ class AudioEngineService {
       }
 
       _crossfadeHandle = _soloud.play(nextSource, volume: 0.0);
-      final fadeOutStep = currentFullVolume / fadeSteps;
-      final fadeInStep = targetVolume / fadeSteps;
 
       // Use a Completer so the caller can await crossfade completion
       final completer = Completer<void>();
@@ -306,21 +410,31 @@ class AudioEngineService {
 
         currentStep++;
         try {
+          // Calculate progress (0.0 → 1.0)
+          final progress = currentStep / _kCrossfadeSteps;
+          
+          // Apply curve transformation
+          final curvedProgress = _applyCrossfadeCurve(progress, curve);
+          
           if (_currentHandle != null) {
+            // Fade out current song
+            final fadeOutVolume = currentFullVolume * (1.0 - curvedProgress);
             _soloud.setVolume(
               _currentHandle!,
-              (currentFullVolume - (fadeOutStep * currentStep)).clamp(0.0, 1.0),
+              fadeOutVolume.clamp(0.0, 1.0),
             );
           }
           if (_crossfadeHandle != null) {
+            // Fade in next song
+            final fadeInVolume = targetVolume * curvedProgress;
             _soloud.setVolume(
               _crossfadeHandle!,
-              (fadeInStep * currentStep).clamp(0.0, 1.0),
+              fadeInVolume.clamp(0.0, 1.0),
             );
           }
-        } catch (_) {}
+        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
 
-        if (currentStep >= fadeSteps) {
+        if (currentStep >= _kCrossfadeSteps) {
           timer.cancel();
           _crossfadeTimer = null;
           if (!completer.isCompleted) completer.complete();
@@ -352,8 +466,8 @@ class AudioEngineService {
           }
         });
       }
-    } catch (e) {
-      debugPrint('Crossfade error: $e');
+    } catch (e, stack) {
+      debugPrint('Crossfade error: $e\n$stack');
     } finally {
       _isCrossfading = false;
       _crossfadeHandle = null;
@@ -382,7 +496,7 @@ class AudioEngineService {
       if (handle != null) {
         try {
           _soloud.stop(handle);
-        } catch (_) {}
+        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
       }
       
       final crossHandle = _crossfadeHandle;
@@ -393,7 +507,7 @@ class AudioEngineService {
       if (crossHandle != null) {
         try {
           _soloud.stop(crossHandle);
-        } catch (_) {}
+        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
       }
     } finally {
       _cleanupLock!.complete();
@@ -401,14 +515,51 @@ class AudioEngineService {
   }
 
   Future<void> _disposeAllCached() async {
-    for (final source in _sourceCache.values) {
+    for (final entry in _sourceCache.values) {
       try {
-        await _soloud.disposeSource(source);
-      } catch (_) {}
+        await _soloud.disposeSource(entry.source);
+      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
     }
     _sourceCache.clear();
     _sourceLoadFutures.clear();
   }
+
+  // ─── Crossfade Curve ──────────────────────────────────────────────────────
+
+  /// Apply crossfade curve transformation to progress value.
+  ///
+  /// Input: progress (0.0 → 1.0, linear)
+  /// Output: curved value (0.0 → 1.0)
+  double _applyCrossfadeCurve(double progress, CrossfadeCurve curve) {
+    switch (curve) {
+      case CrossfadeCurve.linear:
+        return progress;
+      
+      case CrossfadeCurve.exponential:
+        // Exponential: faster start, slower end
+        // Uses x² curve for smoother transition
+        return progress * progress;
+      
+      case CrossfadeCurve.sCurve:
+        // S-curve: smooth start and end
+        // Uses smoothstep function: 3x² - 2x³
+        return progress * progress * (3.0 - 2.0 * progress);
+    }
+  }
+
+  // ─── Diagnostics ───────────────────────────────────────────────────────────
+  
+  /// Returns cache performance metrics for debugging/profiling.
+  Map<String, dynamic> get cacheDiagnostics => {
+    'cacheSize': _sourceCache.length,
+    'maxCacheSize': PlatformCapabilities.instance.maxAudioSourceCacheEntries,
+    'hits': _totalCacheHits,
+    'misses': _totalCacheMisses,
+    'hitRate': _totalCacheHits + _totalCacheMisses > 0
+        ? (_totalCacheHits / (_totalCacheHits + _totalCacheMisses) * 100).toStringAsFixed(1)
+        : 'N/A',
+    'loadFutures': _sourceLoadFutures.length,
+  };
 
   Future<void> dispose() async {
     _isDisposed = true;

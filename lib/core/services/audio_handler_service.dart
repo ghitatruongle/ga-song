@@ -110,20 +110,36 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
     Uri? artUri;
     try {
-      final fileName = song.fileName.replaceAll('.mp3', '.png');
-      final assetPath = 'assets/pic/$fileName';
-      
+      final String assetPath;
+      if (song.isBuiltIn) {
+        assetPath = song.sourcePath
+            .replaceFirst('assets/song/', 'assets/pic/')
+            .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
+      } else {
+        assetPath = '${song.sourcePath}.png';
+      }
+
+      final fileName = song.fileName.replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/$fileName');
       
-      if (!tempFile.existsSync()) {
-        final data = await rootBundle.load(assetPath);
-        await tempFile.writeAsBytes(
-          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-          flush: true,
-        );
+      if (!tempFile.existsSync() || tempFile.lengthSync() == 0) {
+        if (song.isBuiltIn) {
+          final data = await rootBundle.load(assetPath);
+          await tempFile.writeAsBytes(
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+            flush: true,
+          );
+        } else {
+          final imageFile = File(assetPath);
+          if (await imageFile.exists()) {
+            await imageFile.copy(tempFile.path);
+          }
+        }
       }
-      artUri = Uri.file(tempFile.path);
+      if (tempFile.existsSync()) {
+        artUri = Uri.file(tempFile.path);
+      }
     } catch (e) {
       debugPrint('Failed to extract audio_service thumbnail: $e');
     }
@@ -147,10 +163,12 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     final state = _engineService.engineState.value;
     if (state == AudioEngineState.paused) {
       await _engineService.resume();
-    } else if (_playlistService.currentSong != null) {
-      await _engineService.resume();
     } else {
-      _playlistService.play();
+      // For any other state (idle, stopped, loading, error),
+      // delegate to PlaylistService which handles all cases correctly.
+      // This fixes Bug #9: resume() when engine is stopped/idle does nothing
+      // because there is no active SoundHandle.
+      await _playlistService.play();
     }
   }
 
@@ -175,5 +193,12 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     if (!playbackState.value.playing) {
       await stop();
     }
+  }
+
+  /// Cleanup listeners — called during service teardown
+  void disposeListeners() {
+    _engineService.engineState.removeListener(_onEngineStateChanged);
+    _playlistService.currentIndexNotifier.removeListener(_onSongChanged);
+    _engineService.durationNotifier.removeListener(_onDurationChanged);
   }
 }

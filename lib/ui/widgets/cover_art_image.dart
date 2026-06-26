@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cover_art_repository.dart';
-import '../../core/service_locator.dart';
+import '../../providers/service_providers.dart';
+import '../../models/song.dart';
 
-class CoverArtImage extends StatefulWidget {
+class CoverArtImage extends ConsumerStatefulWidget {
   const CoverArtImage({
     super.key,
-    required this.fileName,
+    required this.song,
     required this.fallbackBuilder,
     this.cacheWidth,
     this.cacheHeight,
@@ -14,7 +16,7 @@ class CoverArtImage extends StatefulWidget {
     this.filterQuality = FilterQuality.medium,
   });
 
-  final String fileName;
+  final Song song;
   final WidgetBuilder fallbackBuilder;
   final int? cacheWidth;
   final int? cacheHeight;
@@ -22,11 +24,11 @@ class CoverArtImage extends StatefulWidget {
   final FilterQuality filterQuality;
 
   @override
-  State<CoverArtImage> createState() => _CoverArtImageState();
+  ConsumerState<CoverArtImage> createState() => _CoverArtImageState();
 }
 
-class _CoverArtImageState extends State<CoverArtImage> {
-  final CoverArtRepository _repository = sl<CoverArtRepository>();
+class _CoverArtImageState extends ConsumerState<CoverArtImage> {
+  late final CoverArtRepository _repository = ref.read(coverArtRepositoryProvider);
   CoverArtEntry? _entry;
   Object? _requestToken;
 
@@ -39,7 +41,7 @@ class _CoverArtImageState extends State<CoverArtImage> {
   @override
   void didUpdateWidget(covariant CoverArtImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fileName != widget.fileName ||
+    if (oldWidget.song.fileName != widget.song.fileName ||
         oldWidget.cacheWidth != widget.cacheWidth ||
         oldWidget.cacheHeight != widget.cacheHeight) {
       _resolve();
@@ -47,7 +49,7 @@ class _CoverArtImageState extends State<CoverArtImage> {
   }
 
   Future<void> _resolve() async {
-    final cached = _repository.getCachedEntry(widget.fileName);
+    final cached = _repository.getCachedEntry(widget.song.fileName);
     if (cached != null) {
       setState(() {
         _entry = cached;
@@ -60,7 +62,7 @@ class _CoverArtImageState extends State<CoverArtImage> {
     
     // C5 fix: Added try-catch to handle async resolve errors gracefully
     try {
-      final entry = await _repository.resolveEntry(widget.fileName);
+      final entry = await _repository.resolveEntry(widget.song);
       if (!mounted || _requestToken != token) {
         return;
       }
@@ -69,13 +71,14 @@ class _CoverArtImageState extends State<CoverArtImage> {
         _entry = entry;
       });
     } catch (e) {
-      debugPrint('Failed to resolve cover art for ${widget.fileName}: $e');
+      debugPrint('Failed to resolve cover art for ${widget.song.fileName}: $e');
       if (!mounted || _requestToken != token) return;
       setState(() {
         _entry = CoverArtEntry(
-          fileName: widget.fileName,
-          assetPath: '',
+          fileName: widget.song.fileName,
+          imagePath: '',
           exists: false,
+          isAsset: false,
         );
       });
     }
@@ -83,9 +86,9 @@ class _CoverArtImageState extends State<CoverArtImage> {
 
   @override
   Widget build(BuildContext context) {
-    final entry = _entry ?? _repository.getCachedEntry(widget.fileName);
+    final entry = _entry ?? _repository.getCachedEntry(widget.song.fileName);
     final provider = _repository.getCachedProvider(
-      widget.fileName,
+      widget.song.fileName,
       cacheWidth: widget.cacheWidth,
       cacheHeight: widget.cacheHeight,
     );
@@ -100,7 +103,7 @@ class _CoverArtImageState extends State<CoverArtImage> {
       filterQuality: widget.filterQuality,
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) {
-        debugPrint('Image rendering failed for ${widget.fileName}: $error');
+        debugPrint('Image rendering failed for ${widget.song.fileName}: $error');
         return widget.fallbackBuilder(context);
       },
     );

@@ -99,9 +99,9 @@ class CircleVisualizerPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = min(size.width / 2, size.height / 2) - 100;
     const numBars = 100;
-    final angleStep = (2 * pi) / numBars;
+    const angleStep = (2 * pi) / numBars;
     final baseHue = (1.0 - min(snapshot.smoothEnergy * 2.5, 1.0)) * 270.0;
-    final halfBars = numBars ~/ 2;
+    const halfBars = numBars ~/ 2;
 
     _rebuildLut(baseHue);
 
@@ -722,7 +722,7 @@ class RadialBurstPainter extends CustomPainter {
     canvas.drawCircle(center, 40 + snapshot.smoothEnergy * 30, _glowPaint);
 
     const numRays = 60;
-    final angleStep = (2 * pi) / numRays;
+    const angleStep = (2 * pi) / numRays;
 
     for (var i = 0; i < numRays; i++) {
       final dataIndex = (i * (120 / numRays)).floor();

@@ -3,6 +3,39 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ─── Default Constants ───────────────────────────────────────────────────────
+
+/// Default blur level (0–100 scale).
+const double _kDefaultBlurLevel = 30.0;
+
+/// Default window opacity (0.1–1.0).
+const double _kDefaultWindowOpacity = 0.7;
+
+/// Default crossfade duration in seconds (0–10).
+const double _kDefaultCrossfadeDuration = 3.0;
+
+/// Target normalization level in dB (−24 ... 0).
+const double _kDefaultNormalizationLevel = -12.0;
+
+/// Equalizer band count.
+const int _kEqBandCount = 5;
+
+/// Number of sort modes defined in the app.
+const int _kSortModeCount = 6;
+
+/// Manages all application settings with persistence via [SharedPreferences].
+///
+/// Each setting is exposed as a [ValueNotifier] for reactive UI updates.
+/// Settings are grouped by category:
+/// - **Theme**: theme mode, dynamic color, custom primary color
+/// - **Window**: blur, opacity, native effects, grid view
+/// - **Equalizer**: 5-band EQ, bass level, presets
+/// - **Audio Effects**: crossfade, normalization, pitch, reverb, compressor
+/// - **Sort & Filter**: sort mode, ascending/descending
+/// - **Hotkeys**: custom key bindings
+/// - **Media**: media key support, visualizer
+///
+/// Call [init] before using any notifier to load persisted values.
 class SettingsManager {
   late SharedPreferences _prefs;
   Size? _savedWindowSize;
@@ -14,11 +47,15 @@ class SettingsManager {
     ThemeMode.system,
   );
   final ValueNotifier<bool> enableBlurNotifier = ValueNotifier(true);
-  final ValueNotifier<double> blurLevelNotifier = ValueNotifier(30.0);
+  final ValueNotifier<double> blurLevelNotifier = ValueNotifier(
+    _kDefaultBlurLevel,
+  );
   final ValueNotifier<bool> isMiniPlayerNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> miniPlayerModeNotifier = ValueNotifier(false);
 
   final ValueNotifier<bool> useNativeWindowEffectNotifier = ValueNotifier(false);
+  final ValueNotifier<double> windowOpacityNotifier = ValueNotifier(
+    _kDefaultWindowOpacity,
+  );
 
   final ValueNotifier<bool> isGridViewNotifier = ValueNotifier(false);
   final ValueNotifier<String?> customBackgroundImageNotifier = ValueNotifier(
@@ -29,26 +66,37 @@ class SettingsManager {
   final ValueNotifier<bool> minimizeToTrayNotifier = ValueNotifier(true);
   final ValueNotifier<bool> visualizerEnabledNotifier = ValueNotifier(true);
   final ValueNotifier<bool> useDynamicColorNotifier = ValueNotifier(true);
+  final ValueNotifier<bool> sidebarCollapsedNotifier = ValueNotifier(false);
+
+  // Desktop Lyrics Window
+  final ValueNotifier<bool> desktopLyricsEnabledNotifier = ValueNotifier(false);
+  final ValueNotifier<double> desktopLyricsFontSizeNotifier = ValueNotifier(24.0);
+  final ValueNotifier<double> desktopLyricsOpacityNotifier = ValueNotifier(0.9);
+  final ValueNotifier<bool> desktopLyricsClickThroughNotifier = ValueNotifier(false);
   final ValueNotifier<double> sensitivityNotifier = ValueNotifier(1.0);
   final ValueNotifier<Color> customPrimaryColorNotifier = ValueNotifier(
     const Color(0xFF1DB954),
   );
   final ValueNotifier<Color?> dynamicPrimaryColorNotifier = ValueNotifier(null);
 
+  // Current tab index (0=home, 1=library, 2=online, 3=ktv, 4=personal, 5=settings)
+  final ValueNotifier<int> currentTabIndexNotifier = ValueNotifier(0);
+
   // Equalizer
-  final ValueNotifier<List<double>> eqBandsNotifier = ValueNotifier([
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-  ]);
+  final ValueNotifier<List<double>> eqBandsNotifier = ValueNotifier(
+    List<double>.filled(_kEqBandCount, 0.0),
+  );
   final ValueNotifier<int> eqBassNotifier = ValueNotifier(0);
   final ValueNotifier<String> eqPresetNotifier = ValueNotifier('Normal');
 
   // Audio Effects
-  final ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3.0);
-  final ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(-12.0);
+  final ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(
+    _kDefaultCrossfadeDuration,
+  );
+  final ValueNotifier<int> crossfadeCurveNotifier = ValueNotifier(0); // 0=linear, 1=exponential, 2=sCurve
+  final ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(
+    _kDefaultNormalizationLevel,
+  );
   final ValueNotifier<bool> normalizationEnabledNotifier = ValueNotifier(false);
   final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1.0);
   final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0.0);
@@ -115,12 +163,18 @@ class SettingsManager {
 
     // Load feature settings
     useNativeWindowEffectNotifier.value = _prefs.getBool('useNativeWindowEffect') ?? false;
+    windowOpacityNotifier.value = _prefs.getDouble('windowOpacity') ?? _kDefaultWindowOpacity;
     enableBlurNotifier.value = _prefs.getBool('enableBlur') ?? true;
-    blurLevelNotifier.value = _prefs.getDouble('blurLevel') ?? 30.0;
+    blurLevelNotifier.value = _prefs.getDouble('blurLevel') ?? _kDefaultBlurLevel;
     minimizeToTrayNotifier.value = _prefs.getBool('minimizeToTray') ?? true;
     visualizerEnabledNotifier.value =
         _prefs.getBool('visualizerEnabled') ?? true;
     useDynamicColorNotifier.value = _prefs.getBool('useDynamicColor') ?? true;
+    sidebarCollapsedNotifier.value = _prefs.getBool('sidebarCollapsed') ?? false;
+    desktopLyricsEnabledNotifier.value = _prefs.getBool('desktopLyricsEnabled') ?? false;
+    desktopLyricsFontSizeNotifier.value = _prefs.getDouble('desktopLyricsFontSize') ?? 24.0;
+    desktopLyricsOpacityNotifier.value = _prefs.getDouble('desktopLyricsOpacity') ?? 0.9;
+    desktopLyricsClickThroughNotifier.value = _prefs.getBool('desktopLyricsClickThrough') ?? false;
     sensitivityNotifier.value = _prefs.getDouble('sensitivity') ?? 1.0;
 
     // C3 fix: Load saved window state that was previously forgotten
@@ -161,6 +215,8 @@ class SettingsManager {
     // Load Audio Effects
     crossfadeDurationNotifier.value =
         _prefs.getDouble('crossfadeDuration') ?? 3.0;
+    crossfadeCurveNotifier.value =
+        _prefs.getInt('crossfadeCurve') ?? 0;
     normalizationLevelNotifier.value =
         _prefs.getDouble('normalizationLevel') ?? -12.0;
     normalizationEnabledNotifier.value =
@@ -192,7 +248,7 @@ class SettingsManager {
         final Map<String, dynamic> decoded = jsonDecode(hotkeysJson);
         final hotkeys = decoded.map((key, value) => MapEntry(key, value.toString()));
         customHotkeysNotifier.value = hotkeys;
-      } catch (_) {
+      } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); 
         // Fallback to old format
         try {
           final hotkeys = Map<String, String>.from(
@@ -205,23 +261,47 @@ class SettingsManager {
             }),
           );
           customHotkeysNotifier.value = hotkeys;
-        } catch (_) {}
+        } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); }
       }
     }
 
     // Load Media Key
     mediaKeyEnabledNotifier.value = _prefs.getBool('mediaKeyEnabled') ?? true;
 
-    // Áp dụng ngay cài đặt SoLoud
-    try {
-      // Tránh lỗi chưa khởi tạo engine bên main
-      SoLoud.instance.setVisualizationEnabled(visualizerEnabledNotifier.value);
-    } catch (_) {}
+    // Áp dụng ngay cài đặt SoLoud (chỉ khi engine đã khởi tạo)
+    // Lưu ý: SoLoud được khởi tạo trong main.dart sau khi SettingsManager.init() chạy
+    // Nên ta không thể áp dụng ở đây. Việc áp dụng sẽ được thực hiện trong main.dart
+    // sau khi SoLoud.instance.init() hoàn tất.
   }
 
   Future<void> setIsGridView(bool isGrid) async {
     isGridViewNotifier.value = isGrid;
     await _prefs.setBool('isGridView', isGrid);
+  }
+
+  Future<void> setSidebarCollapsed(bool collapsed) async {
+    sidebarCollapsedNotifier.value = collapsed;
+    await _prefs.setBool('sidebarCollapsed', collapsed);
+  }
+
+  Future<void> setDesktopLyricsEnabled(bool enabled) async {
+    desktopLyricsEnabledNotifier.value = enabled;
+    await _prefs.setBool('desktopLyricsEnabled', enabled);
+  }
+
+  Future<void> setDesktopLyricsFontSize(double size) async {
+    desktopLyricsFontSizeNotifier.value = size;
+    await _prefs.setDouble('desktopLyricsFontSize', size);
+  }
+
+  Future<void> setDesktopLyricsOpacity(double opacity) async {
+    desktopLyricsOpacityNotifier.value = opacity;
+    await _prefs.setDouble('desktopLyricsOpacity', opacity);
+  }
+
+  Future<void> setDesktopLyricsClickThrough(bool clickThrough) async {
+    desktopLyricsClickThroughNotifier.value = clickThrough;
+    await _prefs.setBool('desktopLyricsClickThrough', clickThrough);
   }
 
   Future<void> setCustomBackgroundImage(String? path) async {
@@ -289,6 +369,11 @@ class SettingsManager {
     await _prefs.setBool('useNativeWindowEffect', enable);
   }
 
+  Future<void> setWindowOpacity(double opacity) async {
+    windowOpacityNotifier.value = opacity.clamp(0.1, 1.0);
+    await _prefs.setDouble('windowOpacity', windowOpacityNotifier.value);
+  }
+
   Future<void> setMinimizeToTray(bool minimize) async {
     minimizeToTrayNotifier.value = minimize;
     await _prefs.setBool('minimizeToTray', minimize);
@@ -299,7 +384,7 @@ class SettingsManager {
     await _prefs.setBool('visualizerEnabled', enable);
     try {
       SoLoud.instance.setVisualizationEnabled(enable);
-    } catch (_) {}
+    } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); }
   }
 
   Future<void> setSensitivity(double value) async {
@@ -362,6 +447,11 @@ class SettingsManager {
       'crossfadeDuration',
       crossfadeDurationNotifier.value,
     );
+  }
+
+  Future<void> setCrossfadeCurve(int curve) async {
+    crossfadeCurveNotifier.value = curve.clamp(0, 2);
+    await _prefs.setInt('crossfadeCurve', crossfadeCurveNotifier.value);
   }
 
   Future<void> setNormalizationLevel(double level) async {
@@ -430,7 +520,7 @@ class SettingsManager {
   // ─── Sort Mode Setters ────────────────────────────────────────────────────
 
   Future<void> setSortMode(int mode) async {
-    sortModeNotifier.value = mode.clamp(0, 3);
+    sortModeNotifier.value = mode.clamp(0, _kSortModeCount - 1);
     await _prefs.setInt('sortMode', sortModeNotifier.value);
   }
 
@@ -489,8 +579,10 @@ class SettingsManager {
 
   void dispose() {
     useNativeWindowEffectNotifier.dispose();
+    windowOpacityNotifier.dispose();
     themeModeNotifier.dispose();
     enableBlurNotifier.dispose();
+    blurLevelNotifier.dispose();
     isMiniPlayerNotifier.dispose();
     isGridViewNotifier.dispose();
     customBackgroundImageNotifier.dispose();

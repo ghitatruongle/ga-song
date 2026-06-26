@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
-import '../../core/audio/audio_effect_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
 
 class AudioEffectsDialog {
   static void show(BuildContext context) {
@@ -13,16 +12,16 @@ class AudioEffectsDialog {
   }
 }
 
-class _AudioEffectsDialog extends StatefulWidget {
+class _AudioEffectsDialog extends ConsumerStatefulWidget {
   const _AudioEffectsDialog();
 
   @override
-  State<_AudioEffectsDialog> createState() => _AudioEffectsDialogState();
+  ConsumerState<_AudioEffectsDialog> createState() => _AudioEffectsDialogState();
 }
 
-class _AudioEffectsDialogState extends State<_AudioEffectsDialog> {
-  final _effectService = sl<AudioEffectService>();
-  final _settings = sl<SettingsManager>();
+class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
+  late final _effectService = ref.read(audioEffectServiceProvider);
+  late final _settings = ref.read(settingsManagerProvider);
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +181,42 @@ class _AudioEffectsDialogState extends State<_AudioEffectsDialog> {
                 _settings.setCrossfadeDuration(v);
                 _effectService.setCrossfadeDuration(v);
               },
+            );
+          },
+        ),
+        // Crossfade curve selector
+        ValueListenableBuilder<int>(
+          valueListenable: _settings.crossfadeCurveNotifier,
+          builder: (context, curveIndex, _) {
+            return Row(
+              children: [
+                Text(
+                  'Đường cong:',
+                  style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 12),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 0, label: Text('Tuyến tính')),
+                      ButtonSegment(value: 1, label: Text('Mũ')),
+                      ButtonSegment(value: 2, label: Text('S-curve')),
+                    ],
+                    selected: {curveIndex},
+                    onSelectionChanged: (Set<int> selected) {
+                      final newIndex = selected.first;
+                      _settings.setCrossfadeCurve(newIndex);
+                      _effectService.crossfadeCurveNotifier.value = newIndex;
+                    },
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      textStyle: WidgetStatePropertyAll(
+                        TextStyle(fontSize: 11, color: textColor),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             );
           },
         ),

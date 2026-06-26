@@ -3,14 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:system_tray/system_tray.dart';
 import 'package:window_manager/window_manager.dart';
-import '../service_locator.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 
 class SystemTrayService {
+  SystemTrayService({
+    AudioEngineService? audioEngineService,
+    PlaylistService? playlistService,
+  }) : _engine = audioEngineService,
+       _playlist = playlistService;
+
+  final AudioEngineService? _engine;
+  final PlaylistService? _playlist;
   SystemTray? _systemTray;
   final AppWindow _appWindow = AppWindow();
   final Menu _menu = Menu();
+  DateTime _lastMenuUpdate = DateTime(2000);
 
   Future<void> init() async {
     if (kIsWeb || (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux)) {
@@ -31,7 +39,22 @@ class SystemTrayService {
             final byteData = await rootBundle.load(path);
             await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
           } catch (e) {
-            debugPrint("System tray icon extraction failed: $e");
+            debugPrint('System tray icon extraction failed: $e');
+          }
+        }
+        path = iconFile.path;
+      }
+
+      // Linux: cần copy icon từ assets vào temp giống Windows
+      if (Platform.isLinux) {
+        final iconFile = File('${Directory.systemTemp.path}/ga_song_app_icon.png');
+        final needsWrite = !iconFile.existsSync() || iconFile.lengthSync() == 0;
+        if (needsWrite) {
+          try {
+            final byteData = await rootBundle.load(path);
+            await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
+          } catch (e) {
+            debugPrint('System tray icon extraction failed (Linux): $e');
           }
         }
         path = iconFile.path;
@@ -39,12 +62,12 @@ class SystemTrayService {
 
       final iconFileCheck = File(path);
       if (!iconFileCheck.existsSync()) {
-        debugPrint("System tray icon not found at $path, skipping system tray initialization");
+        debugPrint('System tray icon not found at $path, skipping system tray initialization');
         _systemTray = null;
         return;
       }
 
-      await _systemTray!.initSystemTray(title: "G.A - Song", iconPath: path);
+      await _systemTray!.initSystemTray(title: 'G.A - Song', iconPath: path);
       
       await _buildMenu();
 
@@ -60,10 +83,10 @@ class SystemTrayService {
         }
       });
 
-      sl<AudioEngineService>().engineState.addListener(_updateMenu);
+      _engine?.engineState.addListener(_updateMenu);
     } catch (e, stackTrace) {
-      debugPrint("SystemTray init failed: $e");
-      debugPrint("Stack trace: $stackTrace");
+      debugPrint('SystemTray init failed: $e');
+      debugPrint('Stack trace: $stackTrace');
       _systemTray = null;
     }
   }
@@ -71,7 +94,10 @@ class SystemTrayService {
   Future<void> _buildMenu() async {
     if (_systemTray == null) return;
 
-    final engineService = sl<AudioEngineService>();
+    final engineService = _engine;
+    final playlistService = _playlist;
+    if (engineService == null || playlistService == null) return;
+
     final isPlaying = engineService.engineState.value == AudioEngineState.playing;
 
     await _menu.buildFrom([
@@ -90,23 +116,22 @@ class SystemTrayService {
           if (isPlaying) {
             engineService.pause();
           } else {
-            sl<PlaylistService>().play();
+            playlistService.play();
           }
         },
       ),
       MenuItemLabel(
         label: 'Next',
-        onClicked: (menuItem) => sl<PlaylistService>().next(),
+        onClicked: (menuItem) => playlistService.next(),
       ),
       MenuItemLabel(
         label: 'Previous',
-        onClicked: (menuItem) => sl<PlaylistService>().previous(),
+        onClicked: (menuItem) => playlistService.previous(),
       ),
       MenuSeparator(),
       MenuItemLabel(
         label: 'Exit',
         onClicked: (menuItem) async {
-          await teardownServices();
           await windowManager.destroy();
         },
       ),
@@ -116,11 +141,20 @@ class SystemTrayService {
   }
 
   void _updateMenu() {
+    final now = DateTime.now();
+    if (now.difference(_lastMenuUpdate).inMilliseconds < 1000) return;
+    _lastMenuUpdate = now;
     _buildMenu();
   }
 
   void dispose() {
-    sl<AudioEngineService>().engineState.removeListener(_updateMenu);
-    _systemTray?.destroy();
+    try {
+      _engine?.engineState.removeListener(_updateMenu);
+    } catch (e, stack) { debugPrint('Error in system_tray_service: $e\n$stack'); }
+    try {
+      _systemTray?.destroy();
+    } catch (e) {
+      debugPrint('SystemTray dispose error: $e');
+    }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
 
 class CustomHotkeysDialog {
   static void show(BuildContext context) {
@@ -13,15 +13,15 @@ class CustomHotkeysDialog {
   }
 }
 
-class _CustomHotkeysDialog extends StatefulWidget {
+class _CustomHotkeysDialog extends ConsumerStatefulWidget {
   const _CustomHotkeysDialog();
 
   @override
-  State<_CustomHotkeysDialog> createState() => _CustomHotkeysDialogState();
+  ConsumerState<_CustomHotkeysDialog> createState() => _CustomHotkeysDialogState();
 }
 
-class _CustomHotkeysDialogState extends State<_CustomHotkeysDialog> {
-  final _settings = sl<SettingsManager>();
+class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
+  late final _settings = ref.read(settingsManagerProvider);
   late final FocusNode _focusNode;
 
   static const _hotkeyActions = [

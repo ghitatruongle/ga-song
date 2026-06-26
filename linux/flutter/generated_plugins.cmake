@@ -3,10 +3,13 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audiotags
   flutter_acrylic
   hotkey_manager_linux
   screen_retriever_linux
+  sqlite3_flutter_libs
   system_tray
+  url_launcher_linux
   window_manager
 )
 

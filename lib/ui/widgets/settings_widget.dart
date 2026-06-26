@@ -1,21 +1,20 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
-import '../../core/service_locator.dart';
-import '../../core/settings_manager.dart';
-import 'window_caption_button.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/service_providers.dart';
+import 'desktop_title_bar.dart';
 import 'sleep_timer_dialog.dart';
 import 'audio_effects_dialog.dart';
 import 'sort_filter_dialog.dart';
 import 'custom_hotkeys_dialog.dart';
 
-class SettingsWidget extends StatelessWidget {
+class SettingsWidget extends ConsumerWidget {
   const SettingsWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final settings = sl<SettingsManager>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.read(settingsManagerProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
 
@@ -23,48 +22,8 @@ class SettingsWidget extends StatelessWidget {
       color: Colors.transparent,
       child: Column(
         children: <Widget>[
-          if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS)
-            DragToMoveArea(
-              child: SizedBox(
-                height: 50,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      WindowCaptionButton.minimize(
-                        onPressed: () async => windowManager.minimize(),
-                        iconNormal: Icon(
-                          Icons.remove,
-                          color: textColor,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      WindowCaptionButton.maximize(
-                        onPressed: () async {
-                          if (await windowManager.isMaximized()) {
-                            await windowManager.unmaximize();
-                          } else {
-                            await windowManager.maximize();
-                          }
-                        },
-                        iconNormal: Icon(
-                          Icons.crop_square,
-                          color: textColor,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      WindowCaptionButton.close(
-                        onPressed: () async => windowManager.close(),
-                        iconNormal: Icon(Icons.close, color: textColor, size: 20),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // Q-3 fix: Use shared DesktopTitleBar widget
+          DesktopTitleBar(iconColor: textColor),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(40, 10, 40, 140),
@@ -141,25 +100,60 @@ class SettingsWidget extends StatelessWidget {
                     child: ValueListenableBuilder<bool>(
                       valueListenable: settings.useNativeWindowEffectNotifier,
                       builder: (context, useNative, _) {
-                        return SwitchListTile(
-                          title: Text(
-                            'Hiệu ứng cửa sổ hệ thống (Mica/Acrylic)',
-                            style: TextStyle(color: textColor),
-                          ),
-                          subtitle: Text(
-                            'Sử dụng hiệu ứng trong suốt nguyên bản của hệ điều hành. Sẽ tắt hình nền mờ của ứng dụng.',
-                            style: TextStyle(
-                              color: textColor.withValues(alpha: 0.6),
-                              fontSize: 13,
+                        return Column(
+                          children: [
+                            SwitchListTile(
+                              title: Text(
+                                'Hiệu ứng cửa sổ hệ thống (Xuyên màn hình)',
+                                style: TextStyle(color: textColor),
+                              ),
+                              subtitle: Text(
+                                'Sử dụng hiệu ứng trong suốt nguyên bản của hệ điều hành. Sẽ tắt hình nền mờ của ứng dụng.',
+                                style: TextStyle(
+                                  color: textColor.withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              value: useNative,
+                              activeThumbColor: Theme.of(context).primaryColor,
+                              onChanged: settings.setUseNativeWindowEffect,
                             ),
-                          ),
-                          value: useNative,
-                          activeThumbColor: Theme.of(context).primaryColor,
-                          onChanged: settings.setUseNativeWindowEffect,
+                            if (useNative)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: ValueListenableBuilder<double>(
+                                  valueListenable: settings.windowOpacityNotifier,
+                                  builder: (context, opacity, _) {
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Độ trong suốt: ${(opacity * 100).toInt()}%',
+                                          style: TextStyle(
+                                            color: textColor.withValues(alpha: 0.7),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Slider(
+                                          value: opacity,
+                                          min: 0.1,
+                                          max: 1.0,
+                                          divisions: 90,
+                                          activeColor: Theme.of(context).primaryColor,
+                                          onChanged: settings.setWindowOpacity,
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
                         );
                       },
                     ),
                   ),
+                // Phím tắt: chỉ hiện trên Desktop (không có phím tắt trên Android)
+                if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) ...[
                 const SizedBox(height: 20),
                 _buildSectionHeader(
                   'Phím tắt toàn cục (Global Hotkeys)',
@@ -187,8 +181,11 @@ class SettingsWidget extends StatelessWidget {
                     ),
                   ),
                 ),
+                ],
                 const SizedBox(height: 20),
                 _buildSectionHeader('Hệ thống', textColor),
+                // Minimize to tray: chỉ desktop
+                if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) ...[
                 _buildSettingCard(
                   isDark: isDark,
                   child: ValueListenableBuilder<bool>(
@@ -213,6 +210,7 @@ class SettingsWidget extends StatelessWidget {
                     },
                   ),
                 ),
+                ],
                 const SizedBox(height: 10),
                 _buildSettingCard(
                   isDark: isDark,
@@ -400,6 +398,8 @@ class SettingsWidget extends StatelessWidget {
                     },
                   ),
                 ),
+                // Phím tắt & Media Keys: chỉ desktop
+                if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) ...[
                 const SizedBox(height: 20),
                 _buildSectionHeader('Phím tắt & Media Keys', textColor),
                 _buildSettingCard(
@@ -454,6 +454,7 @@ class SettingsWidget extends StatelessWidget {
                     ],
                   ),
                 ),
+                ],
                 const SizedBox(height: 20),
                 _buildSectionHeader('Hiệu ứng mờ', textColor),
                 _buildSettingCard(
