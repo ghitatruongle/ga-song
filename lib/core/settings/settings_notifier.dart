@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,15 +9,62 @@ import '../../providers/service_providers.dart';
 
 /// Riverpod notifier for app settings.
 ///
-/// Wraps the existing [SettingsManager] to provide a clean Riverpod interface
-/// while maintaining backward compatibility during migration.
+/// Reacts to underlying [ValueNotifier]s in [SettingsManager]: whenever any
+/// setting changes via the manager (or directly via notifier mutations),
+/// the [SettingsState] exposed by this notifier is rebuilt automatically.
+/// Setters are thin pass-throughs — the manager remains the source of truth
+/// for persistence.
 class SettingsNotifier extends Notifier<SettingsState> {
   late SettingsManager _manager;
+  final List<VoidCallback> _disposers = [];
+  Timer? _refreshTimer;
 
   @override
   SettingsState build() {
     _manager = ref.watch(settingsManagerProvider);
+    _subscribeToManager();
+    ref.onDispose(_unsubscribeFromManager);
     return _stateFromManager(_manager);
+  }
+
+  void _subscribeToManager() {
+    // Defensive: clear any prior subscriptions in case build() re-runs
+    // (e.g. during hot reload or test reuse). Without this, the same
+    // notifier would accumulate N listener registrations over N rebuilds.
+    for (final d in _disposers) {
+      d();
+    }
+    _disposers.clear();
+    for (final notifier in _manager.allNotifiers) {
+      notifier.addListener(_debouncedRefresh);
+      _disposers.add(() => notifier.removeListener(_debouncedRefresh));
+    }
+  }
+
+  void _unsubscribeFromManager() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    for (final d in _disposers) {
+      d();
+    }
+    _disposers.clear();
+  }
+
+  /// Debounced refresh: coalesces rapid-fire notifier changes (e.g. slider
+  /// drags that update 45+ listeners per pixel) into a single [SettingsState]
+  /// rebuild after 16ms (~1 frame).
+  void _debouncedRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(const Duration(milliseconds: 16), () {
+      _refreshTimer = null;
+      state = _stateFromManager(_manager);
+    });
+  }
+
+  /// Rebuilds state from the current [SettingsManager] values.
+  /// Called automatically on each underlying notifier change.
+  void refresh() {
+    state = _stateFromManager(_manager);
   }
 
   /// Creates a [SettingsState] from the current [SettingsManager] values.
@@ -83,266 +132,88 @@ class SettingsNotifier extends Notifier<SettingsState> {
     );
   }
 
-  /// Refreshes the state from the underlying [SettingsManager].
-  void refresh() {
-    state = _stateFromManager(_manager);
-  }
-
-  // ─── Theme Methods ──────────────────────────────────────────────────
-
-  Future<void> setThemeMode(ThemeMode mode) async {
-    await _manager.setThemeMode(mode);
-    state = state.copyWith(themeMode: mode);
-  }
-
-  Future<void> setEnableBlur(bool enable) async {
-    await _manager.setEnableBlur(enable);
-    state = state.copyWith(enableBlur: enable);
-  }
-
-  Future<void> setBlurLevel(double level) async {
-    final clamped = level.clamp(0.0, 100.0);
-    await _manager.setBlurLevel(clamped);
-    state = state.copyWith(blurLevel: clamped);
-  }
-
-  Future<void> setUseNativeWindowEffect(bool enable) async {
-    await _manager.setUseNativeWindowEffect(enable);
-    state = state.copyWith(useNativeWindowEffect: enable);
-  }
-
-  Future<void> setWindowOpacity(double opacity) async {
-    final clamped = opacity.clamp(0.1, 1.0);
-    await _manager.setWindowOpacity(clamped);
-    state = state.copyWith(windowOpacity: clamped);
-  }
-
-  Future<void> setUseDynamicColor(bool useDynamic) async {
-    await _manager.setUseDynamicColor(useDynamic);
-    state = state.copyWith(useDynamicColor: useDynamic);
-  }
-
-  Future<void> setCustomPrimaryColor(Color color) async {
-    await _manager.setCustomPrimaryColor(color);
-    state = state.copyWith(customPrimaryColor: color);
-  }
-
-  // ─── Window & Layout Methods ────────────────────────────────────────
-
-  void setIsMiniPlayer(bool isMini) {
-    _manager.setIsMiniPlayer(isMini);
-    state = state.copyWith(isMiniPlayer: isMini);
-  }
-
-  Future<void> setIsGridView(bool isGrid) async {
-    await _manager.setIsGridView(isGrid);
-    state = state.copyWith(isGridView: isGrid);
-  }
-
-  Future<void> setSidebarCollapsed(bool collapsed) async {
-    await _manager.setSidebarCollapsed(collapsed);
-    state = state.copyWith(sidebarCollapsed: collapsed);
-  }
-
+  // Setters are pass-throughs: the underlying notifier triggers [refresh]
+  // via the subscription wired in [build].
+  Future<void> setThemeMode(ThemeMode mode) => _manager.setThemeMode(mode);
+  Future<void> setEnableBlur(bool enable) => _manager.setEnableBlur(enable);
+  Future<void> setBlurLevel(double level) => _manager.setBlurLevel(level);
+  Future<void> setUseNativeWindowEffect(bool enable) =>
+      _manager.setUseNativeWindowEffect(enable);
+  Future<void> setWindowOpacity(double opacity) =>
+      _manager.setWindowOpacity(opacity);
+  Future<void> setUseDynamicColor(bool useDynamic) =>
+      _manager.setUseDynamicColor(useDynamic);
+  Future<void> setCustomPrimaryColor(Color color) =>
+      _manager.setCustomPrimaryColor(color);
+  void setIsMiniPlayer(bool isMini) => _manager.setIsMiniPlayer(isMini);
+  Future<void> setIsGridView(bool isGrid) => _manager.setIsGridView(isGrid);
+  Future<void> setSidebarCollapsed(bool collapsed) =>
+      _manager.setSidebarCollapsed(collapsed);
   void setCurrentTabIndex(int index) {
     _manager.currentTabIndexNotifier.value = index;
-    state = state.copyWith(currentTabIndex: index);
   }
+  Future<void> setEqBand(int index, double value) =>
+      _manager.setEqBand(index, value);
+  Future<void> setEqBass(int level) => _manager.setEqBass(level);
+  Future<void> applyEqPreset(String preset) => _manager.applyEqPreset(preset);
+  Future<void> setCrossfadeDuration(double duration) =>
+      _manager.setCrossfadeDuration(duration);
+  Future<void> setCrossfadeCurve(int curve) =>
+      _manager.setCrossfadeCurve(curve);
+  Future<void> setNormalizationLevel(double level) =>
+      _manager.setNormalizationLevel(level);
+  Future<void> setNormalizationEnabled(bool enabled) =>
+      _manager.setNormalizationEnabled(enabled);
+  Future<void> setPitchShift(double pitch) => _manager.setPitchShift(pitch);
+  Future<void> setReverbMix(double mix) => _manager.setReverbMix(mix);
+  Future<void> setCompressionRatio(double ratio) =>
+      _manager.setCompressionRatio(ratio);
+  Future<void> setReverbRoomSize(double size) =>
+      _manager.setReverbRoomSize(size);
+  Future<void> setReverbDamp(double damp) => _manager.setReverbDamp(damp);
+  Future<void> setCompThreshold(double threshold) =>
+      _manager.setCompThreshold(threshold);
+  Future<void> setCompAttack(double attack) => _manager.setCompAttack(attack);
+  Future<void> setCompRelease(double release) =>
+      _manager.setCompRelease(release);
+  Future<void> setCompKneeWidth(double knee) =>
+      _manager.setCompKneeWidth(knee);
+  Future<void> setCompMakeupGain(double gain) =>
+      _manager.setCompMakeupGain(gain);
+  Future<void> setSortMode(int mode) => _manager.setSortMode(mode);
+  Future<void> setSortAscending(bool ascending) =>
+      _manager.setSortAscending(ascending);
+  Future<void> setDesktopLyricsEnabled(bool enabled) =>
+      _manager.setDesktopLyricsEnabled(enabled);
+  Future<void> setDesktopLyricsFontSize(double size) =>
+      _manager.setDesktopLyricsFontSize(size);
+  Future<void> setDesktopLyricsOpacity(double opacity) =>
+      _manager.setDesktopLyricsOpacity(opacity);
+  Future<void> setDesktopLyricsClickThrough(bool clickThrough) =>
+      _manager.setDesktopLyricsClickThrough(clickThrough);
+  Future<void> setVisualizerEnabled(bool enable) =>
+      _manager.setVisualizerEnabled(enable);
+  Future<void> setVisualizerShape(int shape) =>
+      _manager.setVisualizerShape(shape);
+  Future<void> setCustomHotkey(String action, String keys) =>
+      _manager.setCustomHotkey(action, keys);
+  Future<void> removeCustomHotkey(String action) =>
+      _manager.removeCustomHotkey(action);
+  Future<void> setMediaKeyEnabled(bool enabled) =>
+      _manager.setMediaKeyEnabled(enabled);
+  Future<void> setMinimizeToTray(bool minimize) =>
+      _manager.setMinimizeToTray(minimize);
+  Future<void> setSensitivity(double value) => _manager.setSensitivity(value);
+  Future<void> setCustomBackgroundImage(String? path) =>
+      _manager.setCustomBackgroundImage(path);
 
-  // ─── Equalizer Methods ──────────────────────────────────────────────
-
-  Future<void> setEqBand(int index, double value) async {
-    await _manager.setEqBand(index, value);
-    final newBands = List<double>.from(state.eqBands);
-    newBands[index] = value.clamp(-1.0, 1.0);
-    state = state.copyWith(eqBands: newBands);
-  }
-
-  Future<void> setEqBass(int level) async {
-    await _manager.setEqBass(level);
-    state = state.copyWith(eqBassLevel: level.clamp(0, 100));
-  }
-
-  Future<void> applyEqPreset(String preset) async {
-    await _manager.applyEqPreset(preset);
-    state = state.copyWith(
-      eqPreset: preset,
-      eqBands: List<double>.from(_manager.eqBandsNotifier.value),
-      eqBassLevel: _manager.eqBassNotifier.value,
-    );
-  }
-
-  // ─── Audio Effects Methods ──────────────────────────────────────────
-
-  Future<void> setCrossfadeDuration(double duration) async {
-    await _manager.setCrossfadeDuration(duration);
-    state = state.copyWith(crossfadeDuration: duration.clamp(0.0, 10.0));
-  }
-
-  Future<void> setCrossfadeCurve(int curve) async {
-    await _manager.setCrossfadeCurve(curve);
-    state = state.copyWith(crossfadeCurve: curve.clamp(0, 2));
-  }
-
-  Future<void> setNormalizationLevel(double level) async {
-    await _manager.setNormalizationLevel(level);
-    state = state.copyWith(normalizationLevel: level.clamp(-24.0, 0.0));
-  }
-
-  Future<void> setNormalizationEnabled(bool enabled) async {
-    await _manager.setNormalizationEnabled(enabled);
-    state = state.copyWith(normalizationEnabled: enabled);
-  }
-
-  Future<void> setPitchShift(double pitch) async {
-    await _manager.setPitchShift(pitch);
-    state = state.copyWith(pitchShift: pitch.clamp(0.5, 2.0));
-  }
-
-  Future<void> setReverbMix(double mix) async {
-    await _manager.setReverbMix(mix);
-    state = state.copyWith(reverbMix: mix.clamp(0.0, 1.0));
-  }
-
-  Future<void> setCompressionRatio(double ratio) async {
-    await _manager.setCompressionRatio(ratio);
-    state = state.copyWith(compressionRatio: ratio.clamp(1.0, 10.0));
-  }
-
-  Future<void> setReverbRoomSize(double size) async {
-    await _manager.setReverbRoomSize(size);
-    state = state.copyWith(reverbRoomSize: size.clamp(0.0, 1.0));
-  }
-
-  Future<void> setReverbDamp(double damp) async {
-    await _manager.setReverbDamp(damp);
-    state = state.copyWith(reverbDamp: damp.clamp(0.0, 1.0));
-  }
-
-  Future<void> setCompThreshold(double threshold) async {
-    await _manager.setCompThreshold(threshold);
-    state = state.copyWith(compThreshold: threshold.clamp(-80.0, 0.0));
-  }
-
-  Future<void> setCompAttack(double attack) async {
-    await _manager.setCompAttack(attack);
-    state = state.copyWith(compAttack: attack.clamp(0.0, 100.0));
-  }
-
-  Future<void> setCompRelease(double release) async {
-    await _manager.setCompRelease(release);
-    state = state.copyWith(compRelease: release.clamp(0.0, 1000.0));
-  }
-
-  Future<void> setCompKneeWidth(double knee) async {
-    await _manager.setCompKneeWidth(knee);
-    state = state.copyWith(compKneeWidth: knee.clamp(0.0, 40.0));
-  }
-
-  Future<void> setCompMakeupGain(double gain) async {
-    await _manager.setCompMakeupGain(gain);
-    state = state.copyWith(compMakeupGain: gain.clamp(-40.0, 40.0));
-  }
-
-  // ─── Sort & Filter Methods ──────────────────────────────────────────
-
-  Future<void> setSortMode(int mode) async {
-    await _manager.setSortMode(mode);
-    state = state.copyWith(sortMode: mode);
-  }
-
-  Future<void> setSortAscending(bool ascending) async {
-    await _manager.setSortAscending(ascending);
-    state = state.copyWith(sortAscending: ascending);
-  }
-
-  // ─── Desktop Lyrics Methods ─────────────────────────────────────────
-
-  Future<void> setDesktopLyricsEnabled(bool enabled) async {
-    await _manager.setDesktopLyricsEnabled(enabled);
-    state = state.copyWith(desktopLyricsEnabled: enabled);
-  }
-
-  Future<void> setDesktopLyricsFontSize(double size) async {
-    await _manager.setDesktopLyricsFontSize(size);
-    state = state.copyWith(desktopLyricsFontSize: size);
-  }
-
-  Future<void> setDesktopLyricsOpacity(double opacity) async {
-    await _manager.setDesktopLyricsOpacity(opacity);
-    state = state.copyWith(desktopLyricsOpacity: opacity);
-  }
-
-  Future<void> setDesktopLyricsClickThrough(bool clickThrough) async {
-    await _manager.setDesktopLyricsClickThrough(clickThrough);
-    state = state.copyWith(desktopLyricsClickThrough: clickThrough);
-  }
-
-  // ─── Visualizer Methods ─────────────────────────────────────────────
-
-  Future<void> setVisualizerEnabled(bool enable) async {
-    await _manager.setVisualizerEnabled(enable);
-    state = state.copyWith(visualizerEnabled: enable);
-  }
-
-  Future<void> setVisualizerShape(int shape) async {
-    await _manager.setVisualizerShape(shape);
-    state = state.copyWith(visualizerShape: shape);
-  }
-
-  // ─── Hotkeys & Media Methods ────────────────────────────────────────
-
-  Future<void> setCustomHotkey(String action, String keys) async {
-    await _manager.setCustomHotkey(action, keys);
-    final newHotkeys = Map<String, String>.from(state.customHotkeys);
-    newHotkeys[action] = keys;
-    state = state.copyWith(customHotkeys: newHotkeys);
-  }
-
-  Future<void> removeCustomHotkey(String action) async {
-    await _manager.removeCustomHotkey(action);
-    final newHotkeys = Map<String, String>.from(state.customHotkeys);
-    newHotkeys.remove(action);
-    state = state.copyWith(customHotkeys: newHotkeys);
-  }
-
-  Future<void> setMediaKeyEnabled(bool enabled) async {
-    await _manager.setMediaKeyEnabled(enabled);
-    state = state.copyWith(mediaKeyEnabled: enabled);
-  }
-
-  // ─── Other Methods ──────────────────────────────────────────────────
-
-  Future<void> setMinimizeToTray(bool minimize) async {
-    await _manager.setMinimizeToTray(minimize);
-    state = state.copyWith(minimizeToTray: minimize);
-  }
-
-  Future<void> setSensitivity(double value) async {
-    final clamped = value.clamp(0.3, 2.5);
-    await _manager.setSensitivity(clamped);
-    state = state.copyWith(sensitivity: clamped);
-  }
-
-  Future<void> setCustomBackgroundImage(String? path) async {
-    await _manager.setCustomBackgroundImage(path);
-    state = state.copyWith(customBackgroundImage: path);
-  }
-
-  // ─── Window State (not part of SettingsState, uses manager directly) ─
-
-  Future<void> setSavedWindowState(Size size, bool isMaximized, bool isFullScreen) async {
-    await _manager.setSavedWindowState(size, isMaximized, isFullScreen);
-  }
-
-  Future<void> setSavedWindowPosition(Offset position) async {
-    await _manager.setSavedWindowPosition(position);
-  }
+  // ─── Window State (legacy setters on manager directly) ───────────
+  Future<void> setSavedWindowState(Size size, bool isMaximized, bool isFullScreen) =>
+      _manager.setSavedWindowState(size, isMaximized, isFullScreen);
+  Future<void> setSavedWindowPosition(Offset position) =>
+      _manager.setSavedWindowPosition(position);
 }
 
 /// Provider for the settings notifier.
-///
-/// This provides a clean Riverpod interface for settings while wrapping
-/// the existing [SettingsManager] for backward compatibility.
 final settingsNotifierProvider =
     NotifierProvider<SettingsNotifier, SettingsState>(SettingsNotifier.new);

@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../logging/app_logger.dart';
+
 class LyricLine {
   final Duration startTime;
   final String text;
@@ -107,7 +109,7 @@ class LyricParser {
             final content = await rootBundle.loadString(path);
             return parse(content);
           } catch (e) {
-            debugPrint('LyricParser: $e');
+            AppLogger.w('audio.lyric_parser', 'line parse failed; continuing', error: e);
             // Keep looking
           }
         }

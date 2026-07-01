@@ -1,3 +1,4 @@
+import 'logging/app_logger.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
@@ -8,6 +9,7 @@ import '../models/cover_art_cache.dart';
 import 'settings_manager.dart';
 import 'platform_capabilities.dart';
 import 'services/database_service.dart';
+import 'performance_probe.dart';
 
 class CoverArtEntry {
   CoverArtEntry({
@@ -61,7 +63,7 @@ class CoverArtRepository with WidgetsBindingObserver {
   	  @override
   	  void didHaveMemoryPressure() {
   	    super.didHaveMemoryPressure();
-  	    debugPrint('CoverArtRepository: Memory pressure detected. Clearing caches.');
+  	    AppLogger.i('cover_art.repository', 'Memory pressure detected; clearing caches');
   	    _providerCache.clear();
   	    PaintingBinding.instance.imageCache.clear();
   	    PaintingBinding.instance.imageCache.clearLiveImages();
@@ -70,6 +72,11 @@ class CoverArtRepository with WidgetsBindingObserver {
   	  void dispose() {
   	    WidgetsBinding.instance.removeObserver(this);
   	  }
+
+  /// Reports current provider cache size to [PerformanceProbe].
+  void _reportCacheSize() {
+    PerformanceProbe.instance.recordCacheSize(_providerCache.length);
+  }
 
   Future<void> primeForSongs(Iterable<Song> songs) async {
     await Future.wait(songs.map(resolveEntry));
@@ -92,8 +99,14 @@ class CoverArtRepository with WidgetsBindingObserver {
           final song = songs[idx];
           await resolveEntry(song);
           getCachedProvider(song.fileName, cacheWidth: 200, cacheHeight: 200);
+          PerformanceProbe.instance.recordPreload();
         } catch (e, stack) {
-          debugPrint('Failed to preload cover art for song at index $idx: $e\n$stack');
+          AppLogger.w(
+            'cover_art.repository',
+            'preload cover art failed at index $idx',
+            error: e,
+            stack: stack,
+          );
         }
       }));
     } else {
@@ -103,8 +116,14 @@ class CoverArtRepository with WidgetsBindingObserver {
           final song = songs[idx];
           await resolveEntry(song);
           getCachedProvider(song.fileName, cacheWidth: 200, cacheHeight: 200);
+          PerformanceProbe.instance.recordPreload();
         } catch (e, stack) {
-          debugPrint('Failed to preload cover art for song at index $idx: $e\n$stack');
+          AppLogger.w(
+            'cover_art.repository',
+            'preload cover art failed at index $idx',
+            error: e,
+            stack: stack,
+          );
         }
       }
     }
@@ -153,14 +172,17 @@ class CoverArtRepository with WidgetsBindingObserver {
         );
         if (_providerCache.length >= _maxProviderCacheSize) {
           _providerCache.remove(_providerCache.keys.first);
+          PerformanceProbe.instance.recordEviction();
         }
         _providerCache[key] = resized;
+        _reportCacheSize();
         return resized;
       }
     }
 
     if (_providerCache.length >= _maxProviderCacheSize) {
       _providerCache.remove(_providerCache.keys.first);
+      PerformanceProbe.instance.recordEviction();
     }
 
     final ImageProvider<Object> baseProvider = entry.isAsset
@@ -178,6 +200,7 @@ class CoverArtRepository with WidgetsBindingObserver {
           );
 
     _providerCache[key] = provider;
+    _reportCacheSize();
     return provider;
   }
 
@@ -188,20 +211,25 @@ class CoverArtRepository with WidgetsBindingObserver {
       bool isAsset = false;
 
       if (song.isBuiltIn) {
-        // Built-in asset: map audio path to image path
-        imagePath = _builtInCoverPath(song);
         isAsset = true;
-        try {
-          await rootBundle.load(imagePath);
+        final resolved = await findCoverAssetPath(song);
+        if (resolved != null) {
+          imagePath = resolved;
           exists = true;
-        } catch (e, stack) { debugPrint('Error in cover_art_repository: $e\n$stack');
+        } else {
+          imagePath = _builtInCoverPath(song);
           exists = false;
         }
       } else {
-        // Local file: cover is stored alongside source as <sourcePath>.png
-        imagePath = '${song.sourcePath}.png';
         isAsset = false;
-        exists = File(imagePath).existsSync();
+        final resolved = findLocalCoverPath(song);
+        if (resolved != null) {
+          imagePath = resolved;
+          exists = true;
+        } else {
+          imagePath = '${song.sourcePath}.png';
+          exists = false;
+        }
       }
 
       final entry = CoverArtEntry(
@@ -253,7 +281,7 @@ class CoverArtRepository with WidgetsBindingObserver {
           }
         }
       } catch (e, stack) {
-        debugPrint('CoverArtRepo disk cache error: $e\n$stack');
+        AppLogger.w('cover_art.repository', 'disk cache error', error: e, stack: stack);
         // Database not ready yet — will fall through to source load
       }
 
@@ -278,11 +306,13 @@ class CoverArtRepository with WidgetsBindingObserver {
         // LRU eviction before insert
         if (_providerCache.length >= _maxProviderCacheSize) {
           _providerCache.remove(_providerCache.keys.first);
+          PerformanceProbe.instance.recordEviction();
         }
         _providerCache[key] = provider;
+        _reportCacheSize();
       }
     } catch (e, stack) {
-      debugPrint('Failed to pre-populate cover art for $fileName: $e\n$stack');
+      AppLogger.w('cover_art.repository', 'pre-populate failed for $fileName', error: e, stack: stack);
     }
   }
 
@@ -300,7 +330,7 @@ class CoverArtRepository with WidgetsBindingObserver {
         }
       }
     } catch (e, stack) {
-      debugPrint('Failed to load cover bytes: $e\n$stack');
+      AppLogger.w('cover_art.repository', 'load cover bytes failed', error: e, stack: stack);
     }
     return null;
   }
@@ -340,10 +370,10 @@ class CoverArtRepository with WidgetsBindingObserver {
             lastAccessed: DateTime.now(),
           ));
         } catch (retryError, retryStack) {
-          debugPrint('Failed to save cover art after eviction: $retryError\n$retryStack');
+          AppLogger.w('cover_art.repository', 'save after eviction failed', error: retryError, stack: retryStack);
         }
       } else {
-        debugPrint('Failed to save cover art to disk cache: $e\n$stack');
+        AppLogger.w('cover_art.repository', 'save cover art failed', error: e, stack: stack);
       }
     }
   }
@@ -367,7 +397,7 @@ class CoverArtRepository with WidgetsBindingObserver {
         oldest.map((e) => e.fileName).toList(),
       );
     } catch (e, stack) {
-      debugPrint('Failed to evict disk cache: $e\n$stack');
+      AppLogger.w('cover_art.repository', 'evict disk cache failed', error: e, stack: stack);
     }
   }
 
@@ -387,9 +417,9 @@ class CoverArtRepository with WidgetsBindingObserver {
       await db.deleteCoverArtCachesByFileNames(
         oldest.map((e) => e.fileName).toList(),
       );
-      debugPrint('Force-evicted $toRemove disk cache entries');
+      AppLogger.i('cover_art.repository', 'force-evicted \$toRemove entries');
     } catch (e, stack) {
-      debugPrint('Failed to force-evict disk cache: $e\n$stack');
+      AppLogger.w('cover_art.repository', 'force-evict failed', error: e, stack: stack);
     }
   }
 
@@ -413,7 +443,9 @@ class CoverArtRepository with WidgetsBindingObserver {
       if (cached != null) {
         await db.deleteCoverArtCache(fileName);
       }
-    } catch (e, stack) { debugPrint('CoverArtRepo remove disk cache error: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.w('cover_art.repository', 'remove disk cache error', error: e, stack: stack);
+    }
   }
 
   Future<Color?> resolveDominantColor(
@@ -475,7 +507,7 @@ class CoverArtRepository with WidgetsBindingObserver {
       await _settingsManager?.saveSongColor(song.fileName, color);
       return color;
     } catch (e, stack) {
-      debugPrint('Failed to compute dominant color (image might not exist): $e\n$stack');
+      AppLogger.w('cover_art.repository', 'compute dominant color failed', error: e, stack: stack);
       return null;
     }
   }
@@ -489,6 +521,101 @@ class CoverArtRepository with WidgetsBindingObserver {
         .replaceFirst('assets/song/', 'assets/pic/')
         .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
     return picPath;
+  }
+
+  /// Attempts to find a cover art asset path for a built-in song by checking various locations.
+  /// Returns the first path that successfully loads, or null if none are found.
+  static Future<String?> findCoverAssetPath(Song song) async {
+    if (!song.isBuiltIn) return null;
+
+    final path = song.sourcePath.replaceAll('\\', '/');
+    final lastSlash = path.lastIndexOf('/');
+    final parentDir = lastSlash != -1 ? path.substring(0, lastSlash) : '';
+    final lastDot = path.lastIndexOf('.');
+    final fileNameWithoutExt = (lastDot != -1 && lastDot > lastSlash)
+        ? path.substring(lastSlash + 1, lastDot)
+        : (lastSlash != -1 ? path.substring(lastSlash + 1) : path);
+
+    // List of candidate paths in order of preference
+    final candidates = [
+      // 1. Default mapped path (assets/pic/...)
+      path.replaceFirst('assets/song/', 'assets/pic/').replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png'),
+      path.replaceFirst('assets/song/', 'assets/pic/').replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.jpg'),
+      path.replaceFirst('assets/song/', 'assets/pic/').replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.jpeg'),
+
+      // 2. Sibling path in same folder (assets/song/...)
+      '$parentDir/$fileNameWithoutExt.png',
+      '$parentDir/$fileNameWithoutExt.jpg',
+      '$parentDir/$fileNameWithoutExt.jpeg',
+
+      // 3. Album cover in same folder
+      '$parentDir/cover.png',
+      '$parentDir/cover.jpg',
+      '$parentDir/cover.jpeg',
+      '$parentDir/folder.png',
+      '$parentDir/folder.jpg',
+      '$parentDir/folder.jpeg',
+
+      // 4. Album cover in pic folder
+      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/cover.png',
+      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/cover.jpg',
+      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/cover.jpeg',
+      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/folder.png',
+      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/folder.jpg',
+      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/folder.jpeg',
+    ];
+
+    for (final candidate in candidates) {
+      try {
+        await rootBundle.load(candidate);
+        return candidate;
+      } catch (_) {
+        // Continue to next candidate
+      }
+    }
+
+    return null;
+  }
+
+  /// Attempts to find a cover art image path for a local song by checking various locations.
+  /// Returns the first path that exists, or null if none are found.
+  static String? findLocalCoverPath(Song song) {
+    if (song.isBuiltIn) return null;
+
+    final path = song.sourcePath;
+    final file = File(path);
+    final parentDir = file.parent.path.replaceAll('\\', '/');
+    final fileName = file.path.split(RegExp(r'[/\\]')).last;
+    final lastDot = fileName.lastIndexOf('.');
+    final fileNameWithoutExt = lastDot != -1 ? fileName.substring(0, lastDot) : fileName;
+
+    final candidates = [
+      // 1. Sibling with extension appended (legacy)
+      '$path.png',
+      '$path.jpg',
+      '$path.jpeg',
+
+      // 2. Sibling with extension replaced
+      '$parentDir/$fileNameWithoutExt.png',
+      '$parentDir/$fileNameWithoutExt.jpg',
+      '$parentDir/$fileNameWithoutExt.jpeg',
+
+      // 3. Album cover in same folder
+      '$parentDir/cover.png',
+      '$parentDir/cover.jpg',
+      '$parentDir/cover.jpeg',
+      '$parentDir/folder.png',
+      '$parentDir/folder.jpg',
+      '$parentDir/folder.jpeg',
+    ];
+
+    for (final candidate in candidates) {
+      if (File(candidate).existsSync()) {
+        return candidate;
+      }
+    }
+
+    return null;
   }
 }
 

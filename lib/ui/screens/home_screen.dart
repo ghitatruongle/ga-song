@@ -5,6 +5,7 @@ import '../../core/audio/playlist_service.dart';
 import '../../core/utils/sort_utils.dart';
 import '../../models/song.dart';
 import '../../core/cover_art_repository.dart';
+import '../../core/logging/app_logger.dart';
 import '../../core/performance_probe.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/main_content.dart';
@@ -102,7 +103,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _settingsManager.customBackgroundImageNotifier,
       _playlistService.currentIndexNotifier,
     ]);
-    _playlistService.currentIndexNotifier.addListener(_onSongChanged);
     _settingsManager.sortModeNotifier.addListener(_applySort);
     _settingsManager.sortAscendingNotifier.addListener(_applySort);
     // Listen for external tab changes (e.g. KTV back button)
@@ -121,7 +121,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
-    _playlistService.currentIndexNotifier.removeListener(_onSongChanged);
     _settingsManager.sortModeNotifier.removeListener(_applySort);
     _settingsManager.sortAscendingNotifier.removeListener(_applySort);
     if (_tabListener != null) {
@@ -198,11 +197,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// Rebuild album cache from _songs. Called only when _songs changes.
   void _rebuildAlbumCache() {
+    const uncategorized = 'Chưa phân loại';
     final albumCounts = <String, int>{};
     for (final song in _songs) {
       final album = song.album;
       if (album != null && album.isNotEmpty) {
         albumCounts[album] = (albumCounts[album] ?? 0) + 1;
+      } else {
+        albumCounts[uncategorized] = (albumCounts[uncategorized] ?? 0) + 1;
       }
     }
     _cachedAlbums = albumCounts.keys.toList();
@@ -233,7 +235,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       }
     } catch (error, stackTrace) {
-      debugPrint('Failed to process songs: $error\n$stackTrace');
+      AppLogger.e('home_screen', 'Failed to process songs', error: error, stack: stackTrace);
       if (!mounted) return;
 
       setState(() {
@@ -263,7 +265,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return _cachedViewSongs!;
     }
     _cachedViewPlaylistName = _selectedPlaylistName;
-    _cachedViewSongs = _songs.where((s) => s.album == _selectedPlaylistName).toList();
+    _cachedViewSongs = _selectedPlaylistName == 'Chưa phân loại'
+        ? _songs.where((s) => s.album == null || s.album!.isEmpty).toList()
+        : _songs.where((s) => s.album == _selectedPlaylistName).toList();
     return _cachedViewSongs!;
   }
 
@@ -456,6 +460,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Phase 2.3: ref.listen replaces direct addListener call.
+    ref.listen<int>(currentPlayingIndexProvider, (_, next) {
+      _onSongChanged();
+    });
     // Listen to Isar songListProvider
     ref.listen<AsyncValue<List<Song>>>(songListProvider, (previous, next) {
       next.whenData((songs) {
@@ -465,6 +473,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       });
     });
+
+    // ref.listen only fires on *state changes*. If the stream already emitted
+    // before this widget built, the listener won't fire. Read the current
+    // state once to seed _songs on first build.
+    if (_songs.isEmpty && _isLoading) {
+      final current = ref.read(songListProvider);
+      current.whenData((songs) {
+        if (songs.isNotEmpty) {
+          _handleSongsUpdate(songs);
+        }
+      });
+    }
 
     // On Android, also listen for native PiP mode changes
     return ValueListenableBuilder<bool>(
@@ -692,7 +712,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final color = await _coverArtRepository.resolveDominantColor(song);
       _settingsManager.dynamicPrimaryColorNotifier.value = color;
-    } catch (e, stack) { debugPrint('Error in home_screen: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('home_screen', 'operation failed', error: e, stack: stack);
+    }
   }
 
   Future<void> _importLocalSongs() async {

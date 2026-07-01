@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
+import 'logging/app_logger.dart';
+
 /// Detects platform capabilities and hardware tier to tune performance settings.
 ///
 /// Provides a single source of truth for platform-specific decisions across
@@ -39,7 +41,7 @@ class PlatformCapabilities {
       }
       return false;
     } catch (e) {
-      debugPrint('PlatformCapabilities version error: $e');
+      AppLogger.w('platform.capabilities', 'version detection failed', error: e);
       return false;
     }
   }
@@ -74,7 +76,8 @@ class PlatformCapabilities {
           osRelease.contains('kali') ||
           osRelease.contains('mint') ||
           osRelease.contains('Chrome OS');
-    } catch (e, stack) { debugPrint('Error in platform_capabilities: $e\n$stack'); 
+    } catch (e, stack) {
+      AppLogger.e('platform.capabilities', 'operation failed', error: e, stack: stack);
       return false;
     }
   }
@@ -85,7 +88,8 @@ class PlatformCapabilities {
     try {
       return File('/etc/os-release').readAsStringSync().contains('Chrome OS') ||
           File('/run/chromeos-config').existsSync();
-    } catch (e, stack) { debugPrint('Error in platform_capabilities: $e\n$stack'); 
+    } catch (e, stack) {
+      AppLogger.e('platform.capabilities', 'operation failed', error: e, stack: stack);
       return false;
     }
   }

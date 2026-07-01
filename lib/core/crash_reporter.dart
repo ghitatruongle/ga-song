@@ -1,4 +1,4 @@
-import 'app_logger.dart';
+import 'logging/app_logger.dart';
 
 /// Abstract interface for crash reporting.
 ///
@@ -27,48 +27,49 @@ abstract class CrashReporter {
   void dispose();
 }
 
-/// Debug implementation that logs to console and buffers in [AppLogger].
+/// Debug implementation that logs to console via [AppLogger].
 class DebugCrashReporter implements CrashReporter {
+  static const String _tag = 'crash.reporter';
+
   static final DebugCrashReporter _instance = DebugCrashReporter._();
   factory DebugCrashReporter() => _instance;
   DebugCrashReporter._();
 
-  final _log = AppLogger('CrashReporter');
-
   @override
   Future<void> init() async {
-    _log.info('DebugCrashReporter initialized');
+    AppLogger.i(_tag, 'DebugCrashReporter initialized');
   }
 
   @override
   void reportError(Object error, StackTrace stackTrace, {String? context}) {
     final ctx = context != null ? '[$context] ' : '';
-    _log.warning('${ctx}Non-fatal error reported', error);
+    AppLogger.w(_tag, '${ctx}Non-fatal error reported', error: error, stack: stackTrace);
   }
 
   @override
   void reportFatalError(Object error, StackTrace stackTrace) {
-    _log.error('FATAL crash reported', error, stackTrace);
+    AppLogger.f(_tag, 'FATAL crash reported', error: error, stack: stackTrace);
   }
 
   @override
   void setUser(String? userId) {
-    _log.debug('User set: $userId');
+    AppLogger.d(_tag, 'User set: $userId');
   }
 
   @override
   void addBreadcrumb(String message, {Map<String, dynamic>? data}) {
     final dataStr = data != null ? ' $data' : '';
-    _log.debug('Breadcrumb: $message$dataStr');
+    AppLogger.d(_tag, 'Breadcrumb: $message$dataStr');
   }
 
   @override
   Future<void> flush() async {
-    _log.debug('Flush requested (${AppLogger.getBuffer().length} buffered logs)');
+    final pending = AppLogger.drainPendingCrashReports();
+    AppLogger.d(_tag, 'Flush requested (${pending.length} buffered reports drained)');
   }
 
   @override
   void dispose() {
-    _log.info('DebugCrashReporter disposed');
+    AppLogger.i(_tag, 'DebugCrashReporter disposed');
   }
 }

@@ -5,6 +5,7 @@ import 'package:audiotags/audiotags.dart';
 import '../../models/song.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Dialog for editing song metadata (tags).
 ///
@@ -112,7 +113,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
         try {
           await AudioTags.write(widget.song.sourcePath, tag);
         } catch (e) {
-          debugPrint('Warning: Could not write tags to file: $e');
+          AppLogger.w('tag_editor.dialog', 'write tags failed', error: e);
           // Continue even if file write fails - we can still update DB
         }
       }

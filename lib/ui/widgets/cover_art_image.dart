@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cover_art_repository.dart';
+import '../../core/logging/app_logger.dart';
 import '../../providers/service_providers.dart';
 import '../../models/song.dart';
 
@@ -71,7 +72,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
         _entry = entry;
       });
     } catch (e) {
-      debugPrint('Failed to resolve cover art for ${widget.song.fileName}: $e');
+      AppLogger.w('ui.cover_art_image', 'resolve failed for ${widget.song.fileName}', error: e);
       if (!mounted || _requestToken != token) return;
       setState(() {
         _entry = CoverArtEntry(
@@ -103,7 +104,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
       filterQuality: widget.filterQuality,
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) {
-        debugPrint('Image rendering failed for ${widget.song.fileName}: $error');
+        AppLogger.w('ui.cover_art_image', 'rendering failed for ${widget.song.fileName}', error: error);
         return widget.fallbackBuilder(context);
       },
     );

@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
+import '../logging/app_logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
+import '../cover_art_repository.dart';
 
 class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioEngineService _engineService;
@@ -59,7 +61,7 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
         speed: 1.0,
       ));
     } catch (e) {
-      debugPrint('audio_service broadcastState error: $e');
+      AppLogger.w('audio_handler.service', 'broadcastState failed', error: e);
     }
   }
 
@@ -93,7 +95,7 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     try {
       mediaItem.add(current.copyWith(duration: duration));
     } catch (e) {
-      debugPrint('audio_service duration update error: $e');
+      AppLogger.w('audio_handler.service', 'duration update failed', error: e);
     }
   }
 
@@ -103,35 +105,33 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       try {
         mediaItem.add(null);
       } catch (e) {
-        debugPrint('audio_service clear mediaItem error: $e');
+        AppLogger.w('audio_handler.service', 'clear mediaItem failed', error: e);
       }
       return;
     }
 
     Uri? artUri;
     try {
-      final String assetPath;
+      final String? resolvedPath;
       if (song.isBuiltIn) {
-        assetPath = song.sourcePath
-            .replaceFirst('assets/song/', 'assets/pic/')
-            .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
+        resolvedPath = await CoverArtRepository.findCoverAssetPath(song);
       } else {
-        assetPath = '${song.sourcePath}.png';
+        resolvedPath = CoverArtRepository.findLocalCoverPath(song);
       }
 
       final fileName = song.fileName.replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/$fileName');
       
-      if (!tempFile.existsSync() || tempFile.lengthSync() == 0) {
+      if (resolvedPath != null && (!tempFile.existsSync() || tempFile.lengthSync() == 0)) {
         if (song.isBuiltIn) {
-          final data = await rootBundle.load(assetPath);
+          final data = await rootBundle.load(resolvedPath);
           await tempFile.writeAsBytes(
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
             flush: true,
           );
         } else {
-          final imageFile = File(assetPath);
+          final imageFile = File(resolvedPath);
           if (await imageFile.exists()) {
             await imageFile.copy(tempFile.path);
           }
@@ -141,7 +141,7 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
         artUri = Uri.file(tempFile.path);
       }
     } catch (e) {
-      debugPrint('Failed to extract audio_service thumbnail: $e');
+      AppLogger.w('audio_handler.service', 'thumbnail extract failed', error: e);
     }
     
     try {
@@ -154,7 +154,7 @@ class GaSongAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
         artUri: artUri,
       ));
     } catch (e) {
-      debugPrint('audio_service mediaItem update error: $e');
+      AppLogger.w('audio_handler.service', 'mediaItem update failed', error: e);
     }
   }
 

@@ -21,28 +21,18 @@ class LyricView extends ConsumerStatefulWidget {
 
 class _LyricViewState extends ConsumerState<LyricView> {
   final ScrollController _scrollController = ScrollController();
-  late final _audioEngine = ref.read(audioEngineServiceProvider);
   int _currentIndex = -1;
 
   @override
-  void initState() {
-    super.initState();
-    _audioEngine.positionNotifier.addListener(_onPositionChanged);
-  }
-
-  @override
   void dispose() {
-    _audioEngine.positionNotifier.removeListener(_onPositionChanged);
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _onPositionChanged() {
+  void _onPositionChanged(Duration currentPosition) {
     final lyrics = ref.read(lyricProvider);
     if (lyrics.isEmpty) return;
 
-    final currentPosition = _audioEngine.positionNotifier.value;
-    
     // Find the current line
     int newIndex = -1;
     for (int i = 0; i < lyrics.length; i++) {
@@ -82,6 +72,11 @@ class _LyricViewState extends ConsumerState<LyricView> {
   Widget build(BuildContext context) {
     final lyrics = ref.watch(lyricProvider);
     final accentColor = Theme.of(context).colorScheme.primary;
+    // Phase 2.3: ref.listen for reactive position updates; auto-cleaned on
+    // widget dispose (vs. manual addListener/removeListener).
+    ref.listen<Duration>(positionProvider, (_, next) {
+      _onPositionChanged(next);
+    });
 
     if (lyrics.isEmpty) {
       return Center(
@@ -131,7 +126,7 @@ class _LyricViewState extends ConsumerState<LyricView> {
 
         return GestureDetector(
           onTap: () {
-            _audioEngine.seek(line.startTime);
+            ref.read(audioEngineServiceProvider).seek(line.startTime);
           },
           child: Container(
             height: widget.isFullScreen ? 70.0 : 48.0,

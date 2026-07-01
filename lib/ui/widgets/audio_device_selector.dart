@@ -221,7 +221,9 @@ class _DeviceTile extends StatelessWidget {
               : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E5E5)),
         ),
       ),
-      child: ListTile(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
         leading: Icon(
           isSelected ? Icons.check_circle : Icons.speaker_outlined,
           color: isSelected
@@ -246,6 +248,7 @@ class _DeviceTile extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+      ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import '../logging/app_logger.dart';
 import 'package:flutter/foundation.dart';
 
 /// Service for monitoring and recording performance metrics.
@@ -30,7 +31,7 @@ class PerformanceService {
     _metrics.putIfAbsent(name, () => []).add(timer.elapsed);
 
     if (kDebugMode) {
-      debugPrint('Performance: $name took ${timer.elapsedMilliseconds}ms');
+      AppLogger.d('performance.service', '$name took ${timer.elapsedMilliseconds}ms');
     }
 
     return timer.elapsed;

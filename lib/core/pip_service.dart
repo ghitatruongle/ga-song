@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'logging/app_logger.dart';
+
 /// Service that manages Picture-in-Picture mode on Android.
 ///
 /// Uses a [MethodChannel] to communicate with native Android code.
@@ -48,7 +50,7 @@ class PipService {
       final result = await _channel.invokeMethod<bool>('enterPiP');
       return result ?? false;
     } on PlatformException catch (e) {
-      debugPrint('PiP error: $e');
+      AppLogger.w('pip.service', 'PiP error', error: e);
       return false;
     }
   }

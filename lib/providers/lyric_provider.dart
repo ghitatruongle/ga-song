@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../core/audio/playlist_service.dart';
 import '../core/audio/lyric_parser.dart';
-import '../core/view_models/player_view_model.dart';
 import '../core/services/online_lyrics_service.dart';
 import 'service_providers.dart';
 
@@ -143,17 +142,16 @@ final lyricProvider = StateNotifierProvider<LyricNotifier, List<LyricLine>>((ref
 /// current-line string. Listens to BOTH lyric changes AND position changes.
 class CurrentLyricLineNotifier extends StateNotifier<String> {
   final Ref _ref;
-  final PlayerViewModel _playerViewModel;
   List<LyricLine> _lines = [];
   Timer? _pollTimer;
 
-  CurrentLyricLineNotifier(this._ref, this._playerViewModel) : super('') {
+  CurrentLyricLineNotifier(this._ref) : super('') {
     _ref.listen<List<LyricLine>>(lyricProvider, (previous, next) {
       _lines = next;
       _updateCurrentLine();
     });
 
-    _playerViewModel.positionNotifier.addListener(_onPositionChanged);
+    _ref.listen(positionProvider, (_, _) => _onPositionChanged());
 
     _lines = _ref.read(lyricProvider);
     _updateCurrentLine();
@@ -173,7 +171,7 @@ class CurrentLyricLineNotifier extends StateNotifier<String> {
       return;
     }
 
-    final position = _playerViewModel.position;
+    final position = _ref.read(positionProvider);
 
     String newLine = '';
     for (int i = _lines.length - 1; i >= 0; i--) {
@@ -191,13 +189,11 @@ class CurrentLyricLineNotifier extends StateNotifier<String> {
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _playerViewModel.positionNotifier.removeListener(_onPositionChanged);
     super.dispose();
   }
 }
 
 final currentLyricLineProvider =
     StateNotifierProvider<CurrentLyricLineNotifier, String>((ref) {
-  final playerViewModel = ref.read(playerViewModelProvider);
-  return CurrentLyricLineNotifier(ref, playerViewModel);
+  return CurrentLyricLineNotifier(ref);
 });

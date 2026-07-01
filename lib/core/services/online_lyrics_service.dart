@@ -1,3 +1,4 @@
+import '../logging/app_logger.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -91,11 +92,11 @@ class OnlineLyricsService {
         // No results found
         return [];
       } else {
-        debugPrint('Lyrics API error: ${response.statusCode}');
+        AppLogger.w('online_lyrics.service', 'API error: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      debugPrint('Lyrics fetch error: $e');
+      AppLogger.w('online_lyrics.service', 'fetch failed', error: e);
       return [];
     }
   }

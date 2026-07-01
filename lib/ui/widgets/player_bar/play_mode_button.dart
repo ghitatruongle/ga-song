@@ -10,38 +10,34 @@ class PlayModeButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.read(playerViewModelProvider);
-    return ListenableBuilder(
-      listenable: viewModel,
-      builder: (context, _) {
-        final playMode = viewModel.playMode;
+    // Phase 2.2: play mode from state provider instead of PlayerViewModel.
+    final playMode = ref.watch(playModeProvider);
+    final playlist = ref.read(playlistServiceProvider);
 
-        var icon = Icons.repeat_rounded;
-        var color = context.adaptiveSecondary;
+    var icon = Icons.repeat_rounded;
+    var color = context.adaptiveSecondary;
 
-        switch (playMode) {
-          case PlayMode.sequential:
-            icon = Icons.repeat_rounded;
-            break;
-          case PlayMode.repeatOne:
-            icon = Icons.repeat_one_rounded;
-            color = context.adaptive;
-            break;
-          case PlayMode.playOneStop:
-            icon = Icons.looks_one_rounded;
-            break;
-          case PlayMode.shuffle:
-            icon = Icons.shuffle_rounded;
-            color = context.adaptive;
-            break;
-        }
+    switch (playMode) {
+      case PlayMode.sequential:
+        icon = Icons.repeat_rounded;
+        break;
+      case PlayMode.repeatOne:
+        icon = Icons.repeat_one_rounded;
+        color = context.adaptive;
+        break;
+      case PlayMode.playOneStop:
+        icon = Icons.looks_one_rounded;
+        break;
+      case PlayMode.shuffle:
+        icon = Icons.shuffle_rounded;
+        color = context.adaptive;
+        break;
+    }
 
-        return IconButton(
-          icon: Icon(icon, color: color, size: 22),
-          onPressed: viewModel.togglePlayMode,
-          tooltip: 'Chế độ phát',
-        );
-      },
+    return IconButton(
+      icon: Icon(icon, color: color, size: 22),
+      onPressed: playlist.nextPlayMode,
+      tooltip: 'Chế độ phát',
     );
   }
 }

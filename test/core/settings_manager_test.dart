@@ -615,6 +615,9 @@ void main() {
         await manager.setCrossfadeDuration(5.0);
         await manager.setSensitivity(1.8);
 
+        // Flush debounced writes so values reach SharedPreferences before reinit.
+        manager.flushPendingWrites();
+
         final newManager = SettingsManager();
         await newManager.init();
 

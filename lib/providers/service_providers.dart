@@ -15,6 +15,7 @@ import '../core/services/desktop_lyrics_service.dart';
 import '../core/services/smart_playlist_service.dart';
 import '../core/services/online_lyrics_service.dart';
 export '../core/settings/settings_notifier.dart';
+export 'state_providers.dart';
 
 // ─── Core services ─────────────────────────────────────────────────────
 

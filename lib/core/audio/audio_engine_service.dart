@@ -136,7 +136,8 @@ class AudioEngineService {
   // ─── Source Management & Caching ───────────────────────────────────────────
 
   Future<AudioSource?> ensureSource(String assetPath) {
-    final cached = _sourceCache[assetPath];
+    final normalizedPath = assetPath.replaceAll('\\', '/');
+    final cached = _sourceCache[normalizedPath];
     if (cached != null) {
       _totalCacheHits++;
       // Update LRU access order
@@ -145,40 +146,40 @@ class AudioEngineService {
     }
 
     _totalCacheMisses++;
-    return _sourceLoadFutures.putIfAbsent(assetPath, () async {
+    return _sourceLoadFutures.putIfAbsent(normalizedPath, () async {
       try {
         final Uint8List data;
-        if (assetPath.startsWith('assets/')) {
+        if (normalizedPath.startsWith('assets/')) {
           // Load asset bytes on main thread (required by rootBundle)
-          final bytes = await rootBundle.load(assetPath);
+          final bytes = await rootBundle.load(normalizedPath);
           data = bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
         } else {
           // Load local file bytes
-          final file = File(assetPath);
+          final file = File(normalizedPath);
           if (!await file.exists()) {
-            throw Exception('Local file not found at $assetPath');
+            throw Exception('Local file not found at $normalizedPath');
           }
           data = await file.readAsBytes();
         }
         
         // Decode audio via SoLoud (native C++ — runs off main thread internally)
         final source = await _soloud.loadMem(
-          assetPath,
+          normalizedPath,
           data,
         );
         
         // Enforce LRU cache max size
         _evictIfNeeded();
         
-        _sourceCache[assetPath] = _CacheEntry(source, ++_cacheAccessCounter);
+        _sourceCache[normalizedPath] = _CacheEntry(source, ++_cacheAccessCounter);
         // Track cache size for performance profiling
         PerformanceProbe.instance.recordCacheSize(_sourceCache.length);
         return source;
       } catch (e, stack) {
-        debugPrint('Source load error at $assetPath: $e\n$stack');
+        debugPrint('Source load error at $normalizedPath: $e\n$stack');
         return null;
       } finally {
-        _sourceLoadFutures.remove(assetPath);
+        _sourceLoadFutures.remove(normalizedPath);
       }
     });
   }
@@ -212,8 +213,9 @@ class AudioEngineService {
   }
 
   Future<void> evictSources(Set<String> keepAssetPaths) async {
+    final normalizedKeepPaths = keepAssetPaths.map((path) => path.replaceAll('\\', '/')).toSet();
     final toRemove = _sourceCache.keys
-        .where((path) => !keepAssetPaths.contains(path))
+        .where((path) => !normalizedKeepPaths.contains(path))
         .toList();
     for (final path in toRemove) {
       final entry = _sourceCache.remove(path);

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'logging/app_logger.dart';
 import 'dart:convert';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter/material.dart';
@@ -124,6 +127,36 @@ class SettingsManager {
   // Media Key Support
   final ValueNotifier<bool> mediaKeyEnabledNotifier = ValueNotifier(true);
 
+  // ─── Debounced Persistence ────────────────────────────────────────────────
+  // Slider onChanged fires on every pixel; writing to SharedPreferences each
+  // time blocks the UI thread (especially in debug).  We debounce the disk
+  // write so only the *final* value is persisted after the user stops dragging.
+  final Map<String, _DebouncedWrite> _pendingWrites = {};
+  static const int _persistDebounceMs = 300;
+
+  /// Schedules a debounced SharedPreferences write for a continuous setting.
+  /// The [ValueNotifier] is updated immediately (UI stays responsive); only
+  /// the disk I/O is deferred.
+  void _debouncePersist(String key, Future<void> Function() write) {
+    _pendingWrites[key]?.timer.cancel();
+    _pendingWrites[key] = _DebouncedWrite(
+      timer: Timer(const Duration(milliseconds: _persistDebounceMs), () {
+        _pendingWrites.remove(key);
+        write();
+      }),
+      write: write,
+    );
+  }
+
+  /// Flushes any pending debounced writes.  Call before app exit or test teardown.
+  void flushPendingWrites() {
+    for (final entry in _pendingWrites.values) {
+      entry.timer.cancel();
+      entry.write();
+    }
+    _pendingWrites.clear();
+  }
+
   // Dominant color cache (in-memory mirror of persisted values)
   final Map<String, Color> _songColorCache = <String, Color>{};
 
@@ -248,7 +281,13 @@ class SettingsManager {
         final Map<String, dynamic> decoded = jsonDecode(hotkeysJson);
         final hotkeys = decoded.map((key, value) => MapEntry(key, value.toString()));
         customHotkeysNotifier.value = hotkeys;
-      } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); 
+      } catch (e, stack) {
+        AppLogger.e(
+          'settings.manager',
+          'custom hotkeys JSON parse failed; trying legacy format',
+          error: e,
+          stack: stack,
+        );
         // Fallback to old format
         try {
           final hotkeys = Map<String, String>.from(
@@ -261,7 +300,14 @@ class SettingsManager {
             }),
           );
           customHotkeysNotifier.value = hotkeys;
-        } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); }
+        } catch (e, stack) {
+          AppLogger.e(
+            'settings.manager',
+            'legacy hotkeys parse failed',
+            error: e,
+            stack: stack,
+          );
+        }
       }
     }
 
@@ -361,7 +407,7 @@ class SettingsManager {
 
   Future<void> setBlurLevel(double level) async {
     blurLevelNotifier.value = level.clamp(0.0, 100.0);
-    await _prefs.setDouble('blurLevel', blurLevelNotifier.value);
+    _debouncePersist('blurLevel', () => _prefs.setDouble('blurLevel', blurLevelNotifier.value));
   }
 
   Future<void> setUseNativeWindowEffect(bool enable) async {
@@ -371,7 +417,7 @@ class SettingsManager {
 
   Future<void> setWindowOpacity(double opacity) async {
     windowOpacityNotifier.value = opacity.clamp(0.1, 1.0);
-    await _prefs.setDouble('windowOpacity', windowOpacityNotifier.value);
+    _debouncePersist('windowOpacity', () => _prefs.setDouble('windowOpacity', windowOpacityNotifier.value));
   }
 
   Future<void> setMinimizeToTray(bool minimize) async {
@@ -384,12 +430,14 @@ class SettingsManager {
     await _prefs.setBool('visualizerEnabled', enable);
     try {
       SoLoud.instance.setVisualizationEnabled(enable);
-    } catch (e, stack) { debugPrint('Error in settings_manager: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('settings.manager', 'operation failed', error: e, stack: stack);
+    }
   }
 
   Future<void> setSensitivity(double value) async {
     sensitivityNotifier.value = value.clamp(0.3, 2.5);
-    await _prefs.setDouble('sensitivity', sensitivityNotifier.value);
+    _debouncePersist('sensitivity', () => _prefs.setDouble('sensitivity', sensitivityNotifier.value));
   }
 
   Future<void> setUseDynamicColor(bool useDynamic) async {
@@ -408,10 +456,10 @@ class SettingsManager {
     final bands = List<double>.from(eqBandsNotifier.value);
     bands[index] = value.clamp(-1.0, 1.0);
     eqBandsNotifier.value = bands;
-    await _prefs.setStringList(
+    _debouncePersist('eqBands', () => _prefs.setStringList(
       'eqBands',
       bands.map((b) => b.toStringAsFixed(3)).toList(),
-    );
+    ));
   }
 
   Future<void> setEqBass(int level) async {
@@ -443,10 +491,10 @@ class SettingsManager {
 
   Future<void> setCrossfadeDuration(double duration) async {
     crossfadeDurationNotifier.value = duration.clamp(0.0, 10.0);
-    await _prefs.setDouble(
+    _debouncePersist('crossfadeDuration', () => _prefs.setDouble(
       'crossfadeDuration',
       crossfadeDurationNotifier.value,
-    );
+    ));
   }
 
   Future<void> setCrossfadeCurve(int curve) async {
@@ -456,10 +504,10 @@ class SettingsManager {
 
   Future<void> setNormalizationLevel(double level) async {
     normalizationLevelNotifier.value = level.clamp(-24.0, 0.0);
-    await _prefs.setDouble(
+    _debouncePersist('normalizationLevel', () => _prefs.setDouble(
       'normalizationLevel',
       normalizationLevelNotifier.value,
-    );
+    ));
   }
 
   Future<void> setNormalizationEnabled(bool enabled) async {
@@ -469,52 +517,52 @@ class SettingsManager {
 
   Future<void> setPitchShift(double pitch) async {
     pitchShiftNotifier.value = pitch.clamp(0.5, 2.0);
-    await _prefs.setDouble('pitchShift', pitchShiftNotifier.value);
+    _debouncePersist('pitchShift', () => _prefs.setDouble('pitchShift', pitchShiftNotifier.value));
   }
 
   Future<void> setReverbMix(double mix) async {
     reverbMixNotifier.value = mix.clamp(0.0, 1.0);
-    await _prefs.setDouble('reverbMix', reverbMixNotifier.value);
+    _debouncePersist('reverbMix', () => _prefs.setDouble('reverbMix', reverbMixNotifier.value));
   }
 
   Future<void> setCompressionRatio(double ratio) async {
     compressionRatioNotifier.value = ratio.clamp(1.0, 10.0);
-    await _prefs.setDouble('compressionRatio', compressionRatioNotifier.value);
+    _debouncePersist('compressionRatio', () => _prefs.setDouble('compressionRatio', compressionRatioNotifier.value));
   }
 
   Future<void> setReverbRoomSize(double size) async {
     reverbRoomSizeNotifier.value = size.clamp(0.0, 1.0);
-    await _prefs.setDouble('reverbRoomSize', reverbRoomSizeNotifier.value);
+    _debouncePersist('reverbRoomSize', () => _prefs.setDouble('reverbRoomSize', reverbRoomSizeNotifier.value));
   }
 
   Future<void> setReverbDamp(double damp) async {
     reverbDampNotifier.value = damp.clamp(0.0, 1.0);
-    await _prefs.setDouble('reverbDamp', reverbDampNotifier.value);
+    _debouncePersist('reverbDamp', () => _prefs.setDouble('reverbDamp', reverbDampNotifier.value));
   }
 
   Future<void> setCompThreshold(double threshold) async {
     compThresholdNotifier.value = threshold.clamp(-80.0, 0.0);
-    await _prefs.setDouble('compThreshold', compThresholdNotifier.value);
+    _debouncePersist('compThreshold', () => _prefs.setDouble('compThreshold', compThresholdNotifier.value));
   }
 
   Future<void> setCompAttack(double attack) async {
     compAttackNotifier.value = attack.clamp(0.0, 100.0);
-    await _prefs.setDouble('compAttack', compAttackNotifier.value);
+    _debouncePersist('compAttack', () => _prefs.setDouble('compAttack', compAttackNotifier.value));
   }
 
   Future<void> setCompRelease(double release) async {
     compReleaseNotifier.value = release.clamp(0.0, 1000.0);
-    await _prefs.setDouble('compRelease', compReleaseNotifier.value);
+    _debouncePersist('compRelease', () => _prefs.setDouble('compRelease', compReleaseNotifier.value));
   }
 
   Future<void> setCompKneeWidth(double knee) async {
     compKneeWidthNotifier.value = knee.clamp(0.0, 40.0);
-    await _prefs.setDouble('compKneeWidth', compKneeWidthNotifier.value);
+    _debouncePersist('compKneeWidth', () => _prefs.setDouble('compKneeWidth', compKneeWidthNotifier.value));
   }
 
   Future<void> setCompMakeupGain(double gain) async {
     compMakeupGainNotifier.value = gain.clamp(-40.0, 40.0);
-    await _prefs.setDouble('compMakeupGain', compMakeupGainNotifier.value);
+    _debouncePersist('compMakeupGain', () => _prefs.setDouble('compMakeupGain', compMakeupGainNotifier.value));
   }
 
   // ─── Sort Mode Setters ────────────────────────────────────────────────────
@@ -577,7 +625,60 @@ class SettingsManager {
     await _prefs.setInt('songColor_$fileName', color.toARGB32());
   }
 
+  /// All [ValueNotifier]s exposed by this manager in a single list, so
+  /// reactive wrappers (e.g. [SettingsNotifier]) can subscribe to changes
+  /// across the whole manager without enumerating each notifier manually.
+  ///
+  /// Kept in sync with the field declarations above; additions here must
+  /// match new fields added to the class.
+  List<ValueNotifier<dynamic>> get allNotifiers => <ValueNotifier<dynamic>>[
+    themeModeNotifier,
+    enableBlurNotifier,
+    blurLevelNotifier,
+    isMiniPlayerNotifier,
+    useNativeWindowEffectNotifier,
+    windowOpacityNotifier,
+    isGridViewNotifier,
+    customBackgroundImageNotifier,
+    visualizerShapeNotifier,
+    minimizeToTrayNotifier,
+    visualizerEnabledNotifier,
+    useDynamicColorNotifier,
+    sidebarCollapsedNotifier,
+    desktopLyricsEnabledNotifier,
+    desktopLyricsFontSizeNotifier,
+    desktopLyricsOpacityNotifier,
+    desktopLyricsClickThroughNotifier,
+    sensitivityNotifier,
+    customPrimaryColorNotifier,
+    dynamicPrimaryColorNotifier,
+    currentTabIndexNotifier,
+    eqBandsNotifier,
+    eqBassNotifier,
+    eqPresetNotifier,
+    crossfadeDurationNotifier,
+    crossfadeCurveNotifier,
+    normalizationLevelNotifier,
+    normalizationEnabledNotifier,
+    pitchShiftNotifier,
+    reverbMixNotifier,
+    compressionRatioNotifier,
+    reverbRoomSizeNotifier,
+    reverbDampNotifier,
+    compThresholdNotifier,
+    compAttackNotifier,
+    compReleaseNotifier,
+    compKneeWidthNotifier,
+    compMakeupGainNotifier,
+    sortModeNotifier,
+    sortAscendingNotifier,
+    customHotkeysNotifier,
+    mediaKeyEnabledNotifier,
+    sleepTimerDurationNotifier,
+  ];
+
   void dispose() {
+    flushPendingWrites();
     useNativeWindowEffectNotifier.dispose();
     windowOpacityNotifier.dispose();
     themeModeNotifier.dispose();
@@ -615,4 +716,12 @@ class SettingsManager {
     mediaKeyEnabledNotifier.dispose();
     sleepTimerDurationNotifier.dispose();
   }
+}
+
+/// Pairs a debounce [Timer] with its original [write] callback so that
+/// [SettingsManager.flushPendingWrites] can execute pending writes immediately.
+class _DebouncedWrite {
+  const _DebouncedWrite({required this.timer, required this.write});
+  final Timer timer;
+  final Future<void> Function() write;
 }
