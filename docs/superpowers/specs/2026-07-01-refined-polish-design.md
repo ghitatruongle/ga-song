@@ -460,7 +460,7 @@ Budgets enforced by CI in Phase 6 — over-budget → fail PR.
 ### 4.7 Privacy & Telemetry
 
 - **Default:** Zero telemetry. No analytics, no home calls.
-- **Optional Phase 6:** Crash reports opt-in via Settings (off by default). When enabled, dialog explains what data is sent.
+- **Crash reporting:** Out of scope for Phase 6 (decision in §5.1 Q10). User-reported bugs via GitHub Issues suffice for solo dev. AppLogger persists error breadcrumb locally so user can copy-paste when filing.
 - **Permissions:** Each permission request has Vietnamese rationale string (Android 11+ requirement + best practice).
 
 ---
