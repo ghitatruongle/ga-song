@@ -1,3 +1,4 @@
+import '../logging/app_logger.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -102,7 +103,7 @@ class HotkeyService {
         }
       }
     } catch (error) {
-      debugPrint('Global HotKey error: $error');
+      AppLogger.w('hotkey.service', 'global hotkey failed', error: error);
     } finally {
       _registerCompleters.remove(currentCompleter);
       currentCompleter.complete();
@@ -185,7 +186,9 @@ class HotkeyService {
               : HotKeyScope.system,
         );
       }
-    } catch (e, stack) { debugPrint('Error in hotkey_service: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('hotkey.service', 'operation failed', error: e, stack: stack);
+    }
     return null;
   }
 

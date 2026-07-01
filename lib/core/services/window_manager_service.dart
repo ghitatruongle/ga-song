@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import '../settings_manager.dart';
 import '../platform_capabilities.dart';
+import '../logging/app_logger.dart';
 
 /// Converts [WindowEffectType] (platform-caps enum) to [WindowEffect] (flutter_acrylic).
 WindowEffect _toWindowEffect(WindowEffectType type) {
@@ -76,8 +77,11 @@ class WindowManagerService with WindowListener {
           try {
             await windowManager.setPreventClose(true);
           } catch (e) {
-            debugPrint(
-                'Wayland/Linux fallback: setPreventClose not supported. $e');
+            AppLogger.w(
+              'window_manager.service',
+              'Wayland: setPreventClose unsupported',
+              error: e,
+            );
           }
         }
 
@@ -87,7 +91,7 @@ class WindowManagerService with WindowListener {
           try {
             await windowManager.setPosition(savedPosition);
           } catch (e) {
-            debugPrint('Failed to restore window position: $e');
+            AppLogger.w('window_manager.service', 'restore window position failed', error: e);
           }
         }
 
@@ -97,7 +101,7 @@ class WindowManagerService with WindowListener {
           try {
             await windowManager.setSize(savedSize);
           } catch (e) {
-            debugPrint('Failed to restore window size: $e');
+            AppLogger.w('window_manager.service', 'restore window size failed', error: e);
           }
         }
 
@@ -105,14 +109,17 @@ class WindowManagerService with WindowListener {
           await windowManager.show();
           await windowManager.focus();
         } catch (e) {
-          debugPrint('Failed to show/focus window: $e');
+          AppLogger.w('window_manager.service', 'show/focus window failed', error: e);
         }
 
         _applyWindowEffect();
       });
     } catch (e) {
-      debugPrint(
-          'Window manager initialization failed (possible Wayland unsupported feature): $e');
+      AppLogger.e(
+        'window_manager.service',
+        'init failed (possible Wayland unsupported feature)',
+        error: e,
+      );
     }
 
     // Always listen to window events for resize handling

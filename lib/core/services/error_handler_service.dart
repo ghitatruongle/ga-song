@@ -1,3 +1,4 @@
+import '../logging/app_logger.dart';
 import 'package:flutter/foundation.dart';
 
 import '../exceptions/app_exception.dart';
@@ -74,8 +75,8 @@ class ErrorHandlerService {
   }) {
     // Log to debug console
     if (kDebugMode) {
-      debugPrint('Error${context != null ? ' in $context' : ''}: $error');
-      debugPrint('Stack trace: $stackTrace');
+      AppLogger.w('error_handler.service', 'Error${context != null ? ' in $context' : ''}', error: error);
+      AppLogger.d('error_handler.service', 'stack', error: stackTrace);
     }
 
     // Report to crash reporter

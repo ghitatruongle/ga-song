@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../logging/app_logger.dart';
+
 /// Web-specific integration for G.A Song.
 ///
 /// Provides web-specific features like PWA support,
@@ -36,7 +38,7 @@ class WebIntegration {
       // Service worker registration would go here
       // This is handled by the Flutter web framework
     } catch (e) {
-      debugPrint('Failed to register service worker: $e');
+      AppLogger.w('web.integration', 'service worker registration failed', error: e);
     }
   }
 
@@ -53,7 +55,7 @@ class WebIntegration {
       // Web notifications would be implemented here
       // Using dart:html Notification API
     } catch (e) {
-      debugPrint('Failed to show web notification: $e');
+      AppLogger.w('web.integration', 'web notification failed', error: e);
     }
   }
 

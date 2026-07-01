@@ -7,11 +7,18 @@ import 'package:path/path.dart' as p;
 import '../../models/song.dart';
 import '../../models/playlist.dart';
 import '../../models/cover_art_cache.dart';
+import '../utils/result.dart';
+import '../exceptions/app_exception.dart' as app_exc;
+import '../logging/app_logger.dart';
 
 class DatabaseService {
   late Database _db;
 
-  final _songsController = StreamController<List<Song>>.broadcast();
+  late final _songsController = StreamController<List<Song>>.broadcast(
+    onListen: () {
+      _notifySongsChanged();
+    },
+  );
   Stream<List<Song>> get songsStream => _songsController.stream;
 
   Future<void> init() async {
@@ -25,12 +32,60 @@ class DatabaseService {
       onUpgrade: _onUpgrade,
     );
 
-    final count = await getSongCount();
-    if (count == 0) {
-      await _seedBuiltInSongs();
-    }
+    await _ensureBuiltInSeeded();
 
     _notifySongsChanged();
+  }
+
+  /// Checks that all built-in songs from `assets/song/songs.json` exist in
+  /// the database.  If any are missing (e.g. due to a partial seed or a
+  /// corrupt DB), deletes ALL built-in rows and re-seeds from scratch.
+  Future<void> _ensureBuiltInSeeded() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/song/songs.json');
+      if (jsonString.trim().isEmpty) return;
+
+      final decoded = json.decode(jsonString);
+      if (decoded is! List) return;
+
+      final expectedFileNames = <String>{};
+      for (final item in decoded) {
+        if (item is Map<String, dynamic>) {
+          final fileName = item['fileName'] as String? ?? '';
+          if (fileName.isNotEmpty) {
+            expectedFileNames.add('assets/song/$fileName');
+          }
+        }
+      }
+      if (expectedFileNames.isEmpty) return;
+
+      // Query actual built-in sourcePaths from DB.
+      final rows = await _db.query(
+        'songs',
+        columns: ['sourcePath'],
+        where: 'isBuiltIn = 1',
+      );
+      final actualPaths = rows.map((r) => r['sourcePath'] as String).toSet();
+
+      // Fast path: counts match → nothing to do.
+      if (actualPaths.length == expectedFileNames.length &&
+          actualPaths.containsAll(expectedFileNames)) {
+        return;
+      }
+
+      AppLogger.i(
+        'database.service',
+        'Built-in songs mismatch (expected=${expectedFileNames.length}, '
+        'actual=${actualPaths.length}); re-seeding…',
+      );
+
+      // Delete stale built-in rows and re-seed.
+      await _db.delete('songs', where: 'isBuiltIn = 1');
+      await _seedBuiltInSongs(expectedFileNames);
+    } catch (e, stack) {
+      AppLogger.e('database.service', 'ensureBuiltInSeeded failed',
+          error: e, stack: stack);
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -121,6 +176,30 @@ class DatabaseService {
   Future<List<Song>> getAllSongs() async {
     final maps = await _db.query('songs', orderBy: 'dateAdded DESC');
     return maps.map(_songFromMap).toList();
+  }
+
+  /// Result-returning variant of [getAllSongs].
+  ///
+  /// Wraps any error in a [Failure] with the underlying [AppException]
+  /// accessible via [Failure.exception]. The legacy [getAllSongs] is kept
+  /// for backward compatibility.
+  Future<Result<List<Song>>> querySongs() async {
+    try {
+      final songs = await getAllSongs();
+      return Success(songs);
+    } on app_exc.AppException catch (e, st) {
+      AppLogger.e('database.service', 'querySongs failed', error: e, stack: st);
+      return Failure(e.message, st, e);
+    } catch (e, st) {
+      final ex = app_exc.DatabaseException('querySongs failed: $e');
+      AppLogger.e(
+        'database.service',
+        'querySongs unexpected error',
+        error: e,
+        stack: st,
+      );
+      return Failure(ex.message, st, ex);
+    }
   }
 
   Future<int> getSongCount() async {
@@ -292,7 +371,7 @@ class DatabaseService {
       final songs = await getAllSongs();
       _songsController.add(songs);
     } catch (e) {
-      debugPrint('Error notifying songs changed: $e');
+      AppLogger.w('database.service', 'notify songs changed failed', error: e);
     }
   }
 
@@ -494,7 +573,7 @@ class DatabaseService {
 
   // ─── Seed ─────────────────────────────────────────────────────────────────
 
-  Future<void> _seedBuiltInSongs() async {
+  Future<void> _seedBuiltInSongs([Set<String>? expectedFileNames]) async {
     try {
       final String jsonString =
           await rootBundle.loadString('assets/song/songs.json');
@@ -509,13 +588,22 @@ class DatabaseService {
           final fileName = item['fileName'] as String? ?? '';
           if (fileName.isEmpty) continue;
 
+          final sourcePath = 'assets/song/$fileName';
+
+          // If caller passed expectedFileNames, skip entries that don't
+          // belong (safety guard against a stale JSON).
+          if (expectedFileNames != null &&
+              !expectedFileNames.contains(sourcePath)) {
+            continue;
+          }
+
           songsToInsert.add(Song(
             name: _normalizeText(item['name']) ?? 'Unknown',
             artist: _normalizeText(item['artist']),
             album: _normalizeText(item['album']),
             durationMs: item['duration'] as int?,
             peakDb: (item['peakDb'] as num?)?.toDouble() ?? -12.0,
-            sourcePath: 'assets/song/$fileName',
+            sourcePath: sourcePath,
             isBuiltIn: true,
             dateAdded: DateTime.now(),
           ));
@@ -524,9 +612,12 @@ class DatabaseService {
 
       if (songsToInsert.isNotEmpty) {
         await putAllSongs(songsToInsert);
+        AppLogger.i('database.service',
+            'Seeded ${songsToInsert.length} built-in songs');
       }
-    } catch (e) {
-      debugPrint('Error seeding songs from assets/song/songs.json: $e');
+    } catch (e, stack) {
+      AppLogger.e('database.service', 'seed songs failed',
+          error: e, stack: stack);
     }
   }
 

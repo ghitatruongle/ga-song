@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- Replaced ~113 `debugPrint` calls with structured `AppLogger` (levels: debug/info/warn/error/fatal). Tags follow `module.class` convention (e.g., `audio.engine_service`, `database.service`).
+- `AppLogger` initialized in `main.dart` with level filtering (`debug` in debug mode, `warn+` in release) and optional crash-reporter mirroring.
+
+### Added
+- `lib/core/logging/app_logger.dart` — `AppLogger` static facade with pluggable sink and pending crash-report buffer.
+- `DatabaseService.querySongs()` — Result-returning variant (`Result<List<Song>>`) wrapping typed `AppException` in `Failure.exception`. Legacy `getAllSongs()` retained for backward compatibility.
+- `test/core/logging/app_logger_test.dart` — 7 unit tests covering level filtering, sink swapping, error/stack trace handling.
+- `test/core/services/database_service_query_test.dart` — 2 unit tests for the new Result-returning method.
+
+### Notes
+- `lib/core/app_logger.dart` is now a re-export shim for the canonical `lib/core/logging/app_logger.dart`.
+- AppException types imported with `as app_exc` alias in `database_service.dart` to avoid collision with sqflite's `DatabaseException`.
+
 ## [2.0.0] — 2026-06-26
 
 ### Added

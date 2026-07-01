@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
+import '../logging/app_logger.dart';
+
 /// Handles audio effects (Equalizer, Bass, Normalization, PitchShift,
 /// Reverb, Compressor) via flutter_soloud global filters.
 class AudioEffectService {
@@ -58,7 +60,7 @@ class AudioEffectService {
         bassFilter.boost.value = (clamped / 100.0) * 10.0;
       }
     } catch (e) {
-      debugPrint('setBassLevel error: $e');
+      AppLogger.w('audio.effect_service', 'setBassLevel failed', error: e);
     }
   }
 
@@ -89,7 +91,7 @@ class AudioEffectService {
         eq.bandGain(i).value = _uiValueToEqGain(bands[i]);
       }
     } catch (e) {
-      debugPrint('applyAllEqualizer error: $e');
+      AppLogger.w('audio.effect_service', 'applyAllEqualizer failed', error: e);
     }
   }
 
@@ -148,7 +150,7 @@ class AudioEffectService {
         filter.shift.value = clamped;
       }
     } catch (e) {
-      debugPrint('setPitchShift error: $e');
+      AppLogger.w('audio.effect_service', 'setPitchShift failed', error: e);
     }
   }
 
@@ -176,7 +178,7 @@ class AudioEffectService {
         filter.damp.value = reverbDampNotifier.value;
       }
     } catch (e) {
-      debugPrint('setReverbMix error: $e');
+      AppLogger.w('audio.effect_service', 'setReverbMix failed', error: e);
     }
   }
 
@@ -186,7 +188,7 @@ class AudioEffectService {
     try {
       _soloud.filters.freeverbFilter.roomSize.value = reverbRoomSizeNotifier.value;
     } catch (e) {
-      debugPrint('setReverbRoomSize error: $e');
+      AppLogger.w('audio.effect_service', 'setReverbRoomSize failed', error: e);
     }
   }
 
@@ -196,7 +198,7 @@ class AudioEffectService {
     try {
       _soloud.filters.freeverbFilter.damp.value = reverbDampNotifier.value;
     } catch (e) {
-      debugPrint('setReverbDamp error: $e');
+      AppLogger.w('audio.effect_service', 'setReverbDamp failed', error: e);
     }
   }
 
@@ -229,7 +231,7 @@ class AudioEffectService {
         filter.makeupGain.value = compMakeupGainNotifier.value;
       }
     } catch (e) {
-      debugPrint('setCompressionRatio error: $e');
+      AppLogger.w('audio.effect_service', 'setCompressionRatio failed', error: e);
     }
   }
 
@@ -239,7 +241,7 @@ class AudioEffectService {
     try {
       _soloud.filters.compressorFilter.threshold.value = compThresholdNotifier.value;
     } catch (e) {
-      debugPrint('compressor threshold error: $e');
+      AppLogger.w('audio.effect_service', 'compThreshold failed', error: e);
     }
   }
 
@@ -249,7 +251,7 @@ class AudioEffectService {
     try {
       _soloud.filters.compressorFilter.attackTime.value = compAttackNotifier.value;
     } catch (e) {
-      debugPrint('compressor attack error: $e');
+      AppLogger.w('audio.effect_service', 'compAttack failed', error: e);
     }
   }
 
@@ -259,7 +261,7 @@ class AudioEffectService {
     try {
       _soloud.filters.compressorFilter.releaseTime.value = compReleaseNotifier.value;
     } catch (e) {
-      debugPrint('compressor release error: $e');
+      AppLogger.w('audio.effect_service', 'compRelease failed', error: e);
     }
   }
 
@@ -269,7 +271,7 @@ class AudioEffectService {
     try {
       _soloud.filters.compressorFilter.kneeWidth.value = compKneeWidthNotifier.value;
     } catch (e) {
-      debugPrint('compressor kneeWidth error: $e');
+      AppLogger.w('audio.effect_service', 'compKneeWidth failed', error: e);
     }
   }
 
@@ -279,7 +281,7 @@ class AudioEffectService {
     try {
       _soloud.filters.compressorFilter.makeupGain.value = compMakeupGainNotifier.value;
     } catch (e) {
-      debugPrint('compressor makeupGain error: $e');
+      AppLogger.w('audio.effect_service', 'compMakeupGain failed', error: e);
     }
   }
 

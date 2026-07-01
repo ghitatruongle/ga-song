@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
+import '../../core/audio/audio_engine_service.dart';
 import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
 
@@ -394,16 +395,17 @@ class _SidebarMenuItemState extends State<_SidebarMenuItem> {
           ),
           child: Row(
             children: [
-              // Active indicator
-              AnimatedContainer(
-                duration: _kHoverDuration,
-                width: _kActiveIndicatorWidth,
-                height: isSelected ? 20 : 0,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(2),
+              // Active indicator (hidden when collapsed to avoid 3px overflow)
+              if (!widget.isCollapsed)
+                AnimatedContainer(
+                  duration: _kHoverDuration,
+                  width: _kActiveIndicatorWidth,
+                  height: isSelected ? 20 : 0,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
 
               // Icon
               SizedBox(
@@ -547,11 +549,14 @@ class _SidebarActionButtonState extends State<_SidebarActionButton> {
                 color: textColor.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 10),
-              Text(
-                widget.title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: textColor.withValues(alpha: 0.5),
+              Expanded(
+                child: Text(
+                  widget.title,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: textColor.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
             ],
@@ -592,7 +597,9 @@ class _NowPlayingIndicatorState extends State<_NowPlayingIndicator>
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        final isPlaying = ref.read(playerViewModelProvider).isPlaying;
+        // Phase 2.2: read engine state from state provider.
+        final engineState = ref.watch(engineStateProvider);
+        final isPlaying = engineState == AudioEngineState.playing;
         if (!isPlaying) return const SizedBox.shrink();
 
         return AnimatedBuilder(
@@ -731,8 +738,9 @@ class _SidebarSmartPlaylistItemState extends State<_SidebarSmartPlaylistItem> {
           ),
           child: Row(
             children: [
-              // No active indicator for smart playlists
-              const SizedBox(width: _kActiveIndicatorWidth),
+              // Active indicator spacer (hidden when collapsed to avoid overflow)
+              if (!widget.isCollapsed)
+                const SizedBox(width: _kActiveIndicatorWidth),
 
               // Icon (emoji)
               SizedBox(

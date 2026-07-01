@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audio/audio_engine_service.dart';
 import 'desktop_title_bar.dart';
-import '../../core/audio/playlist_service.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
 import '../../models/song.dart';
@@ -45,15 +44,12 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   late final TextEditingController _searchController;
   Timer? _debounceTimer;
 
-  // P-8 fix: Single listener at parent level instead of per-tile listeners.
-  late final PlaylistService _playlistService;
-  late final AudioEngineService _engineService;
+  // P-8 fix + Phase 2.3: Cached playback state, kept in sync via ref.listen
+  // on [currentPlayingIndexProvider] and [engineStateProvider].
   int _currentPlayingIndex = -1;
   AudioEngineState _engineState = AudioEngineState.stopped;
 
-  void _onPlaybackChanged() {
-    final newIndex = _playlistService.currentIndexNotifier.value;
-    final newState = _engineService.engineState.value;
+  void _onPlaybackChanged(int newIndex, AudioEngineState newState) {
     if (newIndex == _currentPlayingIndex && newState == _engineState) return;
     setState(() {
       _currentPlayingIndex = newIndex;
@@ -65,13 +61,8 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.searchQuery);
-    // P-8 fix: Register 2 parent-level listeners instead of 200+ per-tile listeners.
-    _playlistService = ref.read(playlistServiceProvider);
-    _engineService = ref.read(audioEngineServiceProvider);
-    _currentPlayingIndex = _playlistService.currentIndexNotifier.value;
-    _engineState = _engineService.engineState.value;
-    _playlistService.currentIndexNotifier.addListener(_onPlaybackChanged);
-    _engineService.engineState.addListener(_onPlaybackChanged);
+    // P-8 fix: Riverpod subscriptions replace direct addListener calls so
+    // disposal is automatic on widget unmount.
   }
 
   @override
@@ -88,14 +79,19 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   void dispose() {
     _debounceTimer?.cancel();
     _searchController.dispose();
-    // P-8 fix: Remove parent-level listeners.
-    _playlistService.currentIndexNotifier.removeListener(_onPlaybackChanged);
-    _engineService.engineState.removeListener(_onPlaybackChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // P-8 fix + Phase 2.3: Use ref.listen to subscribe to playback state
+    // changes via Riverpod state providers; cleaner than direct addListener.
+    ref.listen<int>(currentPlayingIndexProvider, (prev, next) {
+      _onPlaybackChanged(next, ref.read(engineStateProvider));
+    });
+    ref.listen<AudioEngineState>(engineStateProvider, (prev, next) {
+      _onPlaybackChanged(ref.read(currentPlayingIndexProvider), next);
+    });
     return ColoredBox(
       color: Colors.transparent,
       child: Column(

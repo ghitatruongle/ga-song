@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/audio/audio_effect_service.dart';
 import 'core/audio/audio_engine_service.dart';
 import 'core/audio/playlist_service.dart';
+import 'core/logging/app_logger.dart';
 import 'core/performance_probe.dart';
 import 'core/platform_capabilities.dart';
 import 'core/settings_manager.dart';
@@ -137,13 +138,13 @@ Future<void> main() async {
           effectService.applyAllEqualizer(settings.eqBandsNotifier.value);
           return;
         } catch (e, stack) {
-          debugPrint('Error in main: $e\n$stack');
+          AppLogger.e('main', 'Error in main', error: e, stack: stack);
           if (attempt < 2) {
             await Future<void>.delayed(const Duration(milliseconds: 100));
           }
         }
       }
-      debugPrint('EQ init failed after 3 retries (will retry on first play)');
+      AppLogger.w('main', 'EQ init failed after 3 retries');
     }
 
     await tryApplyEq();
@@ -151,7 +152,7 @@ Future<void> main() async {
     try {
       effectService.setBassLevel(settings.eqBassNotifier.value);
     } catch (e) {
-      debugPrint('Bass init failed: $e');
+      AppLogger.w('main', 'Bass init failed', error: e);
     }
 
     try {
@@ -163,18 +164,18 @@ Future<void> main() async {
       effectService.setReverbMix(settings.reverbMixNotifier.value);
       effectService.setCompressionRatio(settings.compressionRatioNotifier.value);
     } catch (e) {
-      debugPrint('Audio effects init failed: $e');
+      AppLogger.w('main', 'audio effects init failed', error: e);
     }
 
     try {
       SoLoud.instance.setVisualizationEnabled(settings.visualizerEnabledNotifier.value);
     } catch (e) {
-      debugPrint('Failed to enable visualization: $e');
+      AppLogger.w('main', 'enable visualization failed', error: e);
     }
 
     initialScreen = const HomeScreen();
   } catch (e, st) {
-    debugPrint('SoLoud init error: $e\n$st');
+    AppLogger.e('main', 'SoLoud init error', error: e, stack: st);
     initialScreen = _buildErrorScreen(e, st);
   }
 
@@ -205,7 +206,7 @@ Future<void> main() async {
         await hotkeyService.init();
         if (!kDebugMode) await systemTrayService.init();
       } catch (e, stack) {
-        debugPrint('Deferred desktop service init: $e\n$stack');
+        AppLogger.w('main', 'deferred desktop service init failed', error: e, stack: stack);
       }
     });
   }
@@ -287,25 +288,31 @@ class _GASongAppState extends ConsumerState<GASongApp> {
           title: 'G.A - Song',
           debugShowCheckedModeBanner: false,
           themeMode: themeMode,
-          theme: ThemeData.light().copyWith(
-            scaffoldBackgroundColor: useNative ? Colors.transparent : const Color(0xFFF5F5F5),
-            primaryColor: primaryColor,
-            colorScheme: ColorScheme.light(
-              primary: primaryColor,
-              secondary: primaryColor,
+          // Phase 4: Material 3 — derive ColorScheme.fromSeed for a richer,
+          // consistent palette instead of the legacy copyWith approach.
+          theme: ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.light,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primaryColor,
+              brightness: Brightness.light,
+            ).copyWith(
               surface: const Color(0xFFFFFFFF),
             ),
-            cardColor: const Color(0xFFFFFFFF),
+            scaffoldBackgroundColor:
+                useNative ? Colors.transparent : const Color(0xFFF5F5F5),
           ),
-          darkTheme: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: useNative ? Colors.transparent : const Color(0xFF121212),
-            primaryColor: primaryColor,
-            colorScheme: ColorScheme.dark(
-              primary: primaryColor,
-              secondary: primaryColor,
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primaryColor,
+              brightness: Brightness.dark,
+            ).copyWith(
               surface: const Color(0xFF282828),
             ),
-            cardColor: const Color(0xFF282828),
+            scaffoldBackgroundColor:
+                useNative ? Colors.transparent : const Color(0xFF121212),
           ),
           home: widget.home,
         );

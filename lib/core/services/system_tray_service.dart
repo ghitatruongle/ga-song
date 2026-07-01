@@ -5,6 +5,7 @@ import 'package:system_tray/system_tray.dart';
 import 'package:window_manager/window_manager.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
+import '../logging/app_logger.dart';
 
 class SystemTrayService {
   SystemTrayService({
@@ -39,7 +40,7 @@ class SystemTrayService {
             final byteData = await rootBundle.load(path);
             await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
           } catch (e) {
-            debugPrint('System tray icon extraction failed: $e');
+            AppLogger.w('system_tray.service', 'icon extraction failed', error: e);
           }
         }
         path = iconFile.path;
@@ -54,7 +55,7 @@ class SystemTrayService {
             final byteData = await rootBundle.load(path);
             await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
           } catch (e) {
-            debugPrint('System tray icon extraction failed (Linux): $e');
+            AppLogger.w('system_tray.service', 'icon extraction failed (Linux)', error: e);
           }
         }
         path = iconFile.path;
@@ -62,7 +63,7 @@ class SystemTrayService {
 
       final iconFileCheck = File(path);
       if (!iconFileCheck.existsSync()) {
-        debugPrint('System tray icon not found at $path, skipping system tray initialization');
+        AppLogger.i('system_tray.service', 'icon not found, skipping init: $path');
         _systemTray = null;
         return;
       }
@@ -85,8 +86,8 @@ class SystemTrayService {
 
       _engine?.engineState.addListener(_updateMenu);
     } catch (e, stackTrace) {
-      debugPrint('SystemTray init failed: $e');
-      debugPrint('Stack trace: $stackTrace');
+      AppLogger.e('system_tray.service', 'SystemTray init failed', error: e);
+      AppLogger.d('system_tray.service', 'stack', error: stackTrace);
       _systemTray = null;
     }
   }
@@ -150,11 +151,13 @@ class SystemTrayService {
   void dispose() {
     try {
       _engine?.engineState.removeListener(_updateMenu);
-    } catch (e, stack) { debugPrint('Error in system_tray_service: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('system_tray.service', 'operation failed', error: e, stack: stack);
+    }
     try {
       _systemTray?.destroy();
     } catch (e) {
-      debugPrint('SystemTray dispose error: $e');
+      AppLogger.w('system_tray.service', 'dispose failed', error: e);
     }
   }
 }

@@ -50,7 +50,10 @@ class AlbumGridWidget extends StatelessWidget {
                         songCount: count,
                         onTap: () {
                           final playlistSongs = songs
-                              .where((s) => s.album == albumName)
+                              .where((s) =>
+                                  albumName == 'Chưa phân loại'
+                                      ? (s.album == null || s.album!.isEmpty)
+                                      : s.album == albumName)
                               .toList();
                           onAlbumTap(albumName, playlistSongs);
                         },

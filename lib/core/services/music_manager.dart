@@ -1,3 +1,4 @@
+import '../logging/app_logger.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -60,7 +61,7 @@ class MusicManager {
             }
           }
         } catch (e) {
-          debugPrint('Error reading audio tags: $e');
+          AppLogger.w('music_manager.service', 'audio tags read failed', error: e);
         }
 
         final song = Song(
@@ -75,7 +76,7 @@ class MusicManager {
         await _db.putSong(song);
       }
     } catch (e) {
-      debugPrint('Error importing local songs: $e');
+      AppLogger.w('music_manager.service', 'local songs import failed', error: e);
       rethrow;
     }
   }
@@ -94,7 +95,7 @@ class MusicManager {
         }
       }
     } catch (e) {
-      debugPrint('Error deleting song: $e');
+      AppLogger.w('music_manager.service', 'delete song failed', error: e);
       rethrow;
     }
   }

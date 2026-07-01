@@ -140,7 +140,29 @@ class PlaylistService {
     currentIndexNotifier.value = _currentIndex;
     _markShufflePlayback(_currentIndex);
 
+    // Persist duration once the engine reports it (fire-and-forget).
+    if (song.durationMs == null) {
+      _persistDurationWhenReady(song);
+    }
+
     await _prepareCacheWindow();
+  }
+
+  /// Listens for the engine's duration and writes it to the database the
+  /// first time a non-zero value is reported.  Self-cancels after one write.
+  void _persistDurationWhenReady(Song song) {
+    void listener() {
+      final dur = _engineService.durationNotifier.value;
+      if (dur.inMilliseconds > 0) {
+        _engineService.durationNotifier.removeListener(listener);
+        // Fire-and-forget: don't block playback for a DB write.
+        final updated = song.copyWith(durationMs: dur.inMilliseconds);
+        _databaseService.putSong(updated).catchError((Object e) {
+          debugPrint('Failed to persist duration for ${song.name}: $e');
+        });
+      }
+    }
+    _engineService.durationNotifier.addListener(listener);
   }
 
   Future<void> playSongAt(int index, {bool isHistoryNavigation = false}) async {

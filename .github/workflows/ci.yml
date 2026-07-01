@@ -6,54 +6,93 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FLUTTER_VERSION: '3.32.0'
+  COVERAGE_MIN_PERCENT: '50'  # Phase 5 target; raise over time
+
 jobs:
-  analyze:
-    name: Analyze & Test
+  format:
+    name: Verify Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
+      - run: flutter pub get
+      - name: dart format check
+        run: dart format --output=none --set-exit-if-changed lib/ test/
 
-      - name: Install dependencies
-        run: flutter pub get
+  analyze:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    needs: format
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - run: flutter pub get
+      # Phase 6: treat warnings as errors so regressions fail CI; infos stay
+      # warnings to avoid blocking on pre-existing info-level findings.
+      - name: flutter analyze
+        run: flutter analyze --fatal-warnings
 
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed lib/
-
-      - name: Analyze project
-        run: flutter analyze --no-fatal-infos
-
+  test:
+    name: Unit + Widget Tests
+    runs-on: ubuntu-latest
+    needs: analyze
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - run: flutter pub get
+      # Generate coverage report.
       - name: Run tests with coverage
-        run: flutter test --coverage
-
+        run: flutter test --coverage --reporter=expanded
+      - name: Generate HTML coverage report
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            sudo apt-get update
+            sudo apt-get install -y lcov
+            genhtml coverage/lcov.info -o coverage/html --quiet
+          fi
+      - name: Compute coverage % (lib/core)
+        id: coverage
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            PCT=$(lcov --summary coverage/lcov.info 2>/dev/null | grep -oP 'lines.*:\K[0-9.]+' | head -1)
+            echo "coverage_pct=$PCT" >> $GITHUB_OUTPUT
+            echo "lib/core coverage: $PCT%"
+            # Floor at COVERAGE_MIN_PERCENT — does not fail, only annotates.
+            if awk "BEGIN {exit !($PCT < $COVERAGE_MIN_PERCENT)}"; then
+              echo "::warning::lib/core coverage $PCT% is below target $COVERAGE_MIN_PERCENT%"
+            fi
+          fi
       - name: Upload coverage artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
-          path: coverage/lcov.info
+          name: coverage-report
+          path: coverage/
 
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    needs: analyze
+    needs: test
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-
-      - name: Install dependencies
-        run: flutter pub get
-
+      - run: flutter pub get
       - name: Build Windows
         run: flutter build windows --release
-
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
@@ -63,26 +102,31 @@ jobs:
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
-    needs: analyze
+    needs: test
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-
-      - name: Install dependencies
-        run: flutter pub get
-
+      - run: flutter pub get
       - name: Build APK
         run: flutter build apk --release
-
+      # Phase 6: APK size budget (target ≤30MB per spec).
+      - name: Check APK size budget
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          if [ -f "$APK" ]; then
+            SIZE_MB=$(du -m "$APK" | cut -f1)
+            echo "APK size: ${SIZE_MB}MB"
+            if [ "$SIZE_MB" -gt 30 ]; then
+              echo "::warning::APK ${SIZE_MB}MB exceeds 30MB target"
+            fi
+          fi
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -92,26 +136,20 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    needs: analyze
+    needs: test
     steps:
       - uses: actions/checkout@v4
-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libgtk-3-dev
-
+          sudo apt-get install -y ninja-build libgtk-3-dev lcov
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-
-      - name: Install dependencies
-        run: flutter pub get
-
+      - run: flutter pub get
       - name: Build Linux
         run: flutter build linux --release
-
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:

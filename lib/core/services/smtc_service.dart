@@ -1,3 +1,4 @@
+import '../logging/app_logger.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:smtc_windows/smtc_windows.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 import 'smtc_platform.dart';
+import '../cover_art_repository.dart';
 
 class SmtcService {
   final AudioEngineService _engineService;
@@ -76,7 +78,7 @@ class SmtcService {
       _engineService.durationNotifier.addListener(_onDurationChanged);
 
     } catch (e) {
-      debugPrint('Failed to initialize SMTC: $e');
+      AppLogger.e('smtc.service', 'SMTC init failed', error: e);
     }
   }
 
@@ -99,7 +101,7 @@ class SmtcService {
           break;
       }
     } catch (e) {
-      debugPrint('SMTC state update error: $e');
+      AppLogger.w('smtc.service', 'SMTC state update failed', error: e);
     }
   }
 
@@ -116,17 +118,11 @@ class SmtcService {
       // Try to extract cover art to a temp file for SMTC
       try {
         // Get the correct cover art path from sourcePath
-        final sourcePath = song.sourcePath;
-        String assetPath;
-        
+        final String? resolvedPath;
         if (song.isBuiltIn) {
-          // Map: assets/song/mat_nham_mat_mo/song.mp3 -> assets/pic/mat_nham_mat_mo/song.png
-          assetPath = sourcePath
-              .replaceFirst('assets/song/', 'assets/pic/')
-              .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
+          resolvedPath = await CoverArtRepository.findCoverAssetPath(song);
         } else {
-          // Local file: use sourcePath with .png extension
-          assetPath = '$sourcePath.png';
+          resolvedPath = CoverArtRepository.findLocalCoverPath(song);
         }
         
         final fileName = song.fileName.replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
@@ -142,21 +138,21 @@ class SmtcService {
             }
           } catch (e) {
             // File might be in use by Windows, ignore and continue
-            debugPrint('Could not delete old thumbnail: $e');
+            AppLogger.w('smtc.service', 'delete thumbnail failed', error: e);
           }
           _lastThumbnailPath = null;
         }
 
-        if (!tempFile.existsSync()) {
+        if (resolvedPath != null && !tempFile.existsSync()) {
           if (song.isBuiltIn) {
-            final data = await rootBundle.load(assetPath);
+            final data = await rootBundle.load(resolvedPath);
             await tempFile.writeAsBytes(
               data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
               flush: true,
             );
           } else {
             // For local files, check if image exists and copy it
-            final imageFile = File(assetPath);
+            final imageFile = File(resolvedPath);
             if (await imageFile.exists()) {
               await imageFile.copy(tempFile.path);
             } else {
@@ -165,11 +161,13 @@ class SmtcService {
             }
           }
         }
-        thumbnailPath = tempFile.path;
-        _lastThumbnailPath = thumbnailPath;
+        if (tempFile.existsSync()) {
+          thumbnailPath = tempFile.path;
+          _lastThumbnailPath = thumbnailPath;
+        }
       } catch (e) {
         // Thumbnail is optional - continue without it
-        debugPrint('SMTC thumbnail not available: $e');
+        AppLogger.d('smtc.service', 'thumbnail not available', error: e);
       }
 
       try {
@@ -181,13 +179,13 @@ class SmtcService {
         _lastReportedPosition = Duration.zero;
         _onDurationChanged();
       } catch (e) {
-        debugPrint('SMTC metadata update error: $e');
+        AppLogger.w('smtc.service', 'metadata update failed', error: e);
       }
     } else {
       try {
         _smtc!.clearMetadata();
       } catch (e) {
-        debugPrint('SMTC clearMetadata error: $e');
+        AppLogger.w('smtc.service', 'clearMetadata failed', error: e);
       }
     }
   }
@@ -202,7 +200,7 @@ class SmtcService {
     try {
       _smtc!.setPosition(pos);
     } catch (e) {
-      debugPrint('SMTC position update error: $e');
+      AppLogger.w('smtc.service', 'position update failed', error: e);
     }
   }
   
@@ -212,7 +210,7 @@ class SmtcService {
       final duration = _engineService.durationNotifier.value;
       _smtc!.setEndTime(duration);
     } catch (e) {
-      debugPrint('SMTC duration update error: $e');
+      AppLogger.w('smtc.service', 'duration update failed', error: e);
     }
   }
 
@@ -222,17 +220,19 @@ class SmtcService {
     if (_smtc != null) {
       try {
         _buttonSubscription?.cancel();
-      } catch (e) { debugPrint('SmtcService dispose error: $e'); }
+      } catch (e) { AppLogger.w('smtc.service', 'dispose failed', error: e); }
       try {
         _engineService.engineState.removeListener(_onEngineStateChanged);
         _playlistService.currentIndexNotifier.removeListener(_onPlaylistIndexChanged);
         _engineService.positionNotifier.removeListener(_onPositionChanged);
         _engineService.durationNotifier.removeListener(_onDurationChanged);
-      } catch (e, stack) { debugPrint('Error in smtc_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('smtc.service', 'operation failed', error: e, stack: stack);
+      }
       try {
         _smtc?.dispose();
       } catch (e) {
-        debugPrint('SMTC dispose error: $e');
+        AppLogger.w('smtc.service', 'dispose failed', error: e);
       }
     }
   }

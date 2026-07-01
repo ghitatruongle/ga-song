@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import 'logging/app_logger.dart';
+
 /// Debug-only frame timing + memory logger used while profiling desktop surfaces.
 ///
 /// In debug mode, captures frame build/raster P95 times and periodic
@@ -56,11 +58,12 @@ class PerformanceProbe {
   }
 
   void _reportMemoryStats() {
-    debugPrint(
+    AppLogger.d(
+      'performance.probe',
       '[perf][memory] '
-      'peakCacheSize=$_peakAudioCacheSize '
-      'totalPreloads=$_totalPreloads '
-      'totalEvictions=$_totalEvictions',
+          'peakCacheSize=$_peakAudioCacheSize '
+          'totalPreloads=$_totalPreloads '
+          'totalEvictions=$_totalEvictions',
     );
   }
 
@@ -91,13 +94,14 @@ class PerformanceProbe {
       buildTimes.length - 1,
     );
 
-    debugPrint(
+    AppLogger.d(
+      'performance.probe',
       '[perf][$_surface] '
-      'frames=${_timings.length} '
-      'build_p95=${buildTimes[p95Index].toStringAsFixed(2)}ms '
-      'build_p99=${buildTimes[p99Index].toStringAsFixed(2)}ms '
-      'raster_p95=${rasterTimes[p95Index].toStringAsFixed(2)}ms '
-      'total_frames=$_frameCount',
+          'frames=${_timings.length} '
+          'build_p95=${buildTimes[p95Index].toStringAsFixed(2)}ms '
+          'build_p99=${buildTimes[p99Index].toStringAsFixed(2)}ms '
+          'raster_p95=${rasterTimes[p95Index].toStringAsFixed(2)}ms '
+          'total_frames=$_frameCount',
     );
 
     _timings.clear();

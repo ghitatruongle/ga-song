@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 import '../../core/audio/audio_engine_service.dart';
+import '../../core/logging/app_logger.dart';
 import '../../core/platform_capabilities.dart';
 
 import '../../core/settings_manager.dart';
@@ -269,13 +270,13 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       _overBudgetCount++;
       if (_overBudgetCount >= 3 && !_halfRateMode) {
         _halfRateMode = true;
-        debugPrint('Visualizer: entering half-rate mode (frame ${frameMs.toStringAsFixed(1)}ms > ${_frameBudgetMs}ms)');
+        AppLogger.i('visualizer.controller', 'entering half-rate mode (frame ${frameMs.toStringAsFixed(1)}ms > ${_frameBudgetMs}ms)');
       }
     } else {
       if (_overBudgetCount > 0) _overBudgetCount--;
       if (_overBudgetCount == 0 && _halfRateMode) {
         _halfRateMode = false;
-        debugPrint('Visualizer: exiting half-rate mode');
+        AppLogger.i('visualizer.controller', 'exiting half-rate mode');
       }
     }
 
@@ -291,7 +292,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       try {
         _audioData = AudioData(GetSamplesKind.linear);
       } catch (e) {
-        debugPrint('Visualizer AudioData init failed: $e');
+        AppLogger.w('visualizer.controller', 'AudioData init failed', error: e);
         return;
       }
     }
@@ -351,7 +352,9 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
 
-    } catch (e, stack) { debugPrint('Error in visualizer_controller: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('visualizer.controller', 'operation failed', error: e, stack: stack);
+    }
   }
 
   // ── Particle pool: compact in-place, zero allocation ───────────────────────
@@ -491,7 +494,9 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _ticker.dispose();
     try {
       _audioData?.dispose();
-    } catch (e, stack) { debugPrint('Error in visualizer_controller: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('visualizer.controller', 'operation failed', error: e, stack: stack);
+    }
     super.dispose();
   }
 }

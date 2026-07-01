@@ -564,7 +564,10 @@ class SettingsWidget extends ConsumerWidget {
             ),
           ],
         ),
-        child: child,
+        child: Material(
+          type: MaterialType.transparency,
+          child: child,
+        ),
       ),
     );
   }

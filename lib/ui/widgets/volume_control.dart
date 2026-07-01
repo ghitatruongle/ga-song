@@ -16,57 +16,53 @@ class _VolumeControlState extends ConsumerState<VolumeControl> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = ref.read(playerViewModelProvider);
-    return ListenableBuilder(
-      listenable: viewModel,
-      builder: (context, _) {
-        final volume = viewModel.volume;
+    // Phase 2.2: read volume from state provider, set via engine service.
+    final volume = ref.watch(volumeProvider);
+    final engine = ref.read(audioEngineServiceProvider);
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: <Widget>[
-            IconButton(
-              icon: Icon(
-                volume == 0
-                    ? Icons.volume_off_rounded
-                    : volume < 0.5
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        IconButton(
+          icon: Icon(
+            volume == 0
+                ? Icons.volume_off_rounded
+                : volume < 0.5
                     ? Icons.volume_down_rounded
                     : Icons.volume_up_rounded,
-                color: context.adaptiveSecondary,
-                size: 22,
+            color: context.adaptiveSecondary,
+            size: 22,
+          ),
+          onPressed: () {
+            if (volume > 0) {
+              _previousVolume = volume;
+              engine.setVolume(0.0);
+            } else {
+              engine.setVolume(_previousVolume > 0 ? _previousVolume : 1.0);
+            }
+          },
+        ),
+        Flexible(
+          child: SliderTheme(
+            data: SliderThemeData(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(
+                enabledThumbRadius: 5,
               ),
-              onPressed: () {
-                if (volume > 0) {
-                  _previousVolume = volume;
-                  viewModel.setVolume(0.0);
-                } else {
-                  viewModel.setVolume(_previousVolume > 0 ? _previousVolume : 1.0);
-                }
-              },
-            ),
-            Flexible(
-              child: SliderTheme(
-                data: SliderThemeData(
-                  trackHeight: 3,
-                  thumbShape: const RoundSliderThumbShape(
-                    enabledThumbRadius: 5,
-                  ),
-                  overlayShape: const RoundSliderOverlayShape(
-                    overlayRadius: 10,
-                  ),
-                  activeTrackColor: context.adaptive,
-                  inactiveTrackColor: context.adaptive.withValues(alpha: 0.2),
-                  thumbColor: context.adaptive,
-                ),
-                child: Slider(
-                  value: volume,
-                  onChanged: viewModel.setVolume,
-                ),
+              overlayShape: const RoundSliderOverlayShape(
+                overlayRadius: 10,
               ),
+              activeTrackColor: context.adaptive,
+              inactiveTrackColor: context.adaptive.withValues(alpha: 0.2),
+              thumbColor: context.adaptive,
             ),
-          ],
-        );
-      },
+            child: Slider(
+              value: volume,
+              onChanged: engine.setVolume,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
