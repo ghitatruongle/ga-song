@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
+import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
+import '../utils/theme_helpers.dart';
 
 /// Widget for selecting audio output device (desktop only).
 ///
@@ -89,11 +91,13 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final spacing = ThemeSpacing.of(context);
+    final radius = ThemeRadius.of(context);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(spacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -105,7 +109,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
                   Icons.speaker_outlined,
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: spacing.sm + spacing.xxs),
                 Text(
                   'Thiết bị âm thanh',
                   style: TextStyle(
@@ -116,25 +120,25 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: spacing.md),
 
             // Content
             if (_isLoading)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
+                  padding: EdgeInsets.all(spacing.xl),
+                  child: const CircularProgressIndicator(),
                 ),
               )
             else if (_error != null)
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(32),
+                  padding: EdgeInsets.all(spacing.xl),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-                      const SizedBox(height: 16),
+                      SizedBox(height: spacing.md),
                       Text(
                         _error!,
                         textAlign: TextAlign.center,
@@ -149,7 +153,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
             else if (_devices.isEmpty)
               Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(32),
+                  padding: EdgeInsets.all(spacing.xl),
                   child: Text(
                     'Không tìm thấy thiết bị âm thanh',
                     style: TextStyle(
@@ -172,6 +176,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
                       isSelected: isSelected,
                       onTap: () => _selectDevice(device),
                       isDark: isDark,
+                      radius: radius,
                     );
                   },
                 ),
@@ -179,7 +184,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
 
             // Default device button
             if (_devices.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: spacing.md),
               TextButton.icon(
                 onPressed: () => _selectDevice(null),
                 icon: const Icon(Icons.settings_backup_restore, size: 18),
@@ -198,27 +203,39 @@ class _DeviceTile extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final bool isDark;
+  final ThemeRadius radius;
 
   const _DeviceTile({
     required this.device,
     required this.isSelected,
     required this.onTap,
     required this.isDark,
+    required this.radius,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tileBg = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface,
+      light: AppColors.lightSurface2,
+    );
+    final tileBorder = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface2,
+      light: AppColors.lightBorder,
+    );
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
         color: isSelected
             ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-            : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5)),
-        borderRadius: BorderRadius.circular(12),
+            : tileBg,
+        borderRadius: radius.circular(),
         border: Border.all(
           color: isSelected
               ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-              : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E5E5)),
+              : tileBorder,
         ),
       ),
       child: Material(
@@ -246,7 +263,7 @@ class _DeviceTile extends StatelessWidget {
         ),
         onTap: onTap,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: radius.circular(),
         ),
       ),
       ),

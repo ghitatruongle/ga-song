@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
+import '../../core/theme/tokens.dart';
 
 class SortFilterDialog {
   static void show(BuildContext context) {
@@ -34,8 +35,8 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
     final bgColor = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF1E1E1E)
-        : Colors.white;
+        ? AppColors.darkSurface
+        : AppColors.lightSurface;
 
     return Dialog(
       backgroundColor: Colors.transparent,

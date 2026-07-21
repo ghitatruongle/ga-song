@@ -5,6 +5,7 @@ import 'package:audiotags/audiotags.dart';
 import '../../models/song.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/logging/app_logger.dart';
 
 /// Dialog for editing song metadata (tags).
@@ -193,8 +194,8 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
                                     width: 120,
                                     height: 120,
                                     color: isDark
-                                        ? const Color(0xFF2A2A2A)
-                                        : const Color(0xFFF0F0F0),
+                                        ? AppColors.darkSurface2
+                                        : AppColors.lightSidebarHover,
                                     child: const Icon(Icons.music_note, size: 48),
                                   ),
                                 ),

@@ -6,7 +6,6 @@ import '../core/audio/playlist_service.dart';
 import '../core/cover_art_repository.dart';
 import '../core/pip_service.dart';
 import '../core/settings_manager.dart';
-import '../core/view_models/player_view_model.dart';
 import '../core/services/hotkey_service.dart';
 import '../core/services/system_tray_service.dart';
 import '../core/services/window_manager_service.dart';
@@ -60,15 +59,6 @@ final playlistServiceProvider = Provider<PlaylistService>((ref) {
   final effect = ref.read(audioEffectServiceProvider);
   final db = ref.read(databaseServiceProvider);
   final service = PlaylistService(engine, effect, db);
-  ref.onDispose(() => service.dispose());
-  return service;
-});
-
-/// Aggregated player state for the UI.
-final playerViewModelProvider = Provider<PlayerViewModel>((ref) {
-  final engine = ref.read(audioEngineServiceProvider);
-  final playlist = ref.read(playlistServiceProvider);
-  final service = PlayerViewModel(engine, playlist);
   ref.onDispose(() => service.dispose());
   return service;
 });

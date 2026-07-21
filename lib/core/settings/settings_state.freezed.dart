@@ -65,6 +65,8 @@ mixin _$SettingsState {
       throw _privateConstructorUsedError; // ─── Hotkeys & Media ────────────────────────────────────────────
   Map<String, String> get customHotkeys => throw _privateConstructorUsedError;
   bool get mediaKeyEnabled =>
+      throw _privateConstructorUsedError; // ─── Feedback (Phase 4) ──────────────────────────────────────────
+  bool get soundFeedbackEnabled =>
       throw _privateConstructorUsedError; // ─── Other ──────────────────────────────────────────────────────
   bool get minimizeToTray => throw _privateConstructorUsedError;
   double get sensitivity => throw _privateConstructorUsedError;
@@ -124,6 +126,7 @@ abstract class $SettingsStateCopyWith<$Res> {
     int visualizerShape,
     Map<String, String> customHotkeys,
     bool mediaKeyEnabled,
+    bool soundFeedbackEnabled,
     bool minimizeToTray,
     double sensitivity,
     String? customBackgroundImage,
@@ -184,6 +187,7 @@ class _$SettingsStateCopyWithImpl<$Res, $Val extends SettingsState>
     Object? visualizerShape = null,
     Object? customHotkeys = null,
     Object? mediaKeyEnabled = null,
+    Object? soundFeedbackEnabled = null,
     Object? minimizeToTray = null,
     Object? sensitivity = null,
     Object? customBackgroundImage = freezed,
@@ -346,6 +350,10 @@ class _$SettingsStateCopyWithImpl<$Res, $Val extends SettingsState>
                 ? _value.mediaKeyEnabled
                 : mediaKeyEnabled // ignore: cast_nullable_to_non_nullable
                       as bool,
+            soundFeedbackEnabled: null == soundFeedbackEnabled
+                ? _value.soundFeedbackEnabled
+                : soundFeedbackEnabled // ignore: cast_nullable_to_non_nullable
+                      as bool,
             minimizeToTray: null == minimizeToTray
                 ? _value.minimizeToTray
                 : minimizeToTray // ignore: cast_nullable_to_non_nullable
@@ -413,6 +421,7 @@ abstract class _$$SettingsStateImplCopyWith<$Res>
     int visualizerShape,
     Map<String, String> customHotkeys,
     bool mediaKeyEnabled,
+    bool soundFeedbackEnabled,
     bool minimizeToTray,
     double sensitivity,
     String? customBackgroundImage,
@@ -472,6 +481,7 @@ class __$$SettingsStateImplCopyWithImpl<$Res>
     Object? visualizerShape = null,
     Object? customHotkeys = null,
     Object? mediaKeyEnabled = null,
+    Object? soundFeedbackEnabled = null,
     Object? minimizeToTray = null,
     Object? sensitivity = null,
     Object? customBackgroundImage = freezed,
@@ -634,6 +644,10 @@ class __$$SettingsStateImplCopyWithImpl<$Res>
             ? _value.mediaKeyEnabled
             : mediaKeyEnabled // ignore: cast_nullable_to_non_nullable
                   as bool,
+        soundFeedbackEnabled: null == soundFeedbackEnabled
+            ? _value.soundFeedbackEnabled
+            : soundFeedbackEnabled // ignore: cast_nullable_to_non_nullable
+                  as bool,
         minimizeToTray: null == minimizeToTray
             ? _value.minimizeToTray
             : minimizeToTray // ignore: cast_nullable_to_non_nullable
@@ -694,6 +708,7 @@ class _$SettingsStateImpl implements _SettingsState {
     this.visualizerShape = 0,
     final Map<String, String> customHotkeys = const {},
     this.mediaKeyEnabled = true,
+    this.soundFeedbackEnabled = false,
     this.minimizeToTray = true,
     this.sensitivity = 1.0,
     this.customBackgroundImage,
@@ -839,6 +854,10 @@ class _$SettingsStateImpl implements _SettingsState {
   @override
   @JsonKey()
   final bool mediaKeyEnabled;
+  // ─── Feedback (Phase 4) ──────────────────────────────────────────
+  @override
+  @JsonKey()
+  final bool soundFeedbackEnabled;
   // ─── Other ──────────────────────────────────────────────────────
   @override
   @JsonKey()
@@ -851,7 +870,7 @@ class _$SettingsStateImpl implements _SettingsState {
 
   @override
   String toString() {
-    return 'SettingsState(themeMode: $themeMode, enableBlur: $enableBlur, blurLevel: $blurLevel, useNativeWindowEffect: $useNativeWindowEffect, windowOpacity: $windowOpacity, useDynamicColor: $useDynamicColor, customPrimaryColor: $customPrimaryColor, dynamicPrimaryColor: $dynamicPrimaryColor, isMiniPlayer: $isMiniPlayer, isGridView: $isGridView, sidebarCollapsed: $sidebarCollapsed, currentTabIndex: $currentTabIndex, eqBands: $eqBands, eqBassLevel: $eqBassLevel, eqPreset: $eqPreset, crossfadeDuration: $crossfadeDuration, crossfadeCurve: $crossfadeCurve, normalizationLevel: $normalizationLevel, normalizationEnabled: $normalizationEnabled, pitchShift: $pitchShift, reverbMix: $reverbMix, reverbRoomSize: $reverbRoomSize, reverbDamp: $reverbDamp, compressionRatio: $compressionRatio, compThreshold: $compThreshold, compAttack: $compAttack, compRelease: $compRelease, compKneeWidth: $compKneeWidth, compMakeupGain: $compMakeupGain, sortMode: $sortMode, sortAscending: $sortAscending, desktopLyricsEnabled: $desktopLyricsEnabled, desktopLyricsFontSize: $desktopLyricsFontSize, desktopLyricsOpacity: $desktopLyricsOpacity, desktopLyricsClickThrough: $desktopLyricsClickThrough, visualizerEnabled: $visualizerEnabled, visualizerShape: $visualizerShape, customHotkeys: $customHotkeys, mediaKeyEnabled: $mediaKeyEnabled, minimizeToTray: $minimizeToTray, sensitivity: $sensitivity, customBackgroundImage: $customBackgroundImage)';
+    return 'SettingsState(themeMode: $themeMode, enableBlur: $enableBlur, blurLevel: $blurLevel, useNativeWindowEffect: $useNativeWindowEffect, windowOpacity: $windowOpacity, useDynamicColor: $useDynamicColor, customPrimaryColor: $customPrimaryColor, dynamicPrimaryColor: $dynamicPrimaryColor, isMiniPlayer: $isMiniPlayer, isGridView: $isGridView, sidebarCollapsed: $sidebarCollapsed, currentTabIndex: $currentTabIndex, eqBands: $eqBands, eqBassLevel: $eqBassLevel, eqPreset: $eqPreset, crossfadeDuration: $crossfadeDuration, crossfadeCurve: $crossfadeCurve, normalizationLevel: $normalizationLevel, normalizationEnabled: $normalizationEnabled, pitchShift: $pitchShift, reverbMix: $reverbMix, reverbRoomSize: $reverbRoomSize, reverbDamp: $reverbDamp, compressionRatio: $compressionRatio, compThreshold: $compThreshold, compAttack: $compAttack, compRelease: $compRelease, compKneeWidth: $compKneeWidth, compMakeupGain: $compMakeupGain, sortMode: $sortMode, sortAscending: $sortAscending, desktopLyricsEnabled: $desktopLyricsEnabled, desktopLyricsFontSize: $desktopLyricsFontSize, desktopLyricsOpacity: $desktopLyricsOpacity, desktopLyricsClickThrough: $desktopLyricsClickThrough, visualizerEnabled: $visualizerEnabled, visualizerShape: $visualizerShape, customHotkeys: $customHotkeys, mediaKeyEnabled: $mediaKeyEnabled, soundFeedbackEnabled: $soundFeedbackEnabled, minimizeToTray: $minimizeToTray, sensitivity: $sensitivity, customBackgroundImage: $customBackgroundImage)';
   }
 
   @override
@@ -941,6 +960,8 @@ class _$SettingsStateImpl implements _SettingsState {
             ) &&
             (identical(other.mediaKeyEnabled, mediaKeyEnabled) ||
                 other.mediaKeyEnabled == mediaKeyEnabled) &&
+            (identical(other.soundFeedbackEnabled, soundFeedbackEnabled) ||
+                other.soundFeedbackEnabled == soundFeedbackEnabled) &&
             (identical(other.minimizeToTray, minimizeToTray) ||
                 other.minimizeToTray == minimizeToTray) &&
             (identical(other.sensitivity, sensitivity) ||
@@ -991,6 +1012,7 @@ class _$SettingsStateImpl implements _SettingsState {
     visualizerShape,
     const DeepCollectionEquality().hash(_customHotkeys),
     mediaKeyEnabled,
+    soundFeedbackEnabled,
     minimizeToTray,
     sensitivity,
     customBackgroundImage,
@@ -1046,6 +1068,7 @@ abstract class _SettingsState implements SettingsState {
     final int visualizerShape,
     final Map<String, String> customHotkeys,
     final bool mediaKeyEnabled,
+    final bool soundFeedbackEnabled,
     final bool minimizeToTray,
     final double sensitivity,
     final String? customBackgroundImage,
@@ -1129,7 +1152,9 @@ abstract class _SettingsState implements SettingsState {
   @override
   Map<String, String> get customHotkeys;
   @override
-  bool get mediaKeyEnabled; // ─── Other ──────────────────────────────────────────────────────
+  bool get mediaKeyEnabled; // ─── Feedback (Phase 4) ──────────────────────────────────────────
+  @override
+  bool get soundFeedbackEnabled; // ─── Other ──────────────────────────────────────────────────────
   @override
   bool get minimizeToTray;
   @override

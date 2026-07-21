@@ -65,6 +65,9 @@ class SettingsState with _$SettingsState {
     @Default({}) Map<String, String> customHotkeys,
     @Default(true) bool mediaKeyEnabled,
 
+    // ─── Feedback (Phase 4) ──────────────────────────────────────────
+    @Default(false) bool soundFeedbackEnabled,
+
     // ─── Other ──────────────────────────────────────────────────────
     @Default(true) bool minimizeToTray,
     @Default(1.0) double sensitivity,

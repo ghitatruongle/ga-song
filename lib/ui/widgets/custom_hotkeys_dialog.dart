@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/tokens.dart';
 import '../../providers/service_providers.dart';
+import '../utils/theme_helpers.dart';
 
 class CustomHotkeysDialog {
   static void show(BuildContext context) {
@@ -17,7 +19,8 @@ class _CustomHotkeysDialog extends ConsumerStatefulWidget {
   const _CustomHotkeysDialog();
 
   @override
-  ConsumerState<_CustomHotkeysDialog> createState() => _CustomHotkeysDialogState();
+  ConsumerState<_CustomHotkeysDialog> createState() =>
+      _CustomHotkeysDialogState();
 }
 
 class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
@@ -25,11 +28,31 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
   late final FocusNode _focusNode;
 
   static const _hotkeyActions = [
-    {'action': 'playPause', 'label': 'Phát / Tạm dừng', 'defaultKey': 'Alt + Space'},
-    {'action': 'next', 'label': 'Bài tiếp theo', 'defaultKey': 'Alt + ArrowRight'},
-    {'action': 'previous', 'label': 'Bài trước đó', 'defaultKey': 'Alt + ArrowLeft'},
-    {'action': 'volumeUp', 'label': 'Tăng âm lượng', 'defaultKey': 'Alt + ArrowUp'},
-    {'action': 'volumeDown', 'label': 'Giảm âm lượng', 'defaultKey': 'Alt + ArrowDown'},
+    {
+      'action': 'playPause',
+      'label': 'Phát / Tạm dừng',
+      'defaultKey': 'Alt + Space',
+    },
+    {
+      'action': 'next',
+      'label': 'Bài tiếp theo',
+      'defaultKey': 'Alt + ArrowRight',
+    },
+    {
+      'action': 'previous',
+      'label': 'Bài trước đó',
+      'defaultKey': 'Alt + ArrowLeft',
+    },
+    {
+      'action': 'volumeUp',
+      'label': 'Tăng âm lượng',
+      'defaultKey': 'Alt + ArrowUp',
+    },
+    {
+      'action': 'volumeDown',
+      'label': 'Giảm âm lượng',
+      'defaultKey': 'Alt + ArrowDown',
+    },
   ];
 
   String? _editingAction;
@@ -49,10 +72,16 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
-    final bgColor = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF1E1E1E)
-        : Colors.white;
+    final textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black87;
+    final bgColor = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface,
+      light: Colors.white,
+    );
+    final spacing = ThemeSpacing.of(context);
+    final radius = ThemeRadius.of(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -63,7 +92,7 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: bgColor.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg + 4),
             border: Border.all(color: textColor.withValues(alpha: 0.1)),
             boxShadow: [
               BoxShadow(
@@ -79,7 +108,7 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
               Row(
                 children: [
                   Icon(Icons.keyboard, color: textColor, size: 24),
-                  const SizedBox(width: 12),
+                  SizedBox(width: spacing.sm + spacing.xxs),
                   Text(
                     'Tùy chỉnh Phím tắt',
                     style: TextStyle(
@@ -90,29 +119,40 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Nhấn phím bạn muốn gán cho mỗi hành động',
-                style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 13),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.6),
+                  fontSize: 13,
+                ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: spacing.lg - spacing.xs),
               ValueListenableBuilder<Map<String, String>>(
                 valueListenable: _settings.customHotkeysNotifier,
                 builder: (context, hotkeys, _) {
                   return Column(
                     children: _hotkeyActions.map((action) {
                       final actionKey = action['action'] as String;
-                      final currentKey = hotkeys[actionKey] ?? action['defaultKey'] as String;
+                      final currentKey =
+                          hotkeys[actionKey] ?? action['defaultKey'] as String;
                       final isEditing = _editingAction == actionKey;
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        margin: EdgeInsets.only(
+                          bottom: spacing.sm + spacing.xxs,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: spacing.md,
+                          vertical: spacing.sm + spacing.xs,
+                        ),
                         decoration: BoxDecoration(
                           color: isEditing
-                              ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                              ? Theme.of(
+                                  context,
+                                ).primaryColor.withValues(alpha: 0.1)
                               : textColor.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: radius.circular(),
                           border: Border.all(
                             color: isEditing
                                 ? Theme.of(context).primaryColor
@@ -131,13 +171,21 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                               _buildKeyCaptureField(textColor)
                             else
                               InkWell(
-                                onTap: () => setState(() => _editingAction = actionKey),
-                                borderRadius: BorderRadius.circular(8),
+                                onTap: () =>
+                                    setState(() => _editingAction = actionKey),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.sm,
+                                ),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: spacing.sm + spacing.xxs,
+                                    vertical: AppSpacing.sm,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: textColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.sm,
+                                    ),
                                   ),
                                   child: Text(
                                     currentKey,
@@ -151,8 +199,15 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                               ),
                             if (hotkeys.containsKey(actionKey))
                               IconButton(
-                                icon: Icon(Icons.close, color: Colors.red.withValues(alpha: 0.7), size: 18),
-                                onPressed: () => _settings.removeCustomHotkey(actionKey),
+                                icon: Icon(
+                                  Icons.close,
+                                  color: AppColors.danger.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                  size: 18,
+                                ),
+                                onPressed: () =>
+                                    _settings.removeCustomHotkey(actionKey),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                               ),
@@ -163,12 +218,15 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                   );
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Mẹo: Sử dụng phím Alt, Ctrl, Shift kết hợp với phím khác',
-                style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: spacing.md),
               Row(
                 children: [
                   Expanded(
@@ -176,16 +234,18 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: textColor,
-                        side: BorderSide(color: textColor.withValues(alpha: 0.3)),
+                        side: BorderSide(
+                          color: textColor.withValues(alpha: 0.3),
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(AppRadius.sm + 2),
                         ),
                         minimumSize: const Size(double.infinity, 44),
                       ),
                       child: const Text('Đóng'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: spacing.sm + spacing.xxs),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
@@ -195,7 +255,7 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(AppRadius.sm + 2),
                         ),
                         minimumSize: const Size(double.infinity, 44),
                         elevation: 0,
@@ -232,7 +292,8 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
           if (HardwareKeyboard.instance.isShiftPressed) modifiers.add('Shift');
 
           final keyLabel = event.logicalKey.keyLabel;
-          if (keyLabel.isNotEmpty && !['Alt', 'Control', 'Shift'].contains(keyLabel)) {
+          if (keyLabel.isNotEmpty &&
+              !['Alt', 'Control', 'Shift'].contains(keyLabel)) {
             final keys = [...modifiers, keyLabel].join(' + ');
 
             // Check for conflicts with other actions
@@ -246,7 +307,9 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Phím tắt "$keys" đã được gán cho hành động khác'),
+                    content: Text(
+                      'Phím tắt "$keys" đã được gán cho hành động khác',
+                    ),
                     duration: const Duration(seconds: 2),
                   ),
                 );
@@ -265,10 +328,13 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: Theme.of(context).primaryColor),
         ),
         child: Text(

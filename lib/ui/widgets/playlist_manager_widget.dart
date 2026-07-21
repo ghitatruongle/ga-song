@@ -4,6 +4,7 @@ import '../../models/playlist.dart';
 import '../../models/song.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
+import '../../core/theme/tokens.dart';
 
 class PlaylistManagerWidget {
   static void show(BuildContext context) {
@@ -57,7 +58,7 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
     final textColor = context.adaptive;
 
     return AlertDialog(
-      backgroundColor: context.isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: context.isDark ? AppColors.darkSurface : AppColors.lightSurface,
       title: Text('Quản lý Playlist', style: TextStyle(color: textColor)),
       content: SizedBox(
         width: 400,
@@ -188,7 +189,7 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
     final textColor = context.adaptive;
 
     return AlertDialog(
-      backgroundColor: context.isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: context.isDark ? AppColors.darkSurface : AppColors.lightSurface,
       title: Text(
         'Thêm "${widget.song.name}" vào...',
         style: TextStyle(color: textColor, fontSize: 18),

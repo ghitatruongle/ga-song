@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ga_song/core/audio/audio_engine_service.dart';
@@ -8,7 +9,7 @@ import 'package:ga_song/core/audio/playlist_service.dart';
 import 'package:ga_song/core/services/database_service.dart';
 import 'package:ga_song/models/song.dart';
 
-class MockAudioEngineService implements AudioEngineService {
+class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
   @override
   ValueNotifier<AudioEngineState> engineState = ValueNotifier(AudioEngineState.idle);
   @override
@@ -48,6 +49,10 @@ class MockAudioEngineService implements AudioEngineService {
   Future<void> evictSources(Set<String> keepAssetPaths) async {}
   @override
   Future<void> dispose() async {}
+
+  // P3.4: Lifecycle observer — mock is a no-op.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {}
 
   // Missing methods from AudioEngineService
   @override

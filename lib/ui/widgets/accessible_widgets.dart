@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'debounced_slider.dart';
+
 /// A play/pause button with proper accessibility semantics.
 class AccessiblePlayButton extends StatelessWidget {
   /// Whether the player is currently playing.
@@ -150,11 +152,12 @@ class AccessibleVolumeSlider extends StatelessWidget {
             ),
           SizedBox(
             width: 100,
-            child: Slider(
+            child: DebouncedSlider(
               value: volume,
               onChanged: onChanged,
               min: 0,
               max: 1,
+              debounceMs: 80, // volume — short debounce for responsive feel
             ),
           ),
         ],

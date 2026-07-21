@@ -33,6 +33,10 @@ class _VolumeControlState extends ConsumerState<VolumeControl> {
             color: context.adaptiveSecondary,
             size: 22,
           ),
+          // Match right_controls.dart: keep volume button compact so the
+          // slider gets the leftover width on narrow mobile breakpoints.
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
           onPressed: () {
             if (volume > 0) {
               _previousVolume = volume;
@@ -42,7 +46,7 @@ class _VolumeControlState extends ConsumerState<VolumeControl> {
             }
           },
         ),
-        Flexible(
+        Expanded(
           child: SliderTheme(
             data: SliderThemeData(
               trackHeight: 3,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/motion/app_motion.dart';
 import '../../core/theme_utils.dart';
+import '../utils/animation_utils.dart';
 import '../widgets/desktop_title_bar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/song.dart';
@@ -37,7 +39,12 @@ class AlbumGridWidget extends StatelessWidget {
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 200,
-                      childAspectRatio: 1.0,
+                      // Phase 4 fix: aspect 0.75 (tile is 33% taller than
+                      // wide) gives the album-name Text enough vertical
+                      // budget for 2 lines + ellipsis on narrow mobile
+                      // viewports (~111 px wide after sidebar + padding)
+                      // without silently collapsing to a single line.
+                      childAspectRatio: 0.75,
                       crossAxisSpacing: 24,
                       mainAxisSpacing: 24,
                     ),
@@ -99,7 +106,7 @@ class AlbumGridWidget extends StatelessWidget {
   }
 }
 
-class _AlbumTile extends StatelessWidget {
+class _AlbumTile extends StatefulWidget {
   const _AlbumTile({
     required this.albumName,
     required this.songCount,
@@ -111,69 +118,119 @@ class _AlbumTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_AlbumTile> createState() => _AlbumTileState();
+}
+
+class _AlbumTileState extends State<_AlbumTile> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  void _onTap() {
+    // Phase 4 Task 7: tap also gets a tiny scale-down echo (released on press).
+    if (animationsEnabled(context) && _isPressed) {
+      setState(() => _isPressed = false);
+    }
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final adaptiveColor = context.adaptive;
-    final isSpecialAlbum = albumName == 'Mắt Nhắm Mắt Mở';
+    final isSpecialAlbum = widget.albumName == 'Mắt Nhắm Mắt Mở';
+    final animations = animationsEnabled(context);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: adaptiveColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: adaptiveColor.withValues(alpha: 0.2),
-            width: 2,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isSpecialAlbum)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/pic/mat_nham_mat_mo/mat_nham_mat_mo_trailer.png',
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
-                ),
-              )
-            else
-              Icon(
-                Icons.album_rounded,
-                size: 64,
-                color: adaptiveColor.withValues(alpha: 0.8),
+    return AnimatedContainer(
+      duration: animations ? AppDurations.short : Duration.zero,
+      curve: AppCurves.decelerate,
+      transform: Matrix4.identity()
+        ..scaleByDouble(
+            _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
+            _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
+            1.0,
+            1.0),
+      transformAlignment: Alignment.center,
+      child: GestureDetector(
+        onTap: _onTap,
+        onTapDown: (_) {
+          if (animations) setState(() => _isPressed = true);
+        },
+        onTapUp: (_) {
+          if (animations) setState(() => _isPressed = false);
+        },
+        onTapCancel: () {
+          if (animations) setState(() => _isPressed = false);
+        },
+        child: MouseRegion(
+          onEnter: (_) {
+            if (animations) setState(() => _isHovered = true);
+          },
+          onExit: (_) {
+            if (animations) setState(() => _isHovered = false);
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: adaptiveColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: adaptiveColor.withValues(alpha: 0.2),
+                width: 2,
               ),
-            const SizedBox(height: 16),
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  albumName,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: adaptiveColor.withValues(alpha: 0.9),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isSpecialAlbum)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/pic/mat_nham_mat_mo/mat_nham_mat_mo_trailer.png',
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.album_rounded,
+                    size: 56,
+                    color: adaptiveColor.withValues(alpha: 0.8),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 10),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      widget.albumName,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: adaptiveColor.withValues(alpha: 0.9),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Flexible(
+                  child: Text(
+                    AppLocalizations.of(context).translateWith(
+                      'songCount',
+                      {'count': widget.songCount.toString()},
+                    ),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: adaptiveColor.withValues(alpha: 0.6),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              AppLocalizations.of(context).translateWith(
-                'songCount',
-                {'count': songCount.toString()},
-              ),
-              style: TextStyle(
-                fontSize: 14,
-                color: adaptiveColor.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

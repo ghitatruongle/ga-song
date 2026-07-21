@@ -17,6 +17,10 @@ class DebouncedSlider extends StatefulWidget {
     this.max = 1.0,
     this.debounceMs = 100,
     this.sliderTheme,
+    this.divisions,
+    this.label,
+    this.onChangeStart,
+    this.onChangeEnd,
   });
 
   final double value;
@@ -25,6 +29,21 @@ class DebouncedSlider extends StatefulWidget {
   final ValueChanged<double> onChanged;
   final int debounceMs;
   final SliderThemeData? sliderTheme;
+
+  /// Number of discrete divisions. Forwarded to inner [Slider].
+  /// Null means continuous.
+  final int? divisions;
+
+  /// Floating label shown above thumb on drag. Forwarded to inner [Slider].
+  final String? label;
+
+  /// Optional callback fired when the user starts dragging the thumb.
+  final ValueChanged<double>? onChangeStart;
+
+  /// Optional callback fired when the user releases the thumb. The final
+  /// value is always applied via [onChanged] on release — this fires in
+  /// addition so callers can react to the drag lifecycle.
+  final ValueChanged<double>? onChangeEnd;
 
   @override
   State<DebouncedSlider> createState() => _DebouncedSliderState();
@@ -61,14 +80,18 @@ class _DebouncedSliderState extends State<DebouncedSlider> {
       value: _local.clamp(widget.min, widget.max),
       min: widget.min,
       max: widget.max,
+      divisions: widget.divisions,
+      label: widget.label,
       onChanged: (v) {
         setState(() => _local = v);
         _d.run(() => widget.onChanged(v));
       },
+      onChangeStart: widget.onChangeStart,
       onChangeEnd: (v) {
         // Flush immediately on release so final value is applied.
         _d.cancel();
         widget.onChanged(v);
+        widget.onChangeEnd?.call(v);
       },
     );
     if (widget.sliderTheme == null) return slider;

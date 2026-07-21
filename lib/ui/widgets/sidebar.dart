@@ -10,8 +10,10 @@ import '../../core/theme_utils.dart';
 enum TabItem { home, library, online, ktv, personal, settings }
 
 // ─── Layout Constants ────────────────────────────────────────────────────────
-const double _kSidebarExpandedWidth = 220.0;
-const double _kSidebarCollapsedWidth = 64.0;
+// Public so other widgets (e.g. home_screen.dart overlay layers) can
+// align to the sidebar without duplicating the magic numbers.
+const double kSidebarExpandedWidth = 220.0;
+const double kSidebarCollapsedWidth = 64.0;
 const double _kItemHeight = 40.0;
 const double _kActiveIndicatorWidth = 3.0;
 const Duration _kCollapseDuration = Duration(milliseconds: 250);
@@ -61,7 +63,7 @@ class _SidebarWidgetState extends ConsumerState<SidebarWidget> {
         return AnimatedContainer(
           duration: _kCollapseDuration,
           curve: Curves.easeInOut,
-          width: isCollapsed ? _kSidebarCollapsedWidth : _kSidebarExpandedWidth,
+          width: isCollapsed ? kSidebarCollapsedWidth : kSidebarExpandedWidth,
           color: Colors.transparent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

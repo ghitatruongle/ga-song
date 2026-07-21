@@ -36,7 +36,7 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
       vsync: this,
       audioService: _engineService,
       settings: _settings,
-    )..addListener(_syncRotationState);
+    );
     _rotateController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
@@ -46,7 +46,6 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
 
   @override
   void dispose() {
-    _visualizerController.removeListener(_syncRotationState);
     _visualizerController.dispose();
     _rotateController.dispose();
     super.dispose();
@@ -67,6 +66,20 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _visualizerController,
+      builder: (context, _) {
+        // P2.2: ListenableBuilder only drives rebuilds; it does NOT advance
+        // AnimationController. We still need to imperatively sync the
+        // rotation controller's repeat/stop based on isAudioReactive
+        // on every controller notify.
+        _syncRotationState();
+        return _buildVisualizerContent(context);
+      },
+    );
+  }
+
+  Widget _buildVisualizerContent(BuildContext context) {
     PerformanceProbe.instance.markSurface('Personal Visualizer');
     final textColor = context.adaptive;
 

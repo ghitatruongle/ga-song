@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:ga_song/core/audio/audio_engine_service.dart';
@@ -72,7 +73,7 @@ class MockSmtcPlatform implements SmtcPlatform {
 // ---------------------------------------------------------------------------
 // Mock engine — follows same pattern as playlist_service_test.dart
 // ---------------------------------------------------------------------------
-class MockAudioEngineService implements AudioEngineService {
+class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
   @override
   ValueNotifier<AudioEngineState> engineState =
       ValueNotifier(AudioEngineState.idle);
@@ -140,6 +141,14 @@ class MockAudioEngineService implements AudioEngineService {
 
   @override
   Future<AudioSource?> ensureSource(String assetPath) async => null;
+
+  // P3.4: Lifecycle observer — mock is a no-op.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {}
+
+  // Forward any other WidgetsBindingObserver methods to noSuchMethod.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 // ---------------------------------------------------------------------------

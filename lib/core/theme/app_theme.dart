@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'motion_page_transitions_builder.dart';
+import 'tokens.dart';
 import 'app_typography.dart';
 
 /// Centralized theme configuration for G.A - Song.
@@ -19,11 +20,27 @@ class AppTheme {
     _accentColor = color;
   }
 
+  // ─── Global page transition ──────────────────────────────────────────────
+  // Routes every `MaterialPageRoute` through [MotionPageTransitionsBuilder]
+  // (fade-through + slide 5%, 300ms, decelerate). Honors
+  // `MediaQuery.disableAnimations`.
+  static const _pageTransitionsTheme = PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: MotionPageTransitionsBuilder(),
+      TargetPlatform.iOS: MotionPageTransitionsBuilder(),
+      TargetPlatform.macOS: MotionPageTransitionsBuilder(),
+      TargetPlatform.windows: MotionPageTransitionsBuilder(),
+      TargetPlatform.linux: MotionPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: MotionPageTransitionsBuilder(),
+    },
+  );
+
   // ─── Dark Theme ───────────────────────────────────────────────────────────
   static ThemeData darkTheme() {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      pageTransitionsTheme: _pageTransitionsTheme,
       scaffoldBackgroundColor: AppColors.darkBackground,
       colorScheme: ColorScheme.dark(
         primary: _accentColor,
@@ -78,7 +95,9 @@ class AppTheme {
           color: AppColors.darkSurface3,
           borderRadius: BorderRadius.circular(8),
         ),
-        textStyle: AppTypography.caption.copyWith(color: AppColors.darkTextPrimary),
+        textStyle: AppTypography.caption.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: AppColors.darkSurface2,
@@ -87,7 +106,9 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: AppColors.darkBorder, width: 1),
         ),
-        textStyle: AppTypography.body.copyWith(color: AppColors.darkTextPrimary),
+        textStyle: AppTypography.body.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.darkSurface,
@@ -96,19 +117,27 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.darkBorder, width: 1),
         ),
-        titleTextStyle: AppTypography.subtitle.copyWith(color: AppColors.darkTextPrimary),
-        contentTextStyle: AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+        titleTextStyle: AppTypography.subtitle.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
+        contentTextStyle: AppTypography.body.copyWith(
+          color: AppColors.darkTextSecondary,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.darkSurface3,
-        contentTextStyle: AppTypography.body.copyWith(color: AppColors.darkTextPrimary),
+        contentTextStyle: AppTypography.body.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.darkSurface2,
         selectedColor: _accentColor.withValues(alpha: 0.2),
-        labelStyle: AppTypography.body.copyWith(color: AppColors.darkTextPrimary),
+        labelStyle: AppTypography.body.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: const BorderSide(color: AppColors.darkBorder, width: 1),
@@ -129,7 +158,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: _accentColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         hintStyle: AppTypography.body.copyWith(color: AppColors.darkTextSubtle),
       ),
     );
@@ -140,6 +172,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      pageTransitionsTheme: _pageTransitionsTheme,
       scaffoldBackgroundColor: AppColors.lightBackground,
       colorScheme: ColorScheme.light(
         primary: _accentColor,
@@ -194,7 +227,9 @@ class AppTheme {
           color: AppColors.lightSurface3,
           borderRadius: BorderRadius.circular(8),
         ),
-        textStyle: AppTypography.caption.copyWith(color: AppColors.lightTextPrimary),
+        textStyle: AppTypography.caption.copyWith(
+          color: AppColors.lightTextPrimary,
+        ),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: AppColors.lightSurface,
@@ -203,7 +238,9 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: AppColors.lightBorder, width: 1),
         ),
-        textStyle: AppTypography.body.copyWith(color: AppColors.lightTextPrimary),
+        textStyle: AppTypography.body.copyWith(
+          color: AppColors.lightTextPrimary,
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.lightSurface,
@@ -212,19 +249,27 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.lightBorder, width: 1),
         ),
-        titleTextStyle: AppTypography.subtitle.copyWith(color: AppColors.lightTextPrimary),
-        contentTextStyle: AppTypography.body.copyWith(color: AppColors.lightTextSecondary),
+        titleTextStyle: AppTypography.subtitle.copyWith(
+          color: AppColors.lightTextPrimary,
+        ),
+        contentTextStyle: AppTypography.body.copyWith(
+          color: AppColors.lightTextSecondary,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.lightSurface3,
-        contentTextStyle: AppTypography.body.copyWith(color: AppColors.lightTextPrimary),
+        contentTextStyle: AppTypography.body.copyWith(
+          color: AppColors.lightTextPrimary,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.lightSurface2,
         selectedColor: _accentColor.withValues(alpha: 0.2),
-        labelStyle: AppTypography.body.copyWith(color: AppColors.lightTextPrimary),
+        labelStyle: AppTypography.body.copyWith(
+          color: AppColors.lightTextPrimary,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: const BorderSide(color: AppColors.lightBorder, width: 1),
@@ -245,8 +290,13 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: _accentColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        hintStyle: AppTypography.body.copyWith(color: AppColors.lightTextSubtle),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        hintStyle: AppTypography.body.copyWith(
+          color: AppColors.lightTextSubtle,
+        ),
       ),
     );
   }

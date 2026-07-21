@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import '../logging/app_logger.dart';
 import '../performance_probe.dart';
 import '../platform_capabilities.dart';
 
@@ -50,7 +52,7 @@ const int _kPositionEpsilonMobile = 80;
 ///
 /// The LRU cache evicts least-recently-used sources when the cache exceeds
 /// the platform limit (50 on desktop, 20 on Android).
-class AudioEngineService {
+class AudioEngineService with WidgetsBindingObserver {
   final _soloud = SoLoud.instance;
 
   // ─── LRU Cache ───────────────────────────────────────────────────────────
@@ -85,7 +87,40 @@ class AudioEngineService {
   double _volume = 1.0;
   double _normalizationGain = 1.0;
 
-  AudioEngineService();
+  AudioEngineService() {
+    // P3.4: Register for app lifecycle events so the position timer can be
+    // paused when the app is backgrounded (saves wakeups / battery) and
+    // resumed when the app returns to the foreground (only if a song is
+    // actively playing).
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  // ─── App Lifecycle ────────────────────────────────────────────────────────
+
+  /// Reacts to OS-level lifecycle transitions (background / foreground).
+  ///
+  /// On background (paused/hidden/inactive/detached) we cancel the position
+  /// timer; on resume we restart it only if playback is still active. This
+  /// wires the existing `_isTimerPaused` flag to the real OS signal without
+  /// introducing new state.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isDisposed) return;
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        _pausePositionTimer();
+      case AppLifecycleState.resumed:
+        // Only restart the position timer if we were actively playing
+        // before backgrounding. If the user had paused, the engineState
+        // is already AudioEngineState.paused and we leave it alone.
+        if (engineState.value == AudioEngineState.playing) {
+          _startPositionTimer();
+        }
+    }
+  }
 
   // ─── Position Timer ────────────────────────────────────────────────────────
 
@@ -130,7 +165,9 @@ class AudioEngineService {
       if (delta > epsilon) {
         positionNotifier.value = pos;
       }
-    } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('audio.engine_service', 'position tick failed', error: e, stack: stack);
+    }
   }
 
   // ─── Source Management & Caching ───────────────────────────────────────────
@@ -176,7 +213,7 @@ class AudioEngineService {
         PerformanceProbe.instance.recordCacheSize(_sourceCache.length);
         return source;
       } catch (e, stack) {
-        debugPrint('Source load error at $normalizedPath: $e\n$stack');
+        AppLogger.e('audio.engine_service', 'Source load failed for $normalizedPath', error: e, stack: stack);
         return null;
       } finally {
         _sourceLoadFutures.remove(normalizedPath);
@@ -200,7 +237,9 @@ class AudioEngineService {
         PerformanceProbe.instance.recordEviction();
         try {
           _soloud.disposeSource(removed.source);
-        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+        } catch (e, stack) {
+          AppLogger.e('audio.engine_service', 'source dispose failed during eviction', error: e, stack: stack);
+        }
       }
     }
   }
@@ -223,7 +262,9 @@ class AudioEngineService {
       PerformanceProbe.instance.recordEviction();
       try {
         await _soloud.disposeSource(entry.source);
-      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('audio.engine_service', 'source dispose failed during eviction', error: e, stack: stack);
+      }
     }
   }
 
@@ -278,7 +319,7 @@ class AudioEngineService {
         }
       });
     } catch (e, stack) {
-      debugPrint('Play error: $e\n$stack');
+      AppLogger.e('audio.engine_service', 'playAsset failed', error: e, stack: stack);
       engineState.value = AudioEngineState.error;
     } finally {
       _isPlayingNext = false;
@@ -295,14 +336,18 @@ class AudioEngineService {
         if (_soloud.getPause(handle)) {
           _soloud.setPause(handle, false);
         }
-      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('audio.engine_service', 'resume failed', error: e, stack: stack);
+      }
     }
     if (crossHandle != null) {
       try {
         if (_soloud.getPause(crossHandle)) {
           _soloud.setPause(crossHandle, false);
         }
-      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('audio.engine_service', 'resume crossfade failed', error: e, stack: stack);
+      }
     }
     if (hadAnyHandle) {
       engineState.value = AudioEngineState.playing;
@@ -315,13 +360,17 @@ class AudioEngineService {
     if (handle != null) {
       try {
         _soloud.setPause(handle, true);
-      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('audio.engine_service', 'pause failed', error: e, stack: stack);
+      }
     }
     final crossHandle = _crossfadeHandle;
     if (crossHandle != null) {
       try {
         _soloud.setPause(crossHandle, true);
-      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('audio.engine_service', 'pause crossfade failed', error: e, stack: stack);
+      }
     }
     engineState.value = AudioEngineState.paused;
     _pausePositionTimer();
@@ -340,7 +389,9 @@ class AudioEngineService {
     try {
       _soloud.seek(handle, position);
       positionNotifier.value = position;
-    } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('audio.engine_service', 'seek failed', error: e, stack: stack);
+    }
   }
 
   // ─── Volume & Crossfade ────────────────────────────────────────────────────
@@ -361,7 +412,9 @@ class AudioEngineService {
       if (_currentHandle != null) {
         _soloud.setVolume(_currentHandle!, _volume * _normalizationGain);
       }
-    } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+    } catch (e, stack) {
+      AppLogger.e('audio.engine_service', 'applyVolume failed', error: e, stack: stack);
+    }
   }
 
   Timer? _crossfadeTimer;
@@ -434,7 +487,9 @@ class AudioEngineService {
               fadeInVolume.clamp(0.0, 1.0),
             );
           }
-        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+        } catch (e, stack) {
+          AppLogger.e('audio.engine_service', 'crossfade step failed', error: e, stack: stack);
+        }
 
         if (currentStep >= _kCrossfadeSteps) {
           timer.cancel();
@@ -469,7 +524,7 @@ class AudioEngineService {
         });
       }
     } catch (e, stack) {
-      debugPrint('Crossfade error: $e\n$stack');
+      AppLogger.e('audio.engine_service', 'crossfade failed', error: e, stack: stack);
     } finally {
       _isCrossfading = false;
       _crossfadeHandle = null;
@@ -498,7 +553,9 @@ class AudioEngineService {
       if (handle != null) {
         try {
           _soloud.stop(handle);
-        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+        } catch (e, stack) {
+          AppLogger.e('audio.engine_service', 'cleanup handle failed', error: e, stack: stack);
+        }
       }
       
       final crossHandle = _crossfadeHandle;
@@ -509,7 +566,9 @@ class AudioEngineService {
       if (crossHandle != null) {
         try {
           _soloud.stop(crossHandle);
-        } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+        } catch (e, stack) {
+          AppLogger.e('audio.engine_service', 'cleanup crossfade handle failed', error: e, stack: stack);
+        }
       }
     } finally {
       _cleanupLock!.complete();
@@ -520,7 +579,9 @@ class AudioEngineService {
     for (final entry in _sourceCache.values) {
       try {
         await _soloud.disposeSource(entry.source);
-      } catch (e, stack) { debugPrint('Error in audio_engine_service: $e\n$stack'); }
+      } catch (e, stack) {
+        AppLogger.e('audio.engine_service', 'dispose cached source failed', error: e, stack: stack);
+      }
     }
     _sourceCache.clear();
     _sourceLoadFutures.clear();
@@ -564,6 +625,8 @@ class AudioEngineService {
   };
 
   Future<void> dispose() async {
+    // P3.4: Unregister from lifecycle events before tearing down state.
+    WidgetsBinding.instance.removeObserver(this);
     _isDisposed = true;
     _positionTimer?.cancel();
     _crossfadeTimer?.cancel();

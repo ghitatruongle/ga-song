@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/tokens.dart';
 import '../../providers/service_providers.dart';
+import '../utils/theme_helpers.dart';
+import 'debounced_slider.dart';
 
 class AudioEffectsDialog {
   static void show(BuildContext context) {
@@ -16,7 +19,8 @@ class _AudioEffectsDialog extends ConsumerStatefulWidget {
   const _AudioEffectsDialog();
 
   @override
-  ConsumerState<_AudioEffectsDialog> createState() => _AudioEffectsDialogState();
+  ConsumerState<_AudioEffectsDialog> createState() =>
+      _AudioEffectsDialogState();
 }
 
 class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
@@ -25,10 +29,15 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
-    final bgColor = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF1E1E1E)
-        : Colors.white;
+    final textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black87;
+    final bgColor = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface,
+      light: Colors.white,
+    );
+    final spacing = ThemeSpacing.of(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -41,7 +50,7 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
           ),
           decoration: BoxDecoration(
             color: bgColor.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg + 4),
             border: Border.all(color: textColor.withValues(alpha: 0.1)),
             boxShadow: [
               BoxShadow(
@@ -59,7 +68,7 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
                 child: Row(
                   children: [
                     Icon(Icons.tune, color: textColor, size: 24),
-                    const SizedBox(width: 12),
+                    SizedBox(width: spacing.sm + spacing.xxs),
                     Text(
                       'Audio Effects',
                       style: TextStyle(
@@ -70,16 +79,21 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                        color: AppColors.success.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.sm - 2),
+                        border: Border.all(
+                          color: AppColors.success.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: const Text(
                         'Live',
                         style: TextStyle(
-                          color: Colors.green,
+                          color: AppColors.success,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -88,7 +102,7 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: spacing.md),
 
               // Scrollable content area
               Flexible(
@@ -119,12 +133,15 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
                     backgroundColor: textColor,
                     foregroundColor: bgColor,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadius.sm + 2),
                     ),
                     minimumSize: const Size(double.infinity, 44),
                     elevation: 0,
                   ),
-                  child: const Text('Xong', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Xong',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
@@ -136,7 +153,9 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
 
   Widget _buildDivider(Color textColor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.sm + AppSpacing.xxs,
+      ),
       child: Divider(color: textColor.withValues(alpha: 0.08), height: 1),
     );
   }
@@ -150,7 +169,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Crossfade', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+            Text(
+              'Crossfade',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+            ),
             ValueListenableBuilder<double>(
               valueListenable: _settings.crossfadeDurationNotifier,
               builder: (context, value, _) {
@@ -165,18 +187,25 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         const SizedBox(height: 4),
         Text(
           'Pha trộn mượt giữa các bài hát',
-          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.5),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
         ValueListenableBuilder<double>(
           valueListenable: _settings.crossfadeDurationNotifier,
           builder: (context, value, _) {
-            return Slider(
+            return DebouncedSlider(
+              sliderTheme: SliderThemeData(
+                activeTrackColor: Theme.of(context).primaryColor,
+                thumbColor: Theme.of(context).primaryColor,
+              ),
               value: value,
               min: 0,
               max: 10,
               divisions: 20,
-              activeColor: Theme.of(context).primaryColor,
+              debounceMs: 200,
               onChanged: (v) {
                 _settings.setCrossfadeDuration(v);
                 _effectService.setCrossfadeDuration(v);
@@ -192,7 +221,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
               children: [
                 Text(
                   'Đường cong:',
-                  style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 12),
+                  style: TextStyle(
+                    color: textColor.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -233,7 +265,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Volume Normalization', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+            Text(
+              'Volume Normalization',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+            ),
             ValueListenableBuilder<bool>(
               valueListenable: _settings.normalizationEnabledNotifier,
               builder: (context, enabled, _) {
@@ -251,19 +286,26 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         ),
         Text(
           'Tự động cân bằng âm lượng giữa các bài hát',
-          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.5),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
         ValueListenableBuilder<double>(
           valueListenable: _settings.normalizationLevelNotifier,
           builder: (context, value, _) {
-            return Slider(
+            return DebouncedSlider(
+              sliderTheme: SliderThemeData(
+                activeTrackColor: Theme.of(context).primaryColor,
+                thumbColor: Theme.of(context).primaryColor,
+              ),
               value: value,
               min: -24,
               max: 0,
               divisions: 24,
               label: '${value.toStringAsFixed(0)} dB',
-              activeColor: Theme.of(context).primaryColor,
+              debounceMs: 200,
               onChanged: (v) {
                 _settings.setNormalizationLevel(v);
                 _effectService.setNormalizationLevel(v);
@@ -284,7 +326,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Pitch Shift', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+            Text(
+              'Pitch Shift',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+            ),
             ValueListenableBuilder<double>(
               valueListenable: _settings.pitchShiftNotifier,
               builder: (context, value, _) {
@@ -298,18 +343,25 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         ),
         Text(
           'Thay đổi cao độ bài hát (0.5x thấp hơn — 2.0x cao hơn)',
-          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.5),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
         ValueListenableBuilder<double>(
           valueListenable: _settings.pitchShiftNotifier,
           builder: (context, value, _) {
-            return Slider(
+            return DebouncedSlider(
+              sliderTheme: SliderThemeData(
+                activeTrackColor: Theme.of(context).primaryColor,
+                thumbColor: Theme.of(context).primaryColor,
+              ),
               value: value,
               min: 0.5,
               max: 2.0,
               divisions: 30,
-              activeColor: Theme.of(context).primaryColor,
+              debounceMs: 200,
               onChanged: (v) {
                 _settings.setPitchShift(v);
                 _effectService.setPitchShift(v);
@@ -330,7 +382,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Reverb', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+            Text(
+              'Reverb',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+            ),
             ValueListenableBuilder<double>(
               valueListenable: _settings.reverbMixNotifier,
               builder: (context, value, _) {
@@ -344,7 +399,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         ),
         Text(
           'Hiệu ứng vang âm thanh phòng thu',
-          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.5),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -405,7 +463,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Compressor', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+            Text(
+              'Compressor',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+            ),
             ValueListenableBuilder<double>(
               valueListenable: _settings.compressionRatioNotifier,
               builder: (context, value, _) {
@@ -419,7 +480,10 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
         ),
         Text(
           'Nén dynamic range — âm thanh đều hơn',
-          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.5),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -529,7 +593,7 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
     required ValueChanged<double> onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.only(left: AppSpacing.sm),
       child: Row(
         children: [
           SizedBox(
@@ -546,20 +610,24 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
             child: ValueListenableBuilder<double>(
               valueListenable: notifier,
               builder: (context, value, _) {
-                return SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
+                return DebouncedSlider(
+                  sliderTheme: SliderTheme.of(context).copyWith(
                     trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 12,
+                    ),
+                    activeTrackColor: Theme.of(context).primaryColor,
+                    thumbColor: Theme.of(context).primaryColor,
                   ),
-                  child: Slider(
-                    value: value,
-                    min: min,
-                    max: max,
-                    divisions: divisions,
-                    activeColor: Theme.of(context).primaryColor,
-                    onChanged: onChanged,
-                  ),
+                  debounceMs: 200,
+                  value: value,
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  onChanged: onChanged,
                 );
               },
             ),
