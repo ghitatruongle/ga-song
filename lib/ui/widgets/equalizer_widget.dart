@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/audio/audio_effect_service.dart';
+import '../../core/settings_manager.dart';
 import '../../providers/service_providers.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
+import '../../core/motion/app_motion.dart';
+import '../utils/animation_utils.dart';
+import '../utils/haptic_helper.dart';
+import 'debounced_slider.dart';
 
 /// Premium equalizer dialog with 5-band control and preset selector
 class EqualizerWidget {
@@ -22,184 +29,161 @@ class _EqualizerDialog extends ConsumerStatefulWidget {
 }
 
 class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
-  late final _effectService = ref.read(audioEffectServiceProvider);
-  late final _settings = ref.read(settingsManagerProvider);
+  late SettingsManager _settings;
+  late AudioEffectService _effectService;
 
-  // Band labels
-  static const _bandLabels = ['60Hz', '230Hz', '910Hz', '3.6kHz', '14kHz'];
-  static const _bandIcons = [
-    Icons.waves_rounded, // Sub bass
-    Icons.graphic_eq_rounded, // Bass
-    Icons.equalizer_rounded, // Mid
-    Icons.surround_sound_rounded, // Upper mid
-    Icons.auto_awesome_rounded, // Treble
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _settings = ref.read(settingsManagerProvider);
+    _effectService = ref.read(audioEffectServiceProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     final textColor = context.adaptive;
-    final bgColor = context.isDark ? const Color(0xFF1E1E1E) : Colors.white;
-
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: isDark
+          ? AppColors.darkSurface
+          : AppColors.lightSurface,
       elevation: 0,
-      child: RepaintBoundary(
-        child: Container(
-          width: 420,
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: bgColor.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: textColor.withValues(alpha: 0.1)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
+      ),
+      child: Container(
+        width: 480,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Title
+            Row(
               children: [
-                // Header
-                Row(
-                  children: [
-                    Icon(Icons.tune_rounded, color: textColor, size: 24),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Bộ chỉnh âm (Equalizer)',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () {
-                        _settings.applyEqPreset('Normal');
-                        _effectService.applyAllEqualizer(_settings.eqBandsNotifier.value);
-                        _effectService.setBassLevel(_settings.eqBassNotifier.value);
-                      },
-                      icon: const Icon(Icons.refresh_rounded),
-                      color: textColor.withValues(alpha: 0.7),
-                      tooltip: 'Đặt lại (Reset)',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Preset chips
-                _buildPresetSelector(textColor),
-                const SizedBox(height: 24),
-
-                // 5-band EQ sliders
-                SizedBox(
-                  height: 220,
-                  child: ValueListenableBuilder<List<double>>(
-                    valueListenable: _settings.eqBandsNotifier,
-                    builder: (context, bands, _) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(5, (i) {
-                          return _buildBandSlider(
-                            label: _bandLabels[i],
-                            icon: _bandIcons[i],
-                            value: bands[i],
-                            textColor: textColor,
-                            onChanged: (val) {
-                              _settings.setEqBand(i, val);
-                              _effectService.applyAllEqualizer(
-                                _settings.eqBandsNotifier.value,
-                              );
-                            },
-                          );
-                        }),
-                      );
-                    },
+                Icon(Icons.tune_rounded, color: textColor, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Equalizer',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Bass Boost (existing feature, integrated here)
-                _buildBassBoostRow(textColor),
-                const SizedBox(height: 20),
-
-                // Close button
-                ElevatedButton(
+                const Spacer(),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: textColor),
                   onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: textColor,
-                    foregroundColor: bgColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    minimumSize: const Size(double.infinity, 44),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Xong',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+
+            // Preset selector — subscribes to eqPresetNotifier so the
+            // selected chip updates when `eqPreset = 'Custom'` is set.
+            ValueListenableBuilder<String>(
+              valueListenable: _settings.eqPresetNotifier,
+              builder: (context, _, _) => _buildPresetSelector(textColor),
+            ),
+            const SizedBox(height: 20),
+
+            // 5-band sliders — subscribe to eqBandsNotifier so each band's
+            // dB readout and active-color flip live during drag.
+            SizedBox(
+              height: 200,
+              child: ValueListenableBuilder<List<double>>(
+                valueListenable: _settings.eqBandsNotifier,
+                builder: (context, bands, _) {
+                  Widget band(int i, String label, IconData icon) =>
+                      _buildBandSlider(
+                        label: label,
+                        icon: icon,
+                        value: bands[i],
+                        textColor: textColor,
+                        onChanged: (v) {
+                          _settings.setEqBand(i, v);
+                        },
+                      );
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      band(0, '60Hz', Icons.graphic_eq_rounded),
+                      band(1, '230Hz', Icons.equalizer_rounded),
+                      band(2, '910Hz', Icons.bar_chart_rounded),
+                      band(3, '3.6kHz', Icons.waves_rounded),
+                      band(4, '14kHz', Icons.surround_sound_rounded),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Bass Boost
+            _buildBassBoostRow(textColor),
+            const SizedBox(height: 8),
+
+            // Reset
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  _settings.applyEqPreset('Normal');
+                  for (var i = 0; i < 5; i++) {
+                    _settings.setEqBand(i, 0.0);
+                  }
+                  _effectService.setBassLevel(0);
+                },
+                icon: Icon(
+                  Icons.restart_alt_rounded,
+                  color: textColor.withValues(alpha: 0.7),
+                  size: 18,
+                ),
+                label: Text(
+                  'Đặt lại',
+                  style: TextStyle(color: textColor),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildPresetSelector(Color textColor) {
-    return ValueListenableBuilder<String>(
-      valueListenable: _settings.eqPresetNotifier,
-      builder: (context, currentPreset, _) {
-        final presets = ['Normal', 'Bass+', 'Vocal', 'Acoustic', 'Custom'];
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: presets.map((preset) {
-              final isSelected = currentPreset == preset;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(
-                    preset,
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : textColor.withValues(alpha: 0.8),
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontSize: 13,
-                    ),
-                  ),
-                  selected: isSelected,
-                  selectedColor: Theme.of(context).primaryColor,
-                  backgroundColor: textColor.withValues(alpha: 0.08),
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  onSelected: (_) {
-                    _settings.applyEqPreset(preset);
-                    // Apply all bands atomically
-                    _effectService.applyAllEqualizer(
-                      _settings.eqBandsNotifier.value,
-                    );
-                    // Also apply bass level from preset
-                    _effectService.setBassLevel(_settings.eqBassNotifier.value);
-                  },
-                ),
-              );
-            }).toList(),
-          ),
-        );
-      },
+    const presets = [
+      'Normal',
+      'Pop',
+      'Rock',
+      'Jazz',
+      'Classical',
+      'Bass Boost',
+      'Vocal',
+    ];
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: presets.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final p = presets[i];
+          final selected = _settings.eqPresetNotifier.value == p;
+          return ChoiceChip(
+            label: Text(p),
+            selected: selected,
+            onSelected: (_) {
+              _settings.applyEqPreset(p);
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -210,67 +194,19 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
     required Color textColor,
     required ValueChanged<double> onChanged,
   }) {
-    // Map -1..1 to display: -12dB to +12dB
-    final displayDb = (value * 12).round();
     final isActive = value.abs() > 0.05;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          '${displayDb > 0 ? '+' : ''}${displayDb}dB',
-          style: TextStyle(
-            color: isActive ? textColor : textColor.withValues(alpha: 0.5),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 130,
-          width: 40,
-          child: RotatedBox(
-            quarterTurns: -1,
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 4,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                activeTrackColor: isActive
-                    ? Theme.of(context).primaryColor
-                    : textColor.withValues(alpha: 0.3),
-                inactiveTrackColor: textColor.withValues(alpha: 0.1),
-                thumbColor: isActive
-                    ? Theme.of(context).primaryColor
-                    : textColor.withValues(alpha: 0.5),
-              ),
-              child: Slider(
-                value: value,
-                min: -1.0,
-                max: 1.0,
-                onChanged: (v) {
-                  // Snap to zero near center
-                  if (v.abs() < 0.05) v = 0.0;
-                  onChanged(v);
-                  // Mark as custom preset
-                  _settings.eqPresetNotifier.value = 'Custom';
-                },
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Icon(icon, color: textColor.withValues(alpha: 0.6), size: 16),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: textColor.withValues(alpha: 0.6),
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+    return _BandSliderWidget(
+      key: ValueKey(label),
+      value: value,
+      textColor: textColor,
+      isActive: isActive,
+      label: label,
+      icon: icon,
+      onChanged: (v) {
+        if (v.abs() < 0.05) v = 0.0;
+        onChanged(v);
+        _settings.eqPresetNotifier.value = 'Custom';
+      },
     );
   }
 
@@ -279,10 +215,13 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
       valueListenable: _settings.eqBassNotifier,
       builder: (context, bassLevel, _) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
             color: textColor.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Row(
             children: [
@@ -316,10 +255,11 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
                     inactiveTrackColor: textColor.withValues(alpha: 0.15),
                     thumbColor: textColor,
                   ),
-                  child: Slider(
+                  child: DebouncedSlider(
                     value: bassLevel.toDouble(),
                     min: 0,
                     max: 100,
+                    debounceMs: 250,
                     onChanged: (val) {
                       final level = val.round();
                       _settings.setEqBass(level);
@@ -345,6 +285,121 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Phase 4 Task 8: per-band slider that glows while dragging.
+class _BandSliderWidget extends StatefulWidget {
+  const _BandSliderWidget({
+    super.key,
+    required this.value,
+    required this.textColor,
+    required this.isActive,
+    required this.label,
+    required this.icon,
+    required this.onChanged,
+  });
+  final double value;
+  final Color textColor;
+  final bool isActive;
+  final String label;
+  final IconData icon;
+  final ValueChanged<double> onChanged;
+
+  @override
+  State<_BandSliderWidget> createState() => _BandSliderWidgetState();
+}
+
+class _BandSliderWidgetState extends State<_BandSliderWidget> {
+  bool _isDragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final animations = animationsEnabled(context);
+    final displayDb = (widget.value * 12).round();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          '${displayDb > 0 ? '+' : ''}${displayDb}dB',
+          style: TextStyle(
+            color: widget.isActive
+                ? widget.textColor
+                : widget.textColor.withValues(alpha: 0.5),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        AnimatedContainer(
+          duration: animations ? AppDurations.short : Duration.zero,
+          curve: AppCurves.decelerate,
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: widget.textColor.withValues(
+                  alpha: _isDragging && animations ? 0.4 : 0.0,
+                ),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: SizedBox(
+            height: 130,
+            width: 40,
+            child: RotatedBox(
+              quarterTurns: -1,
+              child: SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 4,
+                  thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 7),
+                  overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14),
+                  activeTrackColor: widget.isActive
+                      ? Theme.of(context).primaryColor
+                      : widget.textColor.withValues(alpha: 0.3),
+                  inactiveTrackColor: widget.textColor.withValues(alpha: 0.1),
+                  thumbColor: widget.isActive
+                      ? Theme.of(context).primaryColor
+                      : widget.textColor.withValues(alpha: 0.5),
+                ),
+                child: DebouncedSlider(
+                  value: widget.value,
+                  min: -1.0,
+                  max: 1.0,
+                  debounceMs: 250,
+                  onChanged: (v) {
+                    setState(() => _isDragging = true);
+                    widget.onChanged(v);
+                  },
+                  onChangeEnd: (_) {
+                    setState(() => _isDragging = false);
+                    safeHaptic(HapticType.light);
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Icon(
+          widget.icon,
+          color: widget.textColor.withValues(alpha: 0.6),
+          size: 16,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          widget.label,
+          style: TextStyle(
+            color: widget.textColor.withValues(alpha: 0.6),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

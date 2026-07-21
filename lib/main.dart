@@ -17,13 +17,13 @@ import 'core/services/window_manager_service.dart';
 import 'core/services/system_tray_service.dart';
 import 'core/services/hotkey_service.dart';
 import 'core/cover_art_repository.dart';
-import 'core/view_models/player_view_model.dart';
 import 'core/pip_service.dart';
 import 'core/services/smtc_service.dart';
 import 'core/services/audio_handler_service.dart';
 import 'core/services/database_service.dart';
 import 'core/services/desktop_lyrics_service.dart';
 import 'core/crash_reporter.dart';
+import 'core/theme/tokens.dart';
 import 'providers/service_providers.dart';
 import 'ui/screens/home_screen.dart';
 
@@ -124,7 +124,6 @@ Future<void> main() async {
   final engineService = AudioEngineService();
   final effectService = AudioEffectService();
   final playlistService = PlaylistService(engineService, effectService, dbService);
-  final playerViewModel = PlayerViewModel(engineService, playlistService);
   final coverArtRepo = CoverArtRepository();
 
   Widget initialScreen;
@@ -201,14 +200,9 @@ Future<void> main() async {
       final smtcService = SmtcService(engineService, playlistService);
       await smtcService.init();
     }
-    Future<void>.delayed(const Duration(milliseconds: 500), () async {
-      try {
-        await hotkeyService.init();
-        if (!kDebugMode) await systemTrayService.init();
-      } catch (e, stack) {
-        AppLogger.w('main', 'deferred desktop service init failed', error: e, stack: stack);
-      }
-    });
+    // Note: hotkeyService + systemTrayService init moved out of here and
+    // registered via `addPostFrameCallback` (see P3.5 block just before
+    // `runApp(...)`) so they do not block first paint.
   }
 
   if (!kIsWeb && (Platform.isAndroid || Platform.isLinux)) {
@@ -223,6 +217,24 @@ Future<void> main() async {
     // AudioHandler is used internally by audio_service, no need to store in providers
   }
 
+  // P3.5: defer non-critical init until after first paint.
+  // Future first-frame targets: lyrics DB warmup, smart playlist computation,
+  // audio cache prefill, cover-art prime. Currently hosts desktop hotkey
+  // registration and (release-only) system tray init — both are not required
+  // for playback to start or for the splash to dismiss. Registered BEFORE
+  // `runApp(...)` so it fires as soon as the first frame is presented.
+  if (caps.isDesktop) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await hotkeyService.init();
+        if (!kDebugMode) await systemTrayService.init();
+      } catch (e, stack) {
+        AppLogger.w('main', 'deferred desktop service init failed',
+            error: e, stack: stack);
+      }
+    });
+  }
+
   runApp(
     ProviderScope(
       overrides: [
@@ -232,7 +244,6 @@ Future<void> main() async {
         playlistServiceProvider.overrideWithValue(playlistService),
         settingsManagerProvider.overrideWithValue(settings),
         coverArtRepositoryProvider.overrideWithValue(coverArtRepo),
-        playerViewModelProvider.overrideWithValue(playerViewModel),
         pipServiceProvider.overrideWithValue(pipService),
         hotkeyServiceProvider.overrideWithValue(hotkeyService),
         systemTrayServiceProvider.overrideWithValue(systemTrayService),
@@ -297,10 +308,10 @@ class _GASongAppState extends ConsumerState<GASongApp> {
               seedColor: primaryColor,
               brightness: Brightness.light,
             ).copyWith(
-              surface: const Color(0xFFFFFFFF),
+              surface: AppColors.lightSurface,
             ),
             scaffoldBackgroundColor:
-                useNative ? Colors.transparent : const Color(0xFFF5F5F5),
+                useNative ? Colors.transparent : AppColors.lightSurface2,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
@@ -309,11 +320,23 @@ class _GASongAppState extends ConsumerState<GASongApp> {
               seedColor: primaryColor,
               brightness: Brightness.dark,
             ).copyWith(
-              surface: const Color(0xFF282828),
+              surface: AppColors.darkSurface2,
             ),
             scaffoldBackgroundColor:
-                useNative ? Colors.transparent : const Color(0xFF121212),
+                useNative ? Colors.transparent : AppColors.darkBackground,
           ),
+          builder: (context, child) {
+            // Honor reduced-motion preference: disable all tickers
+            // (animations, hero transitions, etc.) when the user has
+            // requested reduced motion.
+            if (MediaQuery.of(context).disableAnimations) {
+              return TickerMode(
+                enabled: false,
+                child: child ?? const SizedBox.shrink(),
+              );
+            }
+            return child ?? const SizedBox.shrink();
+          },
           home: widget.home,
         );
       },

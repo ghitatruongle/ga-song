@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 
 /// Mock implementation of [AudioEngineService] for testing.
 /// Simulates playback state without requiring SoLoud native initialization.
-class MockAudioEngineService implements AudioEngineService {
+class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
   @override
   ValueNotifier<AudioEngineState> engineState = ValueNotifier(AudioEngineState.idle);
   @override
@@ -115,4 +115,20 @@ class MockAudioEngineService implements AudioEngineService {
 
   @override
   Future<AudioSource?> ensureSource(String assetPath) async => null;
+
+  // P3.4: Lifecycle observer — mock records the events for verification.
+  int lifecycleEventCount = 0;
+  AppLifecycleState? lastLifecycleState;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    lifecycleEventCount++;
+    lastLifecycleState = state;
+  }
+
+  // The other WidgetsBindingObserver methods (didChangeLocales,
+  // didChangeMetrics, etc.) are forwarded to noSuchMethod so the mock
+  // doesn't have to stub them all explicitly.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

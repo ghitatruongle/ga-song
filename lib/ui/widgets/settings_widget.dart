@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
+import '../../core/theme/tokens.dart';
 import 'desktop_title_bar.dart';
 import 'sleep_timer_dialog.dart';
 import 'audio_effects_dialog.dart';
@@ -241,8 +242,8 @@ class SettingsWidget extends ConsumerWidget {
                         trailing: DropdownButton<int>(
                           value: shape,
                           dropdownColor: isDark
-                              ? const Color(0xFF282828)
-                              : Colors.white,
+                              ? AppColors.darkSurface2
+                              : AppColors.lightSurface,
                           underline: const SizedBox.shrink(),
                           items: const <DropdownMenuItem<int>>[
                             DropdownMenuItem(value: 0, child: Text('Circle')),
@@ -429,6 +430,30 @@ class SettingsWidget extends ConsumerWidget {
                         },
                       ),
                       const Divider(height: 1),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: settings.soundFeedbackEnabledNotifier,
+                        builder: (context, soundEnabled, _) {
+                          return SwitchListTile(
+                            secondary: Icon(Icons.volume_up_rounded,
+                                color: textColor),
+                            title: Text(
+                              'Phát âm thanh khi chuyển bài',
+                              style: TextStyle(color: textColor),
+                            ),
+                            subtitle: Text(
+                              'Chỉ áp dụng trên điện thoại (Android)',
+                              style: TextStyle(
+                                color: textColor.withValues(alpha: 0.6),
+                                fontSize: 13,
+                              ),
+                            ),
+                            value: soundEnabled,
+                            activeThumbColor: Theme.of(context).primaryColor,
+                            onChanged: settings.setSoundFeedbackEnabled,
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         leading: Icon(
                           Icons.settings_input_component,
@@ -553,8 +578,8 @@ class SettingsWidget extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isDark
-              ? const Color(0xFF2A2A2A)
-              : Colors.white,
+              ? AppColors.darkSurface2
+              : AppColors.lightSurface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(

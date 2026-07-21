@@ -31,6 +31,11 @@ class RightControls extends ConsumerWidget {
             color: context.adaptiveSecondary,
             size: 22,
           ),
+          // Device bug fix: shrink PiP/Mic/Lyrics IconButtons so the
+          // volume slider has enough room on narrow mobile widths.
+          // Default IconButton is 48x48; we use 36x36 to free up space.
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
           tooltip: (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
               ? 'Picture-in-Picture'
               : 'Trình phát thu nhỏ (Mini Player)',
@@ -68,6 +73,8 @@ class RightControls extends ConsumerWidget {
                 color: showLyrics ? context.adaptive : context.adaptiveSecondary,
                 size: 22,
               ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
               tooltip: 'Lời bài hát (trong app)',
               onPressed: () {
                 ref.read(lyricVisibilityProvider.notifier).state = !showLyrics;
@@ -88,6 +95,8 @@ class RightControls extends ConsumerWidget {
                       : context.adaptiveSecondary,
                   size: 22,
                 ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 36, height: 36),
                 tooltip: 'Lời bài hát nổi (Desktop)',
                 onPressed: () => desktopLyrics.toggle(context),
               );

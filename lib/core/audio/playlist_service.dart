@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/song.dart';
 import '../audio_source_cache_policy.dart';
+import '../logging/app_logger.dart';
 import '../platform_capabilities.dart';
 import '../services/database_service.dart';
 import '../utils/sort_utils.dart';
@@ -158,7 +159,7 @@ class PlaylistService {
         // Fire-and-forget: don't block playback for a DB write.
         final updated = song.copyWith(durationMs: dur.inMilliseconds);
         _databaseService.putSong(updated).catchError((Object e) {
-          debugPrint('Failed to persist duration for ${song.name}: $e');
+          AppLogger.w('audio.playlist_service', 'Failed to persist duration for ${song.name}', error: e);
         });
       }
     }

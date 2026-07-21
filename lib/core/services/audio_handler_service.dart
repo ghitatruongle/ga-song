@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import '../logging/app_logger.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import '../audio/audio_engine_service.dart';

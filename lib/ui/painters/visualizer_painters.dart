@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -482,9 +483,80 @@ class StarfieldPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final snapshot = controller.snapshot;
-    final center = Offset(size.width / 2, size.height / 2);
 
-    for (final star in snapshot.stars) {
+    // P3.2.5: Prefer the typed-array snapshot produced on an isolate.
+    // Falls back to the legacy `Star` list until the first isolate
+    // completes.
+    final typed = snapshot.starFieldSnapshot;
+    if (typed != null && typed.length > 0) {
+      _paintStarFieldFromSnapshot(canvas, typed);
+    } else {
+      _paintStarFieldFromLegacyStars(canvas, size, snapshot.stars);
+    }
+
+    if (snapshot.fftData.isNotEmpty) {
+      _drawBottomWave(canvas, size, snapshot);
+    }
+  }
+
+  /// P3.2.5: Typed-array fast path.
+  ///
+  /// Reads positions/colors/radii/zs directly from [StarFieldSnapshot]
+  /// without per-iteration Offset or Paint allocations (the [Paint]
+  /// instance is reused; only [Offset] is allocated per star, which is
+  /// required by [Canvas.drawCircle]).
+  ///
+  /// Positions are already in screen-space (computed by [computeStarField]
+  /// using the host viewport size), so no center-relative projection is
+  /// applied here. The visual style is intentionally simpler than the
+  /// legacy branch (dots with z-based size and alpha, no trails) to keep
+  /// the inner loop allocation-free.
+  void _paintStarFieldFromSnapshot(Canvas canvas, StarFieldSnapshot snap) {
+    final positions = snap.positions;
+    final colors = snap.colors;
+    final radii = snap.radii;
+    final zs = snap.zs;
+    final n = snap.length;
+
+    for (var i = 0; i < n; i++) {
+      final x = positions[i * 2];
+      final y = positions[i * 2 + 1];
+      final z = zs[i];
+      final radius = radii[i];
+
+      // Higher z (closer to camera) → bigger dot and brighter alpha.
+      final projectedRadius = radius * (0.5 + z * 0.5);
+      final alpha = ((0.5 + z * 0.5) * 255).toInt() & 0xFF;
+
+      // B4 fix: reuse cached MaskFilter by quantized star radius.
+      final blurIdx =
+          ((projectedRadius - 0.5) / 0.25).floor().clamp(0, 15);
+
+      // Combine the snapshot's RGB with our z-derived alpha without
+      // allocating a Color object.
+      final argb = (colors[i] & 0x00FFFFFF) | (alpha << 24);
+      _starPaint
+        ..color = Color(argb)
+        ..maskFilter = _starBlurCache[blurIdx];
+
+      canvas.drawCircle(Offset(x, y), projectedRadius, _starPaint);
+    }
+  }
+
+  /// Legacy rendering path — preserved verbatim from the pre-P3.2.5
+  /// implementation. Reads [Star] objects from the main-thread list and
+  /// applies center-relative perspective projection with two-segment
+  /// trails. This branch is retained as a fallback during the migration
+  /// window when the typed-array snapshot is not yet available.
+  void _paintStarFieldFromLegacyStars(
+    Canvas canvas,
+    Size size,
+    UnmodifiableListView<Star> stars,
+  ) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final snapshot = controller.snapshot;
+
+    for (final star in stars) {
       final projScale = (1.0 / (1.0 - star.z * 0.5)).clamp(1.0, 10.0);
       final screenX = center.dx + star.x * projScale;
       final screenY = center.dy + star.y * projScale;
@@ -538,10 +610,6 @@ class StarfieldPainter extends CustomPainter {
         ..color = star.color.withValues(alpha: brightness)
         ..maskFilter = _starBlurCache[blurIdx];
       canvas.drawCircle(trailEnd, starSize, _starPaint);
-    }
-
-    if (snapshot.fftData.isNotEmpty) {
-      _drawBottomWave(canvas, size, snapshot);
     }
   }
 

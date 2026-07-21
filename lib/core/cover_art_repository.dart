@@ -11,18 +11,32 @@ import 'platform_capabilities.dart';
 import 'services/database_service.dart';
 import 'performance_probe.dart';
 
+/// P3.3: cache entries older than this are evicted even if LRU hasn't
+/// pushed them out. Conservative default per plan.
+const Duration _coverArtTtl = Duration(minutes: 30);
+
 class CoverArtEntry {
   CoverArtEntry({
     required this.fileName,
     required this.imagePath,
     required this.exists,
     required this.isAsset,
-  });
+    DateTime? capturedAt,
+  }) : capturedAt = capturedAt ?? DateTime.now();
 
   final String fileName;
   final String imagePath;
   final bool exists;
   final bool isAsset; // true = AssetImage, false = FileImage
+
+  /// When this entry was created. Used for TTL eviction. Defaults to
+  /// `DateTime.now()` at construction time.
+  final DateTime capturedAt;
+
+  /// True when [capturedAt] is within [ttl] from `DateTime.now()`.
+  bool isFresh({required Duration ttl}) {
+    return DateTime.now().difference(capturedAt) < ttl;
+  }
 
   bool get hasCover => exists;
 }
@@ -129,7 +143,22 @@ class CoverArtRepository with WidgetsBindingObserver {
     }
   }
 
-  CoverArtEntry? getCachedEntry(String fileName) => _entries[fileName];
+  CoverArtEntry? getCachedEntry(String fileName) {
+    final entry = _entries[fileName];
+    if (entry != null && !entry.isFresh(ttl: _coverArtTtl)) {
+      _evictStaleEntry(fileName);
+      return null;
+    }
+    return entry;
+  }
+
+  /// Removes a stale entry from all in-memory caches for [fileName].
+  void _evictStaleEntry(String fileName) {
+    _entries.remove(fileName);
+    _entryFutures.remove(fileName);
+    _providerCache.removeWhere((key, _) => key.fileName == fileName);
+    _dominantColorFutures.remove(fileName);
+  }
 
   ImageProvider<Object>? getCachedProvider(
     String fileName, {
@@ -138,6 +167,11 @@ class CoverArtRepository with WidgetsBindingObserver {
   }) {
     final entry = _entries[fileName];
     if (entry == null || !entry.hasCover) {
+      return null;
+    }
+
+    if (!entry.isFresh(ttl: _coverArtTtl)) {
+      _evictStaleEntry(fileName);
       return null;
     }
 

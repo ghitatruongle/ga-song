@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
@@ -21,6 +23,7 @@ class VisualizerFrameSnapshot {
     required this.time,
     required this.size,
     required this.isBeat,
+    this.starFieldSnapshot,
   });
 
   final UnmodifiableListView<double> fftData;
@@ -30,6 +33,14 @@ class VisualizerFrameSnapshot {
   final double time;
   final Size size;
   final bool isBeat;
+
+  /// P3.2.5: Star field produced off the main thread via `compute()`.
+  ///
+  /// When non-null, [StarfieldPainter] prefers this typed-array snapshot
+  /// over the legacy [stars] list. The legacy [stars] list is retained
+  /// during the transition window so the painter can fall back if the
+  /// isolate hasn't completed yet.
+  final StarFieldSnapshot? starFieldSnapshot;
 }
 
 class Particle {
@@ -72,6 +83,133 @@ class Star {
   Color color;
 }
 
+/// P3.2: Snapshot of pre-computed star field, produced on an isolate via
+/// `compute()`. Uses only typed arrays so it can cross the isolate boundary.
+///
+/// P3.2.5: Extended with [zs] and [speeds] so the painter can apply
+/// perspective projection and motion without re-deriving them.
+class StarFieldSnapshot {
+  const StarFieldSnapshot({
+    required this.positions,
+    required this.colors,
+    required this.radii,
+    required this.zs,
+    required this.speeds,
+  });
+
+  /// Flat `[x0, y0, x1, y1, ...]` in screen-space pixels.
+  final Float32List positions;
+
+  /// ARGB packed ints (`Color.toARGB32()`).
+  final Int32List colors;
+
+  /// Radius per star in pixels (pre-projection).
+  final Float32List radii;
+
+  /// Per-star depth in `[0.5, 1.0]`. Higher = closer to camera.
+  final Float32List zs;
+
+  /// Per-star motion speed (pixels/second). Retained for future trail /
+  /// motion-blur work; not consumed by the current painter branch.
+  final Float32List speeds;
+
+  int get length => positions.length ~/ 2;
+}
+
+/// P3.2: Parameters for [computeStarField]. Primitive-only so it's
+/// `compute()`-safe.
+///
+/// P3.2.5: Now carries the host screen dimensions so positions can be
+/// distributed across the full viewport.
+class StarFieldComputeInput {
+  const StarFieldComputeInput({
+    required this.starCount,
+    required this.timeSeconds,
+    required this.amplitude,
+    required this.seed,
+    required this.screenWidth,
+    required this.screenHeight,
+  });
+
+  final int starCount;
+  final double timeSeconds;
+  final double amplitude;
+  final int seed;
+  final double screenWidth;
+  final double screenHeight;
+}
+
+/// P3.2: Top-level function (required for `compute()`) that produces a
+/// pre-computed star field. Deterministic given the same input.
+///
+/// P3.2.5: Positions now cover the full screen using [input.screenWidth] /
+/// [input.screenHeight]. Per-star [StarFieldSnapshot.zs] and
+/// [StarFieldSnapshot.speeds] are also populated so the painter can apply
+/// parallax projection and motion without re-deriving them.
+StarFieldSnapshot computeStarField(StarFieldComputeInput input) {
+  final n = input.starCount;
+  final positions = Float32List(n * 2);
+  final colors = Int32List(n);
+  final radii = Float32List(n);
+  final zs = Float32List(n);
+  final speeds = Float32List(n);
+  final rng = Random(input.seed);
+
+  // Pre-computed color palette: 20 hues evenly spaced.
+  const paletteSize = 20;
+  final palette = List<int>.generate(
+    paletteSize,
+    (i) => HSVColor.fromAHSV(1.0, (i * 360.0 / paletteSize) % 360.0, 0.8, 0.9)
+        .toColor()
+        .toARGB32(),
+  );
+
+  // Guard against zero-sized inputs (degenerate but possible before first
+  // layout). Fall back to a sensible default so the isolate never divides
+  // by zero.
+  final screenW = input.screenWidth > 0 ? input.screenWidth : 1920.0;
+  final screenH = input.screenHeight > 0 ? input.screenHeight : 1080.0;
+
+  final t = input.timeSeconds;
+
+  for (var i = 0; i < n; i++) {
+    // Deterministic per-star state from seed.
+    final baseAngle = rng.nextDouble() * pi * 2;
+    final z = 0.5 + rng.nextDouble() * 0.5; // depth in [0.5, 1.0]
+    final speed = 10.0 + rng.nextDouble() * 40.0; // pixels/second
+    // Far stars (small z) appear smaller; near stars (large z) appear larger.
+    final radius = 1.0 + rng.nextDouble() * 2.0 * (0.5 + z * 0.5);
+
+    // Position covering the full screen with sinusoidal drift.
+    // Drifting amplitude scales inversely with z so far stars feel static.
+    final baseX = rng.nextDouble() * screenW;
+    final baseY = rng.nextDouble() * screenH;
+    final driftX = cos(baseAngle + t * speed * 0.02) * 30 * (1.0 - z);
+    final driftY = sin(baseAngle * 1.3 + t * speed * 0.02) * 30 * (1.0 - z);
+    // Wrap into the viewport.
+    var x = (baseX + driftX) % screenW;
+    var y = (baseY + driftY) % screenH;
+    if (x < 0) x += screenW;
+    if (y < 0) y += screenH;
+
+    positions[i * 2] = x;
+    positions[i * 2 + 1] = y;
+
+    colors[i] = palette[i % paletteSize];
+    radii[i] = radius;
+    zs[i] = z;
+    speeds[i] = speed;
+  }
+
+  return StarFieldSnapshot(
+    positions: positions,
+    colors: colors,
+    radii: radii,
+    zs: zs,
+    speeds: speeds,
+  );
+}
+
 class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   VisualizerController({
     required TickerProvider vsync,
@@ -82,7 +220,10 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _audioData = null; // D2 fix: deferred to lazy init in _updateAudioFrame
 
     _initStars();
-    _ticker = vsync.createTicker(_handleTick);
+    // P3.2: Ticker callback wraps the now-async `_handleTick` in `unawaited`.
+    _ticker = vsync.createTicker((elapsed) {
+      unawaited(_handleTick(elapsed));
+    });
     _audioService.engineState.addListener(_handleActivityChanged);
     _settings.visualizerEnabledNotifier.addListener(_handleActivityChanged);
     WidgetsBinding.instance.addObserver(this);
@@ -92,6 +233,10 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
 
   // P4.3: Lifecycle state flag to stop ticker when app is in background
   bool _isAppInBackground = false;
+
+  // P3.2: Disposal flag — guards against the async `_handleTick` running
+  // after dispose(). Set in `dispose()`.
+  bool _isDisposed = false;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -172,6 +317,15 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       List<Color>.filled(_starPaletteSize, Colors.transparent);
   double _lastPaletteHue = -999.0;
 
+  // P3.2: Snapshot captured from the isolate call in `_handleTick`.
+  // P3.2.5: Now published into [VisualizerFrameSnapshot.starFieldSnapshot]
+  // and consumed by [StarfieldPainter] via its typed-array branch.
+  StarFieldSnapshot? _frameSnapshot;
+
+  // P3.2: Stable seed for the isolate's `Random`. Constant for now; the
+  // real implementation will advance it across frames.
+  static const int _seed = 42;
+
   // Beat detection
   bool _isBeat = false;
   int _beatCooldown = 0;
@@ -225,7 +379,8 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _tickerRunning = false;
   }
 
-  void _handleTick(Duration elapsed) {
+  Future<void> _handleTick(Duration elapsed) async {
+    if (_isDisposed) return;
     final deltaSeconds = _lastElapsed == null
         ? 0.016
         : (elapsed - _lastElapsed!).inMicroseconds /
@@ -258,6 +413,33 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     // Chỉ update stars khi đang hiển thị Starfield mode (shape == 4)
     if (isAudioReactive && _settings.visualizerShapeNotifier.value == 4) {
       _updateStars();
+    }
+
+    // P3.2: Heavy compute on an isolate.
+    // P3.2.5: Pass screen dimensions so positions cover the viewport.
+    if (isAudioReactive && _settings.visualizerShapeNotifier.value == 4) {
+      try {
+        final snap = await compute(
+          computeStarField,
+          StarFieldComputeInput(
+            starCount: starCount,
+            timeSeconds: elapsed.inMicroseconds / 1e6,
+            amplitude: _computeAmplitude(),
+            seed: _seed,
+            screenWidth: _size.width > 0 ? _size.width : 1920.0,
+            screenHeight: _size.height > 0 ? _size.height : 1080.0,
+          ),
+        );
+        if (_isDisposed) return;
+        _frameSnapshot = snap;
+      } catch (e, stack) {
+        AppLogger.e(
+          'visualizer.controller',
+          'star field compute failed',
+          error: e,
+          stack: stack,
+        );
+      }
     }
 
     if (!isAudioReactive && _activeParticleCount == 0) {
@@ -448,6 +630,12 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // ── Particle spawn: reuse pool slot, no allocation ─────────────────────────
+  double _computeAmplitude() {
+    // P3.2: Stub. Real implementation reads from audio engine.
+    // For now returns a fixed value so the isolate pipeline is exercised.
+    return 0.5;
+  }
+
   void _spawnParticle(double energy) {
     if (_activeParticleCount >= maxParticleCount) {
       return;
@@ -483,11 +671,13 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       time: _elapsedSeconds,
       size: _size,
       isBeat: _isBeat,
+      starFieldSnapshot: _frameSnapshot,
     );
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _audioService.engineState.removeListener(_handleActivityChanged);
     _settings.visualizerEnabledNotifier.removeListener(_handleActivityChanged);

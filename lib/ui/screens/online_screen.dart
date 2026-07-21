@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import '../../core/theme/tokens.dart';
 import '../widgets/desktop_title_bar.dart';
 
 class OnlineScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
   String _currentTitle = 'Chưa chọn bài hát';
 
   // Chế độ xem video hay chỉ nghe nhạc
-  bool _showVideo = true; 
+  bool _showVideo = true;
 
   @override
   void initState() {
@@ -61,7 +62,8 @@ class _OnlineScreenState extends State<OnlineScreen> {
   }
 
   // Q-3 fix: Use shared DesktopTitleBar widget
-  Widget _buildTitleBar(Color textColor) => DesktopTitleBar(iconColor: textColor);
+  Widget _buildTitleBar(Color textColor) =>
+      DesktopTitleBar(iconColor: textColor);
 
   @override
   Widget build(BuildContext context) {
@@ -81,14 +83,19 @@ class _OnlineScreenState extends State<OnlineScreen> {
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Dán Link hoặc ID YouTube vào đây...',
-                    hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                    hintStyle: TextStyle(
+                      color: textColor.withValues(alpha: 0.5),
+                    ),
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                    fillColor: isDark ? AppColors.darkSurface2 : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon: Icon(Icons.search, color: textColor.withValues(alpha: 0.5)),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: textColor.withValues(alpha: 0.5),
+                    ),
                   ),
                   onSubmitted: _search,
                 ),
@@ -115,7 +122,10 @@ class _OnlineScreenState extends State<OnlineScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                 ),
                 child: const Text('Tìm'),
               ),
@@ -133,7 +143,9 @@ class _OnlineScreenState extends State<OnlineScreen> {
                   padding: const EdgeInsets.fromLTRB(40, 0, 20, 40),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFEEEEEE),
+                      color: isDark
+                          ? AppColors.darkPlayerBar
+                          : AppColors.lightSurface3,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -163,18 +175,33 @@ class _OnlineScreenState extends State<OnlineScreen> {
                               Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.music_note_rounded, size: 80, color: textColor.withValues(alpha: 0.2)),
+                                  Icon(
+                                    Icons.music_note_rounded,
+                                    size: 80,
+                                    color: textColor.withValues(alpha: 0.2),
+                                  ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'Đang phát âm thanh',
-                                    style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 16),
+                                    style: TextStyle(
+                                      color: textColor.withValues(alpha: 0.5),
+                                      fontSize: 16,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                    ),
                                     child: Text(
-                                      _currentTitle.isEmpty ? 'Chưa chọn bài hát' : _currentTitle,
-                                      style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold),
+                                      _currentTitle.isEmpty
+                                          ? 'Chưa chọn bài hát'
+                                          : _currentTitle,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                       textAlign: TextAlign.center,
                                       maxLines: 2,
                                     ),
@@ -186,7 +213,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
                   ),
                 ),
               ),
-              
+
               // Hướng dẫn / Thông tin bổ sung
               Expanded(
                 flex: 1,
@@ -195,7 +222,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      color: isDark ? AppColors.darkSurface2 : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(

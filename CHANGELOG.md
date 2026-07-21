@@ -6,19 +6,123 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Phase 4: UI Polish & Motion Language
+
+**Changed:**
+
+- **AppColors collision resolved** — Legacy `app_colors.dart` (97 lines, 38+ fields) folded into `tokens.dart`. Single `AppColors` class is now the canonical source. Deleted `app_colors.dart`. `surface(context, level)` helper renamed to `surfaceFor(...)` to avoid colliding with the `surface` Material 3 seed field; legacy semantic `error` color exposed as `danger`.
+- **Token migration in 6 widget files** — Replaced 12 hardcoded `Color(0xFF...)` literals in `playlist_manager_widget.dart`, `settings_widget.dart`, `sleep_timer_dialog.dart`, `sort_filter_dialog.dart`, `tag_editor_dialog.dart`, `song_tiles.dart` with `AppColors.darkX`/`lightX` constants. `Color(0x` count in `lib/ui/` is now **0**.
+- **Global page transition** — `pageTransitionsTheme` in `ThemeData` (both light and dark) routes every `MaterialPageRoute` through `MotionPageTransitionsBuilder` (fade-through + slide via `AppMotion.slideUpFade`, 300ms, decelerate). Honors `MediaQuery.disableAnimations`.
+- **Theme switch cross-fade** — `MaterialApp` wrapped in `AnimatedTheme` (600ms, `AppCurves.emphasized`). Smooth transition between light/dark themes.
+- **Haptic feedback (Android)** — New `safeHaptic(HapticType)` helper. Wired to:
+  - `center_controls.dart` — play (medium), next/prev (light)
+  - `mini_player_screen.dart` — desktop + mobile play (medium), next/prev (light)
+  - `equalizer_widget.dart` — EQ band slider release (light)
+- **Sound feedback opt-in** — New `soundFeedbackEnabled: bool` field on `SettingsState` (default false). `SettingsManager` persists to SharedPreferences. `SystemSound.click` plays on next/prev when enabled. Settings UI toggle added under "Phím tắt & Media Keys".
+- **Card hover/press animation** — `AnimatedContainer` (`AppDurations.short`, `AppCurves.decelerate`, scale 1.0 → 1.02 on hover → 0.98 on press) on `_AlbumTile` (with `MouseRegion` + `GestureDetector` lifecycle). `_DuplicateGroup` gets a softer 1.0 → 1.01 hover with border + shadow. `SongGridTile` wrapped in `AnimatedContainer` for animation parity. Honors `MediaQuery.disableAnimations`.
+- **EQ slider waveform pulse** — Per-band slider extracted to `_BandSliderWidget` (StatefulWidget). `AnimatedContainer` `boxShadow` glow tied to `_isDragging` state via `DebouncedSlider.onChangeStart`/`onChangeEnd`.
+- **Lyric transition cross-fade** — Active lyric line `Text` wrapped in `AnimatedSwitcher` (300ms, `FadeTransition`). Keyed by `line.startTime.inMilliseconds` so Flutter triggers the transition on line change.
+
+**Added:**
+
+- `lib/core/theme/motion_page_transitions_builder.dart` — `MotionPageTransitionsBuilder extends PageTransitionsBuilder`.
+- `lib/ui/utils/animation_utils.dart` — `animationsEnabled(BuildContext)` helper (gates on `MediaQuery.disableAnimations`).
+- `lib/ui/utils/haptic_helper.dart` — `safeHaptic(HapticType.light | medium)` Android-gated.
+- `lib/core/settings/settings_state.dart` — `soundFeedbackEnabled` field.
+- `lib/core/settings_manager.dart` — `soundFeedbackEnabledNotifier` + `setSoundFeedbackEnabled` (persisted to SharedPreferences).
+- `lib/ui/widgets/debounced_slider.dart` — `onChangeStart` / `onChangeEnd` parameters (forwarded to inner `Slider`).
+
+**Tests:**
+
+- 13 tests for merged `AppColors` fields and helpers (`test/core/theme/tokens_appcolors_merged_test.dart`).
+- 3 tests for `MotionPageTransitionsBuilder` (`test/core/theme/motion_page_transitions_builder_test.dart`).
+- 2 tests for `animationsEnabled` helper (`test/ui/utils/animation_utils_test.dart`).
+- 2 tests for `safeHaptic` helper (`test/ui/utils/haptic_helper_test.dart`).
+- 2 tests for `soundFeedbackEnabled` field (`test/core/settings/settings_state_sound_test.dart`).
+
+Test count delta: 559 baseline → **582 passing** (+23).
+
+**Notes:**
+
+- **Bottom player bar scroll show/hide** — DEFERRED. Complex scroll-listener wiring. Not in current spec scope.
+- **Per-song accent color extraction** — DEFERRED to Phase 7+. Requires `palette_generator` integration with theme switching.
+- **Backward compatibility** — `SettingsState.soundFeedbackEnabled` defaults to `false`. Users opt-in. No data migration needed.
+
+
+## [Unreleased]
+
 ### Changed
 - Replaced ~113 `debugPrint` calls with structured `AppLogger` (levels: debug/info/warn/error/fatal). Tags follow `module.class` convention (e.g., `audio.engine_service`, `database.service`).
 - `AppLogger` initialized in `main.dart` with level filtering (`debug` in debug mode, `warn+` in release) and optional crash-reporter mirroring.
+- Completed `debugPrint → AppLogger` migration in `lib/core/audio/audio_engine_service.dart` (16 calls) and `lib/core/audio/playlist_service.dart` (1 call). All 17 calls now use structured logging with tags, error, and stack trace.
 
 ### Added
 - `lib/core/logging/app_logger.dart` — `AppLogger` static facade with pluggable sink and pending crash-report buffer.
 - `DatabaseService.querySongs()` — Result-returning variant (`Result<List<Song>>`) wrapping typed `AppException` in `Failure.exception`. Legacy `getAllSongs()` retained for backward compatibility.
 - `test/core/logging/app_logger_test.dart` — 7 unit tests covering level filtering, sink swapping, error/stack trace handling.
 - `test/core/services/database_service_query_test.dart` — 2 unit tests for the new Result-returning method.
+- `lib/core/theme/tokens.dart` — design tokens (colors, spacing, radius, elevation) as single source of truth.
+- `lib/core/theme/theme_extensions.dart` — `AppSpacingExtension`, `AppRadiusExtension`, `AppElevationExtension` (ThemeExtension wrappers).
+- `lib/core/motion/app_motion.dart` — `AppDurations`, `AppCurves`, `MotionPreferences`, `AppMotion` signature animations.
+
+### Tests
+- 5 tests for `tokens.dart`.
+- 9 tests for `theme_extensions.dart`.
+- 8 tests for `app_motion.dart`.
+- 128 audio tests + 56 playlist tests + foundation tests all pass.
 
 ### Notes
 - `lib/core/app_logger.dart` is now a re-export shim for the canonical `lib/core/logging/app_logger.dart`.
 - AppException types imported with `as app_exc` alias in `database_service.dart` to avoid collision with sqflite's `DatabaseException`.
+- Latent name collision between new `AppColors` class (in `tokens.dart`) and existing `AppColors` class (in `app_colors.dart`). Documented as TODO at top of `tokens.dart` for Phase 4 reconciliation. Both classes are dormant today (no file imports both).
+
+### Phase 2: State Management Consolidation
+
+**Added:**
+- `lib/ui/screens/home_screen_uses_providers_test.dart` — smoke test verifying settingsNotifierProvider resolves under test container.
+- `lib/ui/screens/mini_player_uses_providers_test.dart` — smoke test verifying service providers resolve.
+
+**Changed:**
+- `lib/ui/screens/home_screen.dart` — replaced imperative `_settingsManager.*Notifier.addListener(...)` (sortMode, sortAscending, currentTabIndex) with `ref.listen<...>(settingsNotifierProvider.select((s) => ...))` — single rebuild per state change instead of per-notifier.
+- `lib/ui/widgets/visualizer_widget.dart` — replaced `_visualizerController.addListener(_syncRotationState)` + `removeListener` with a top-level `ListenableBuilder`. The imperative `_syncRotationState()` is called inside the builder so `AnimationController` advances correctly on every controller notify (Phase 2.2 critical fix).
+- `lib/ui/screens/mini_player_screen.dart` — replaced 4 `ref.read(playerViewModelProvider)` reads + 22 `viewModel.xxx` calls with direct consumption of `positionProvider` / `trackDurationProvider` / `engineStateProvider` / `playlistServiceProvider` / `audioEngineServiceProvider`.
+- `lib/main.dart` — dropped `PlayerViewModel` instantiation (line 127 was) and `playerViewModelProvider.overrideWithValue` (line 235 was).
+- `lib/providers/service_providers.dart` — dropped `playerViewModelProvider` declaration.
+
+**Removed:**
+- `lib/core/view_models/player_view_model.dart` — deprecated `@Deprecated('Use state providers from lib/providers/state_providers.dart')` class deleted entirely. The class was already a transitional facade.
+
+### Notes
+- 4 widget files (`bottom_player_bar.dart`, `player_bar/center_controls.dart`, `play_mode_button.dart`, `progress_bar.dart`) preserve historical doc comments referencing the old PlayerViewModel API — these are migration provenance notes and harmless.
+- `lib/ui/visualizer/visualizer_controller.dart` still uses 2 internal `addListener` for `AudioEngineService.engineState` and `SettingsManager.visualizerEnabledNotifier`. These subscribe to *upstream* services; the migration target was consumer-side widgets only. Out of scope for Phase 2.
+
+### Phase 3: Performance & Responsiveness
+
+**Changed:**
+
+- **Slider debouncing** — Migrated remaining raw `Slider` widgets to `DebouncedSlider` (250ms for EQ + Bass Boost, 200ms for audio effects, 80ms for volume). Affected: `equalizer_widget.dart` (5 EQ bands + 1 Bass Boost), `audio_effects_dialog.dart` (4 named sliders + 9 sub-params), `accessible_widgets.dart` (volume). Per-slider tuning rationale: EQ is most expensive (calls `applyAllEqualizer` + `setBassLevel` per pixel), volume must feel responsive.
+- **DebouncedSlider API extended** with `divisions` + `label` parameters. Previously lost in Task 1 migration; now restored to all 4 audio effect sliders (crossfade, normalization, pitch, sub-params) so they retain snap-to-grid behavior and live value readouts.
+- **Visualizer isolate (minimal first-pass)** — `computeStarField` extracted to top-level function in `visualizer_controller.dart`. Per-frame heavy compute (HSV→RGB color palette + star position math) runs on a Dart isolate via `compute()`. Painter refactor (Task 2.5) deferred — current implementation captures `_frameSnapshot` but does not yet consume it. Painter still reads existing internal lists; no user-visible change.
+- **Cover art TTL** — `CoverArtEntry` now carries `capturedAt` timestamp with `isFresh({ttl})` helper. 30-minute TTL applied on top of existing LRU; stale entries are evicted on access even if LRU hasn't pushed them out. Conservative setting per spec.
+- **Position timer lifecycle** — `AudioEngineService` now implements `WidgetsBindingObserver`. Position timer pauses on `AppLifecycleState.paused/hidden/inactive/detached` and resumes on `resumed` only if `engineState == AudioEngineState.playing`. Reuses existing `_pausePositionTimer()` / `_startPositionTimer()` methods; no new state fields.
+- **Startup deferred init** — Hotkey + system tray init (was on a 500ms timer) moved into `WidgetsBinding.instance.addPostFrameCallback` placed before `runApp(...)`. First frame now renders without waiting for desktop service init. Critical init (SoLoud, SettingsManager, DatabaseService, AudioEngineService, EQ) stays synchronous.
+
+**Tests:**
+
+- 1 smoke test for `DebouncedSlider` widget inflation
+- 2 widget tests for `DebouncedSlider` divisions + label passthrough
+- 3 unit tests for `StarFieldSnapshot` / `StarFieldComputeInput`
+- 3 unit tests for `CoverArtEntry` timestamp + freshness
+- 6 unit tests for `AudioEngineService` lifecycle wiring (mocks updated)
+- 2 smoke tests for `addPostFrameCallback` mechanism
+
+Expected test count: ≥539.
+
+### Notes
+
+- **Task 2.5 (visualizer painter refactor)** is deferred to a future phase. The current `_frameSnapshot` is captured but unused — the painter continues to read from the existing `_stars` / `_particles` lists. When wired up, Task 2.5 will need to choose between adding a new field to `VisualizerFrameSnapshot` or replacing its `stars` field with `StarFieldSnapshot`.
+- **Position timer resume gating** is stricter than the plan called for: timer only resumes if `engineState == AudioEngineState.playing`, not just on `AppLifecycleState.resumed`. Prevents spinning up the timer when no song is active.
+- **Backward compatibility**: `CoverArtEntry`'s `capturedAt` defaults to `DateTime.now()`, so existing call sites are unaffected. `DebouncedSlider`'s `divisions` and `label` parameters are optional — old call sites compile unchanged.
 
 ## [2.0.0] — 2026-06-26
 

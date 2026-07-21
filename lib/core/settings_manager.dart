@@ -127,6 +127,12 @@ class SettingsManager {
   // Media Key Support
   final ValueNotifier<bool> mediaKeyEnabledNotifier = ValueNotifier(true);
 
+  // ─── Feedback (Phase 4) ──────────────────────────────────────────────────
+  /// Whether [SystemSound.click] plays on next/prev. Off by default;
+  /// users opt-in via the Settings UI.
+  final ValueNotifier<bool> soundFeedbackEnabledNotifier =
+      ValueNotifier(false);
+
   // ─── Debounced Persistence ────────────────────────────────────────────────
   // Slider onChanged fires on every pixel; writing to SharedPreferences each
   // time blocks the UI thread (especially in debug).  We debounce the disk
@@ -209,6 +215,8 @@ class SettingsManager {
     desktopLyricsOpacityNotifier.value = _prefs.getDouble('desktopLyricsOpacity') ?? 0.9;
     desktopLyricsClickThroughNotifier.value = _prefs.getBool('desktopLyricsClickThrough') ?? false;
     sensitivityNotifier.value = _prefs.getDouble('sensitivity') ?? 1.0;
+    soundFeedbackEnabledNotifier.value =
+        _prefs.getBool('soundFeedbackEnabled') ?? false;
 
     // C3 fix: Load saved window state that was previously forgotten
     final w = _prefs.getDouble('savedWindowWidth');
@@ -600,6 +608,11 @@ class SettingsManager {
     await _prefs.setBool('mediaKeyEnabled', enabled);
   }
 
+  Future<void> setSoundFeedbackEnabled(bool enabled) async {
+    soundFeedbackEnabledNotifier.value = enabled;
+    await _prefs.setBool('soundFeedbackEnabled', enabled);
+  }
+
   // #7: Dispose all ValueNotifiers to avoid listener leaks in tests / hot-reload
   // ── Dominant Color Cache ──────────────────────────────────────────
 
@@ -670,6 +683,7 @@ class SettingsManager {
     compReleaseNotifier,
     compKneeWidthNotifier,
     compMakeupGainNotifier,
+    soundFeedbackEnabledNotifier,
     sortModeNotifier,
     sortAscendingNotifier,
     customHotkeysNotifier,
@@ -715,6 +729,7 @@ class SettingsManager {
     customHotkeysNotifier.dispose();
     mediaKeyEnabledNotifier.dispose();
     sleepTimerDurationNotifier.dispose();
+    soundFeedbackEnabledNotifier.dispose();
   }
 }
 

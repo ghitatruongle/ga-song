@@ -17,12 +17,37 @@ class SystemTrayService {
   final AudioEngineService? _engine;
   final PlaylistService? _playlist;
   SystemTray? _systemTray;
-  final AppWindow _appWindow = AppWindow();
-  final Menu _menu = Menu();
+
+  // Device bug fix: AppWindow()'s constructor in the system_tray plugin
+  // calls `InitAppWindow` on a MethodChannel synchronously. On Android
+  // (and iOS / web) that channel has no implementation, which throws
+  // `MissingPluginException` before we ever get to `init()`. Use lazy
+  // initialization so the platform-channel call only fires on desktop.
+  late final AppWindow _appWindow = _isDesktop ? AppWindow() : _noOpAppWindow;
+  late final Menu _menu = _isDesktop ? Menu() : _noOpMenu;
   DateTime _lastMenuUpdate = DateTime(2000);
 
+  static bool get _isDesktop =>
+      !kIsWeb &&
+      (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+
+  /// Stand-in AppWindow for non-desktop platforms. The system_tray
+  /// plugin's AppWindow exposes its methods as instance members that
+  /// forward to the platform channel; we never call them on mobile.
+  AppWindow get _noOpAppWindow => throw StateError(
+        'SystemTrayService._appWindow is unavailable on non-desktop platforms',
+      );
+
+  /// Stand-in Menu for non-desktop platforms.
+  Menu get _noOpMenu => throw StateError(
+        'SystemTrayService._menu is unavailable on non-desktop platforms',
+      );
+
   Future<void> init() async {
-    if (kIsWeb || (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux)) {
+    if (!_isDesktop) {
+      // Non-desktop platforms: nothing to do. The class-level `late`
+      // fields above are wired to the no-op stand-ins, so nothing
+      // touches the platform channel.
       return;
     }
 

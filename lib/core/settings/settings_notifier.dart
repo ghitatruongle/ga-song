@@ -124,6 +124,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       // Hotkeys & Media
       customHotkeys: Map<String, String>.from(m.customHotkeysNotifier.value),
       mediaKeyEnabled: m.mediaKeyEnabledNotifier.value,
+      soundFeedbackEnabled: m.soundFeedbackEnabledNotifier.value,
 
       // Other
       minimizeToTray: m.minimizeToTrayNotifier.value,
@@ -201,6 +202,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
       _manager.removeCustomHotkey(action);
   Future<void> setMediaKeyEnabled(bool enabled) =>
       _manager.setMediaKeyEnabled(enabled);
+  Future<void> setSoundFeedbackEnabled(bool enabled) =>
+      _manager.setSoundFeedbackEnabled(enabled);
   Future<void> setMinimizeToTray(bool minimize) =>
       _manager.setMinimizeToTray(minimize);
   Future<void> setSensitivity(double value) => _manager.setSensitivity(value);

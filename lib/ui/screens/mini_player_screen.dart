@@ -3,14 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart' hide WindowCaptionButton;
-import '../../providers/service_providers.dart';
+import '../../core/audio/audio_engine_service.dart';
 import '../../core/settings_manager.dart';
-import '../../core/view_models/player_view_model.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 import '../../core/utils/time_utils.dart';
 import '../../models/song.dart';
 import '../../providers/lyric_provider.dart';
+import '../../providers/service_providers.dart';
 import '../widgets/cover_art_image.dart';
+import '../utils/haptic_helper.dart';
 
 /// Whether the current platform is desktop (Windows/macOS/Linux).
 bool get _isDesktopPlatform =>
@@ -45,7 +47,10 @@ class MiniPlayerScreen extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Restores the window from mini player mode to normal size.
-Future<void> _restoreFromMiniPlayer(BuildContext context, SettingsManager settings) async {
+Future<void> _restoreFromMiniPlayer(
+  BuildContext context,
+  SettingsManager settings,
+) async {
   final screenSize = MediaQuery.sizeOf(context);
   settings.setIsMiniPlayer(false);
   await windowManager.setMinimumSize(const Size(800, 600));
@@ -73,215 +78,222 @@ class _DesktopMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.read(playerViewModelProvider);
     final settings = ref.read(settingsManagerProvider);
+    final playlist = ref.read(playlistServiceProvider);
+
+    // Watch playback state to drive cover art + button rebuilds.
+    final isPlaying =
+        ref.watch(engineStateProvider) == AudioEngineState.playing;
+    final song = playlist.currentSong;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) {
-          // viewModel captured from outer scope
-          final song = viewModel.currentSong;
+      body: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: Builder(
+              builder: (context) {
+                if (song != null) {
+                  const maxCacheSize = 256;
+                  final mediaSize = MediaQuery.sizeOf(context);
+                  final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+                  final cacheWidth = (mediaSize.width * pixelRatio)
+                      .clamp(1, maxCacheSize)
+                      .round();
+                  final cacheHeight = (mediaSize.height * pixelRatio)
+                      .clamp(1, maxCacheSize)
+                      .round();
+                  return CoverArtImage(
+                    song: song,
+                    cacheWidth: cacheWidth,
+                    cacheHeight: cacheHeight,
+                    fallbackBuilder: (context) =>
+                        Container(color: AppColors.darkBackground),
+                  );
+                }
+                return Container(color: AppColors.darkBackground);
+              },
+            ),
+          ),
 
-          return Stack(
-            children: [
-              // Background Image
-              Positioned.fill(
-                child: Builder(
-                  builder: (context) {
-                    if (song != null) {
-                      const maxCacheSize = 256;
-                      final mediaSize = MediaQuery.sizeOf(context);
-                      final pixelRatio =
-                          MediaQuery.devicePixelRatioOf(context);
-                      final cacheWidth = (mediaSize.width * pixelRatio)
-                          .clamp(1, maxCacheSize)
-                          .round();
-                      final cacheHeight = (mediaSize.height * pixelRatio)
-                          .clamp(1, maxCacheSize)
-                          .round();
-                      return CoverArtImage(
+          // Blur overlay — RepaintBoundary isolates blur from content repaints
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                  child: Container(color: Colors.black.withValues(alpha: 0.4)),
+                ),
+              ),
+            ),
+          ),
+
+          // Drag Window Area (desktop only)
+          Positioned.fill(
+            child: GestureDetector(
+              onHorizontalDragEnd: (details) {
+                if (details.primaryVelocity == null) return;
+                if (details.primaryVelocity! < -300) {
+                  ref.read(playlistServiceProvider).next();
+                } else if (details.primaryVelocity! > 300) {
+                  ref.read(playlistServiceProvider).previous();
+                }
+              },
+              child: const DragToMoveArea(child: SizedBox.expand()),
+            ),
+          ),
+
+          // Content
+          Positioned.fill(
+            child: Builder(
+              builder: (context) {
+                if (song == null) return const SizedBox.shrink();
+
+                final textColor = context.adaptive;
+
+                return Row(
+                  children: [
+                    // Album Art
+                    Container(
+                      margin: const EdgeInsets.all(10),
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: CoverArtImage(
                         song: song,
-                        cacheWidth: cacheWidth,
-                        cacheHeight: cacheHeight,
-                        fallbackBuilder: (context) =>
-                            Container(color: const Color(0xFF0F0F0F)),
-                      );
-                    }
-                    return Container(color: const Color(0xFF0F0F0F));
-                  },
-                ),
-              ),
-
-              // Blur overlay — RepaintBoundary isolates blur from content repaints
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                      child: Container(
-                          color: Colors.black.withValues(alpha: 0.4)),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Drag Window Area (desktop only)
-              Positioned.fill(
-                child: GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    if (details.primaryVelocity == null) return;
-                    if (details.primaryVelocity! < -300) {
-                      viewModel.next();
-                    } else if (details.primaryVelocity! > 300) {
-                      viewModel.previous();
-                    }
-                  },
-                  child: const DragToMoveArea(child: SizedBox.expand()),
-                ),
-              ),
-
-              // Content
-              Positioned.fill(
-                child: Builder(
-                  builder: (context) {
-                    if (song == null) return const SizedBox.shrink();
-
-                    final textColor = context.adaptive;
-
-                    return Row(
-                      children: [
-                        // Album Art
-                        Container(
-                          margin: const EdgeInsets.all(10),
-                          width: 64,
-                          height: 64,
+                        cacheWidth: 128,
+                        cacheHeight: 128,
+                        fallbackBuilder: (context) => DecoratedBox(
                           decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).cardColor.withValues(alpha: 0.16),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          clipBehavior: Clip.antiAlias,
-                          child: CoverArtImage(
-                            song: song,
-                            cacheWidth: 128,
-                            cacheHeight: 128,
-                            fallbackBuilder: (context) => DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .cardColor
-                                    .withValues(alpha: 0.16),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.music_note_rounded,
-                                color: context.adaptiveSecondary,
-                                size: 24,
-                              ),
-                            ),
+                          child: Icon(
+                            Icons.music_note_rounded,
+                            color: context.adaptiveSecondary,
+                            size: 24,
                           ),
                         ),
+                      ),
+                    ),
 
-                        // Info + Lyric compact
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                song.name,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                song.artist ?? 'Unknown',
-                                style: TextStyle(
-                                  color: textColor.withValues(alpha: 0.7),
-                                  fontSize: 11,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              // Compact lyric scroll
-                              _MiniPlayerLyricLine(song: song),
-                            ],
+                    // Info + Lyric compact
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            song.name,
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            song.artist ?? 'Unknown',
+                            style: TextStyle(
+                              color: textColor.withValues(alpha: 0.7),
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          // Compact lyric scroll
+                          _MiniPlayerLyricLine(song: song),
+                        ],
+                      ),
+                    ),
+
+                    // Controls
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.skip_previous_rounded,
+                            size: 22,
+                          ),
+                          color: textColor,
+                          onPressed: () {
+                            safeHaptic(HapticType.light);
+                            ref.read(playlistServiceProvider).previous();
+                          },
+                        ),
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: textColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              safeHaptic(HapticType.medium);
+                              final playing =
+                                  ref.read(engineStateProvider) ==
+                                  AudioEngineState.playing;
+                              if (playing) {
+                                ref.read(audioEngineServiceProvider).pause();
+                              } else {
+                                ref.read(playlistServiceProvider).play();
+                              }
+                            },
                           ),
                         ),
-
-                        // Controls
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.skip_previous_rounded,
-                                size: 22,
-                              ),
-                              color: textColor,
-                              onPressed: viewModel.previous,
-                            ),
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: textColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: Icon(
-                                  viewModel.isPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  color: Theme.of(context)
-                                      .scaffoldBackgroundColor,
-                                  size: 18,
-                                ),
-                                onPressed: viewModel.togglePlayPause,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.skip_next_rounded,
-                                size: 22,
-                              ),
-                              color: textColor,
-                              onPressed: viewModel.next,
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                size: 20,
-                              ),
-                              color: textColor.withValues(alpha: 0.6),
-                              tooltip: 'Đóng mini player',
-                              onPressed: () => _restoreFromMiniPlayer(context, settings),
-                            ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.open_in_full_rounded,
-                                size: 20,
-                              ),
-                              color: textColor.withValues(alpha: 0.6),
-                              tooltip: 'Trở lại bình thường',
-                              onPressed: () => _restoreFromMiniPlayer(context, settings),
-                            ),
-                          ],
+                        IconButton(
+                          icon: const Icon(Icons.skip_next_rounded, size: 22),
+                          color: textColor,
+                          onPressed: () {
+                            safeHaptic(HapticType.light);
+                            ref.read(playlistServiceProvider).next();
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          color: textColor.withValues(alpha: 0.6),
+                          tooltip: 'Đóng mini player',
+                          onPressed: () =>
+                              _restoreFromMiniPlayer(context, settings),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.open_in_full_rounded,
+                            size: 20,
+                          ),
+                          color: textColor.withValues(alpha: 0.6),
+                          tooltip: 'Trở lại bình thường',
+                          onPressed: () =>
+                              _restoreFromMiniPlayer(context, settings),
                         ),
                       ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -296,95 +308,83 @@ class _MobileMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.read(playerViewModelProvider);
+    final playlist = ref.read(playlistServiceProvider);
+    final song = playlist.currentSong;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) {
-          // viewModel captured from outer scope
-          final song = viewModel.currentSong;
+      body: Stack(
+        children: [
+          // Background — blurred cover art
+          Positioned.fill(
+            child: Builder(
+              builder: (context) {
+                if (song != null) {
+                  return CoverArtImage(
+                    song: song,
+                    cacheWidth: 256,
+                    cacheHeight: 256,
+                    fallbackBuilder: (context) =>
+                        Container(color: AppColors.darkBackground),
+                  );
+                }
+                return Container(color: AppColors.darkBackground);
+              },
+            ),
+          ),
 
-          return Stack(
-            children: [
-              // Background — blurred cover art
-              Positioned.fill(
-                child: Builder(
-                  builder: (context) {
-                    if (song != null) {
-                      return CoverArtImage(
-                        song: song,
-                        cacheWidth: 256,
-                        cacheHeight: 256,
-                        fallbackBuilder: (context) =>
-                            Container(color: const Color(0xFF0F0F0F)),
-                      );
-                    }
-                    return Container(color: const Color(0xFF0F0F0F));
-                  },
+          // Blur + dark scrim — RepaintBoundary isolates blur from content repaints
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                  child: Container(color: Colors.black.withValues(alpha: 0.5)),
                 ),
               ),
+            ),
+          ),
 
-              // Blur + dark scrim — RepaintBoundary isolates blur from content repaints
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                      child: Container(
-                          color: Colors.black.withValues(alpha: 0.5)),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Content
-              SafeArea(
-                child: GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    if (details.primaryVelocity == null) return;
-                    if (details.primaryVelocity! < -300) {
-                      viewModel.next();
-                    } else if (details.primaryVelocity! > 300) {
-                      viewModel.previous();
-                    }
-                  },
-                  child: song == null
-                      ? Center(
-                          child: Text(
-                            'Chưa chọn bài hát',
-                            style: TextStyle(
-                              color: context.adaptive.withValues(alpha: 0.4),
-                              fontSize: 16,
-                            ),
-                          ),
-                        )
-                      : _MobileMiniPlayerContent(
-                          song: song,
-                          viewModel: viewModel,
+          // Content
+          SafeArea(
+            child: GestureDetector(
+              onHorizontalDragEnd: (details) {
+                if (details.primaryVelocity == null) return;
+                if (details.primaryVelocity! < -300) {
+                  ref.read(playlistServiceProvider).next();
+                } else if (details.primaryVelocity! > 300) {
+                  ref.read(playlistServiceProvider).previous();
+                }
+              },
+              child: song == null
+                  ? Center(
+                      child: Text(
+                        'Chưa chọn bài hát',
+                        style: TextStyle(
+                          color: context.adaptive.withValues(alpha: 0.4),
+                          fontSize: 16,
                         ),
-                ),
-              ),
-            ],
-          );
-        },
+                      ),
+                    )
+                  : _MobileMiniPlayerContent(song: song),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _MobileMiniPlayerContent extends ConsumerWidget {
-  const _MobileMiniPlayerContent({
-    required this.song,
-    required this.viewModel,
-  });
+  const _MobileMiniPlayerContent({required this.song});
 
   final Song song;
-  final PlayerViewModel viewModel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textColor = context.adaptive;
+    final isPlaying =
+        ref.watch(engineStateProvider) == AudioEngineState.playing;
 
     return Column(
       children: [
@@ -394,8 +394,11 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
           child: Row(
             children: [
               IconButton(
-                icon: Icon(Icons.keyboard_arrow_down_rounded,
-                    color: textColor, size: 32),
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: textColor,
+                  size: 32,
+                ),
                 tooltip: 'Trở lại bình thường',
                 onPressed: () {
                   ref.read(settingsManagerProvider).setIsMiniPlayer(false);
@@ -441,9 +444,9 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
                     cacheWidth: 512,
                     cacheHeight: 512,
                     fallbackBuilder: (context) => Container(
-                      color: Theme.of(context)
-                          .cardColor
-                          .withValues(alpha: 0.16),
+                      color: Theme.of(
+                        context,
+                      ).cardColor.withValues(alpha: 0.16),
                       child: Icon(
                         Icons.music_note_rounded,
                         color: context.adaptiveSecondary,
@@ -493,15 +496,16 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
         // Progress bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: AnimatedBuilder(
-            animation: Listenable.merge(<Listenable>[
-              viewModel.positionNotifier,
-              viewModel.durationNotifier,
-            ]),
-            builder: (context, _) {
-              final position = viewModel.position;
-              final duration = viewModel.duration;
-              final progress = viewModel.progress;
+          child: Consumer(
+            builder: (context, ref, _) {
+              final position = ref.watch(positionProvider);
+              final duration = ref.watch(trackDurationProvider);
+              final progress = duration.inMilliseconds > 0
+                  ? (position.inMilliseconds / duration.inMilliseconds).clamp(
+                      0.0,
+                      1.0,
+                    )
+                  : 0.0;
 
               return Column(
                 children: [
@@ -515,18 +519,17 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
                         overlayRadius: 14,
                       ),
                       activeTrackColor: textColor,
-                      inactiveTrackColor:
-                          textColor.withValues(alpha: 0.2),
+                      inactiveTrackColor: textColor.withValues(alpha: 0.2),
                       thumbColor: textColor,
                     ),
                     child: Slider(
                       value: progress.clamp(0.0, 1.0),
                       onChanged: (value) {
                         final newPosition = Duration(
-                          milliseconds:
-                              (value * duration.inMilliseconds).round(),
+                          milliseconds: (value * duration.inMilliseconds)
+                              .round(),
                         );
-                        viewModel.seek(newPosition);
+                        ref.read(audioEngineServiceProvider).seek(newPosition);
                       },
                     ),
                   ),
@@ -569,9 +572,15 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
-                icon: Icon(Icons.skip_previous_rounded,
-                    size: 40, color: textColor),
-                onPressed: viewModel.previous,
+                icon: Icon(
+                  Icons.skip_previous_rounded,
+                  size: 40,
+                  color: textColor,
+                ),
+                onPressed: () {
+                  safeHaptic(HapticType.light);
+                  ref.read(playlistServiceProvider).previous();
+                },
               ),
               Container(
                 width: 64,
@@ -583,19 +592,29 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   icon: Icon(
-                    viewModel.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
+                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     color: Theme.of(context).scaffoldBackgroundColor,
                     size: 36,
                   ),
-                  onPressed: viewModel.togglePlayPause,
+                  onPressed: () {
+                    safeHaptic(HapticType.medium);
+                    final playing =
+                        ref.read(engineStateProvider) ==
+                        AudioEngineState.playing;
+                    if (playing) {
+                      ref.read(audioEngineServiceProvider).pause();
+                    } else {
+                      ref.read(playlistServiceProvider).play();
+                    }
+                  },
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.skip_next_rounded,
-                    size: 40, color: textColor),
-                onPressed: viewModel.next,
+                icon: Icon(Icons.skip_next_rounded, size: 40, color: textColor),
+                onPressed: () {
+                  safeHaptic(HapticType.light);
+                  ref.read(playlistServiceProvider).next();
+                },
               ),
             ],
           ),
@@ -616,88 +635,89 @@ class _PipCompactPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.read(playerViewModelProvider);
+    final playlist = ref.read(playlistServiceProvider);
+    final isPlaying =
+        ref.watch(engineStateProvider) == AudioEngineState.playing;
+    final song = playlist.currentSong;
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) {
-          final song = viewModel.currentSong;
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Full-bleed cover art background
+          if (song != null)
+            CoverArtImage(
+              song: song,
+              cacheWidth: 256,
+              cacheHeight: 144,
+              fallbackBuilder: (context) =>
+                  Container(color: AppColors.darkSurface),
+            )
+          else
+            Container(color: AppColors.darkSurface),
 
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              // Full-bleed cover art background
-              if (song != null)
-                CoverArtImage(
-                  song: song,
-                  cacheWidth: 256,
-                  cacheHeight: 144,
-                  fallbackBuilder: (context) =>
-                      Container(color: const Color(0xFF1A1A1A)),
-                )
-              else
-                Container(color: const Color(0xFF1A1A1A)),
+          // Dark scrim for readability
+          Container(color: Colors.black.withValues(alpha: 0.35)),
 
-              // Dark scrim for readability
-              Container(color: Colors.black.withValues(alpha: 0.35)),
-
-              // Centered play/pause button & swipe
-              Positioned.fill(
-                child: GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    if (details.primaryVelocity == null) return;
-                    if (details.primaryVelocity! < -300) {
-                      viewModel.next();
-                    } else if (details.primaryVelocity! > 300) {
-                      viewModel.previous();
-                    }
-                  },
-                  onTap: viewModel.togglePlayPause,
-                  child: Center(
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        viewModel.isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: Colors.black,
-                        size: 28,
-                      ),
-                    ),
+          // Centered play/pause button & swipe
+          Positioned.fill(
+            child: GestureDetector(
+              onHorizontalDragEnd: (details) {
+                if (details.primaryVelocity == null) return;
+                if (details.primaryVelocity! < -300) {
+                  ref.read(playlistServiceProvider).next();
+                } else if (details.primaryVelocity! > 300) {
+                  ref.read(playlistServiceProvider).previous();
+                }
+              },
+              onTap: () {
+                final playing =
+                    ref.read(engineStateProvider) == AudioEngineState.playing;
+                if (playing) {
+                  ref.read(audioEngineServiceProvider).pause();
+                } else {
+                  ref.read(playlistServiceProvider).play();
+                }
+              },
+              child: Center(
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: Colors.black,
+                    size: 28,
                   ),
                 ),
               ),
+            ),
+          ),
 
-              // Song name at bottom
-              if (song != null)
-                Positioned(
-                  left: 8,
-                  right: 8,
-                  bottom: 6,
-                  child: Text(
-                    song.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      shadows: [
-                        Shadow(blurRadius: 4, color: Colors.black),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
+          // Song name at bottom
+          if (song != null)
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 6,
+              child: Text(
+                song.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  shadows: [Shadow(blurRadius: 4, color: Colors.black)],
                 ),
-            ],
-          );
-        },
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -729,6 +749,10 @@ class _MiniPlayerLyricLineState extends ConsumerState<_MiniPlayerLyricLine> {
     // Auto-scroll horizontally when line changes
     if (line != _currentLine) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // P4 BUG-3: state may have been disposed before the next frame
+        // fires (e.g. mini-player closed mid-lyric-change). Guard so we
+        // don't touch the ScrollController of a defunct widget.
+        if (!mounted) return;
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/service_providers.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
+import '../utils/theme_helpers.dart';
 
 /// Widget that displays library statistics.
 ///
@@ -56,16 +58,17 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final spacing = ThemeSpacing.of(context);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(spacing.lg),
         child: _isLoading
-            ? const Center(
+            ? Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
+                  padding: EdgeInsets.all(spacing.xl),
+                  child: const CircularProgressIndicator(),
                 ),
               )
             : Column(
@@ -81,7 +84,7 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
                       color: context.adaptive,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: spacing.lg),
 
                   // Stats cards
                   _StatCard(
@@ -90,14 +93,14 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
                     value: '${_stats!['totalSongs']}',
                     isDark: isDark,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: spacing.sm + spacing.xxs),
                   _StatCard(
                     icon: Icons.timer,
                     label: 'Tổng thời gian',
                     value: _formatDuration(_stats!['totalDurationMs'] as int),
                     isDark: isDark,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: spacing.sm + spacing.xxs),
                   _StatCard(
                     icon: Icons.play_circle,
                     label: 'Tổng lượt nghe',
@@ -107,7 +110,7 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
 
                   // Genre breakdown
                   if ((_stats!['genreCounts'] as List).isNotEmpty) ...[
-                    const SizedBox(height: 24),
+                    SizedBox(height: spacing.lg),
                     Text(
                       'Thể loại',
                       style: TextStyle(
@@ -116,12 +119,12 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
                         color: context.adaptive,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: spacing.sm + spacing.xxs),
                     ...(_stats!['genreCounts'] as List).take(5).map((g) {
                       final genre = g['genre'] as String;
                       final count = g['count'] as int;
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Row(
                           children: [
                             Expanded(
@@ -165,19 +168,29 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = ThemeSpacing.of(context);
+    final radius = ThemeRadius.of(context);
+    final cardBg = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface,
+      light: AppColors.lightSurface2,
+    );
+    final cardBorder = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface2,
+      light: AppColors.lightBorder,
+    );
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E5E5),
-        ),
+        color: cardBg,
+        borderRadius: radius.circular(),
+        border: Border.all(color: cardBorder),
       ),
       child: Row(
         children: [
           Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +202,7 @@ class _StatCard extends StatelessWidget {
                     color: context.adaptive.withValues(alpha: 0.5),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   value,
                   style: TextStyle(

@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/song.dart';
 import '../../providers/service_providers.dart';
+import '../../core/motion/app_motion.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
+import '../utils/animation_utils.dart';
+import '../utils/theme_helpers.dart';
 
 /// Widget that detects and manages duplicate songs in the library.
 ///
@@ -94,10 +98,11 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
 
   @override
   Widget build(BuildContext context) {
+    final spacing = ThemeSpacing.of(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(spacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,7 +116,7 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
                 color: context.adaptive,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: spacing.md),
 
             // Content
             Expanded(
@@ -125,9 +130,9 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
                               Icon(
                                 Icons.check_circle_outline,
                                 size: 64,
-                                color: Colors.green.withValues(alpha: 0.5),
+                                color: AppColors.success.withValues(alpha: 0.5),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: spacing.md),
                               Text(
                                 'Không tìm thấy bài trùng',
                                 style: TextStyle(
@@ -160,7 +165,7 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
 
             // Actions
             if (!_isLoading && _duplicateGroups.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: spacing.md),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -168,18 +173,18 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Đóng'),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   FilledButton(
                     onPressed: _selectedForDeletion.isEmpty || _isDeleting
                         ? null
                         : _deleteSelected,
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: AppColors.danger,
                     ),
                     child: _isDeleting
                         ? const SizedBox(
-                            width: 16,
-                            height: 16,
+                            width: AppSpacing.md,
+                            height: AppSpacing.md,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
@@ -197,7 +202,7 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
   }
 }
 
-class _DuplicateGroup extends StatelessWidget {
+class _DuplicateGroup extends StatefulWidget {
   final List<Song> songs;
   final Set<int> selectedIds;
   final Function(int id, bool selected) onToggle;
@@ -209,26 +214,73 @@ class _DuplicateGroup extends StatelessWidget {
   });
 
   @override
+  State<_DuplicateGroup> createState() => _DuplicateGroupState();
+}
+
+class _DuplicateGroupState extends State<_DuplicateGroup> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final spacing = ThemeSpacing.of(context);
+    final radius = ThemeRadius.of(context);
+    final groupBg = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface,
+      light: AppColors.lightSurface2,
+    );
+    final groupBorder = AppColors.adaptive(
+      context,
+      dark: AppColors.darkSurface2,
+      light: AppColors.lightBorder,
+    );
+    final dividerColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    final animations = animationsEnabled(context);
+
+    return AnimatedContainer(
+      duration: animations ? AppDurations.short : Duration.zero,
+      curve: AppCurves.decelerate,
+      transform: Matrix4.identity()
+        ..scaleByDouble(_isHovered ? 1.01 : 1.0, _isHovered ? 1.01 : 1.0, 1.0, 1.0),
+      margin: EdgeInsets.only(bottom: spacing.sm + spacing.xxs),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
+        color: groupBg,
+        borderRadius: radius.circular(),
         border: Border.all(
-          color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E5E5),
+          color: _isHovered
+              ? groupBorder.withValues(alpha: 1.0)
+              : groupBorder.withValues(alpha: 0.7),
+          width: _isHovered ? 1.5 : 1.0,
         ),
+        boxShadow: _isHovered
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
-      child: Column(
+      child: MouseRegion(
+        onEnter: (_) {
+          if (animations) setState(() => _isHovered = true);
+        },
+        onExit: (_) {
+          if (animations) setState(() => _isHovered = false);
+        },
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Group header
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(spacing.sm + spacing.xxs),
             child: Text(
-              '${songs.first.name} - ${songs.first.artist ?? "Unknown"}',
+              '${widget.songs.first.name} - ${widget.songs.first.artist ?? "Unknown"}',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: context.adaptive,
@@ -239,21 +291,20 @@ class _DuplicateGroup extends StatelessWidget {
           ),
 
           // Songs in group
-          ...songs.asMap().entries.map((entry) {
+          ...widget.songs.asMap().entries.map((entry) {
             final index = entry.key;
             final song = entry.value;
-            final isSelected = selectedIds.contains(song.id);
+            final isSelected = widget.selectedIds.contains(song.id);
             final isRecommended = index == 0; // First is newest (keep this one)
 
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: spacing.sm + spacing.xxs,
+                vertical: AppSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.06),
-                  ),
+                  top: BorderSide(color: dividerColor),
                 ),
               ),
               child: Row(
@@ -264,14 +315,14 @@ class _DuplicateGroup extends StatelessWidget {
                       value: isSelected,
                       onChanged: (value) {
                         if (song.id != null) {
-                          onToggle(song.id!, value ?? false);
+                          widget.onToggle(song.id!, value ?? false);
                         }
                       },
                     )
                   else
-                    const SizedBox(width: 48),
+                    SizedBox(width: spacing.sm + spacing.md + spacing.sm),
 
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
 
                   // Song info
                   Expanded(
@@ -283,23 +334,24 @@ class _DuplicateGroup extends StatelessWidget {
                             if (isRecommended)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
+                                  horizontal: AppSpacing.sm - 2,
+                                  vertical: AppSpacing.xxs,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: AppColors.success.withValues(alpha: 0.2),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.sm - 4),
                                 ),
                                 child: const Text(
                                   'GIỮ LẠI',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.green,
+                                    color: AppColors.success,
                                   ),
                                 ),
                               ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 song.fileName,
@@ -329,6 +381,7 @@ class _DuplicateGroup extends StatelessWidget {
             );
           }),
         ],
+      ),
       ),
     );
   }

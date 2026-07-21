@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audio/playlist_service.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
+import '../../core/theme/tokens.dart';
 import '../../models/song.dart';
 import 'cover_art_image.dart';
 import 'playlist_manager_widget.dart';
@@ -62,13 +63,13 @@ class SongGridTile extends ConsumerWidget {
         child: Container(
           decoration: BoxDecoration(
             color: isCurrent
-                ? (isDark ? const Color(0xFF222222) : const Color(0xFFF5F5F5))
+                ? (isDark ? AppColors.darkSidebarHover : AppColors.lightSurface2)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isCurrent
-                  ? (isDark ? const Color(0xFF333333) : const Color(0xFFE0E0E0))
-                  : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE)),
+                  ? (isDark ? AppColors.darkSurface3 : AppColors.lightBorder)
+                  : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
               width: 1,
             ),
           ),
@@ -213,117 +214,133 @@ class _SongListTileState extends ConsumerState<SongListTile> {
                 ),
               ),
             ),
-            child: Row(
-              children: [
-                // Index / Playing indicator
-                SizedBox(
-                  width: 32,
-                  child: isPlaying
-                      ? Icon(
-                          Icons.equalizer_rounded,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : Text(
-                          '${widget.songIndex + 1}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.adaptive.withValues(alpha: 0.35),
-                            fontWeight: FontWeight.w400,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Phase 4 fix: at narrow viewports (mobile portrait with
+                // sidebar visible, ~63 px inner) the fixed-width children
+                // (32+12+36+12+8+40 = 140) overflow.  Drop the index and
+                // shrink the cover/duration so the row fits.
+                final isNarrow = constraints.maxWidth < 240;
+                final coverSize = isNarrow ? 28.0 : 36.0;
+                final durationWidth = isNarrow ? 32.0 : 40.0;
+                final coverSpacing = isNarrow ? 8.0 : 12.0;
+
+                return Row(
+                  children: [
+                    // Index / Playing indicator (hidden on narrow)
+                    if (!isNarrow)
+                      SizedBox(
+                        width: 32,
+                        child: isPlaying
+                            ? Icon(
+                                Icons.equalizer_rounded,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              )
+                            : Text(
+                                '${widget.songIndex + 1}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.adaptive.withValues(alpha: 0.35),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                      ),
+
+                    if (!isNarrow) const SizedBox(width: 12),
+
+                    // Cover art (smaller on narrow)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox(
+                        width: coverSize,
+                        height: coverSize,
+                        child: CoverArtImage(
+                          song: widget.song,
+                          cacheWidth: (coverSize * 2).toInt(),
+                          cacheHeight: (coverSize * 2).toInt(),
+                          fallbackBuilder: (context) => Container(
+                            color: isDark
+                                ? AppColors.darkSurface2
+                                : AppColors.lightSidebarHover,
+                            child: Icon(
+                              Icons.music_note_rounded,
+                              size: isNarrow ? 14 : 18,
+                              color: context.adaptive.withValues(alpha: 0.3),
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Cover art (small)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CoverArtImage(
-                      song: widget.song,
-                      cacheWidth: 72,
-                      cacheHeight: 72,
-                      fallbackBuilder: (context) => Container(
-                        color: isDark
-                            ? const Color(0xFF2A2A2A)
-                            : const Color(0xFFF0F0F0),
-                        child: Icon(
-                          Icons.music_note_rounded,
-                          size: 18,
-                          color: context.adaptive.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(width: 12),
+                    SizedBox(width: coverSpacing),
 
-                // Song name + artist
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.song.name,
+                    // Song name + artist
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.song.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                              color: isCurrent
+                                  ? Theme.of(context).colorScheme.primary
+                                  : context.adaptive,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            widget.song.artist ?? 'Unknown',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.adaptive.withValues(alpha: 0.4),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Add to playlist button (on hover) — hidden on narrow
+                    // because there is no room and it is a desktop-only
+                    // convenience.
+                    if (_isHovered && !isNarrow)
+                      GestureDetector(
+                        onTap: () => PlaylistManagerWidget.showAddToPlaylist(context, widget.song),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.playlist_add_rounded,
+                            size: 18,
+                            color: context.adaptive.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+
+                    if (!isNarrow) const SizedBox(width: 8),
+
+                    // Duration
+                    SizedBox(
+                      width: durationWidth,
+                      child: Text(
+                        _formatDuration(widget.song.durationMs),
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                          color: isCurrent
-                              ? Theme.of(context).colorScheme.primary
-                              : context.adaptive,
+                          fontSize: 12,
+                          color: context.adaptive.withValues(alpha: 0.35),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        widget.song.artist ?? 'Unknown',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.adaptive.withValues(alpha: 0.4),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Add to playlist button (on hover)
-                if (_isHovered)
-                  GestureDetector(
-                    onTap: () => PlaylistManagerWidget.showAddToPlaylist(context, widget.song),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.playlist_add_rounded,
-                        size: 18,
-                        color: context.adaptive.withValues(alpha: 0.4),
+                        textAlign: TextAlign.right,
                       ),
                     ),
-                  ),
-
-                const SizedBox(width: 8),
-
-                // Duration
-                SizedBox(
-                  width: 40,
-                  child: Text(
-                    _formatDuration(widget.song.durationMs),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.adaptive.withValues(alpha: 0.35),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
