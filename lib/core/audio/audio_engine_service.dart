@@ -309,7 +309,9 @@ class AudioEngineService with WidgetsBindingObserver {
       engineState.value = AudioEngineState.playing;
       _startPositionTimer();
 
-      // Subscribe to song-end event
+      // Subscribe to song-end event — cancel any prior subscription first
+      await _songEndSub?.cancel();
+      _songEndSub = null;
       _songEndSub = source.allInstancesFinished.listen((_) {
         if (!_isDisposed && !_isPlayingNext) {
           engineState.value = AudioEngineState.stopped;
@@ -514,6 +516,9 @@ class AudioEngineService with WidgetsBindingObserver {
         engineState.value = AudioEngineState.playing;
         _startPositionTimer();
 
+        // Subscribe to song-end event — cancel any prior subscription first
+        await _songEndSub?.cancel();
+        _songEndSub = null;
         _songEndSub = nextSource.allInstancesFinished.listen((_) {
           if (!_isDisposed && !_isPlayingNext) {
             engineState.value = AudioEngineState.stopped;
@@ -628,12 +633,19 @@ class AudioEngineService with WidgetsBindingObserver {
     // P3.4: Unregister from lifecycle events before tearing down state.
     WidgetsBinding.instance.removeObserver(this);
     _isDisposed = true;
+
+    final sub = _songEndSub;
+    _songEndSub = null;
+    await sub?.cancel();
+
     _positionTimer?.cancel();
     _crossfadeTimer?.cancel();
     _crossfadeTimer = null;
+
     await _songCompletedController.close();
     await _cleanupCurrent();
     await _disposeAllCached();
+
     engineState.dispose();
     positionNotifier.dispose();
     durationNotifier.dispose();

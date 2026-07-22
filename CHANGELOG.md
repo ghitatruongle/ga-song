@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.1] — 2026-07-22
+
+### Fixed
+- **Audio effect service** — `dispose()` now deactivates SoLoud filters
+  (bass, EQ, pitch shift, reverb, compressor) and resets their `wet`
+  values to `0.0` before teardown. Wrapped in try/catch with `AppLogger.w`
+  to remain safe if the engine is already shut down.
+- **Audio engine service** — Cancel prior `_songEndSub` before
+  re-subscribing in `_play` and `_playNext`. Cancellation is also ensured
+  in `dispose()`. Eliminates duplicate "song ended" callbacks when the
+  same source is replayed.
+- **Cover art repository** — `dispose()` now clears `_entryFutures`,
+  `_entries`, `_providerCache`, and `_dominantColorFutures` to release
+  cache memory on shutdown.
+
+### Changed
+- **Lyric provider** — `_databaseService` typed as `DatabaseService`
+  instead of `dynamic`; redundant `as String?` casts removed on
+  `cached['syncedLyrics']` / `cached['plainLyrics']` lookups.
+- **Cover art repository** — Re-formatted tab-indented block to standard
+  2-space indentation; parentDir/replaceFirst string concatenations
+  wrapped in `${...}` for clarity.
+- **Database service** — Removed unused `package:flutter/foundation.dart`
+  import.
+- **Web audio player** — Added `avoid_dynamic_calls` to `ignore_for_file`
+  directive.
+
+### Tests
+- Removed unused `_wrap` helper in `test/core/theme_utils_test.dart`.
+- Removed unused `lastValue` local in 2 debounced slider tests.
+
+### Notes
+- All 7 modified tests pass; no new analyzer issues introduced
+  (13 pre-existing `info`-level lints remain, unchanged).
+- Backward compatibility: no public API changes.
+
 ## [Unreleased]
 
 ### Phase 4: UI Polish & Motion Language
@@ -49,7 +85,7 @@ Test count delta: 559 baseline → **582 passing** (+23).
 - **Backward compatibility** — `SettingsState.soundFeedbackEnabled` defaults to `false`. Users opt-in. No data migration needed.
 
 
-## [Unreleased]
+## [0.1.0] — 2026-07-21
 
 ### Changed
 - Replaced ~113 `debugPrint` calls with structured `AppLogger` (levels: debug/info/warn/error/fatal). Tags follow `module.class` convention (e.g., `audio.engine_service`, `database.service`).

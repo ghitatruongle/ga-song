@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter, avoid_dynamic_calls
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js' as js;

@@ -2,17 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/theme_utils.dart';
 
-Widget _wrap(ThemeMode mode) {
-  return MaterialApp(
-    home: Builder(builder: (context) {
-      return Container(color: context.adaptive);
-    }),
-    theme: ThemeData.light(),
-    darkTheme: ThemeData.dark(),
-    themeMode: mode,
-  );
-}
-
 void main() {
   group('AdaptiveColors extension', () {
     testWidgets('light mode returns black87 for adaptive', (tester) async {
