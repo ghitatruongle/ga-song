@@ -4,7 +4,6 @@ import 'package:ga_song/ui/widgets/debounced_slider.dart';
 
 void main() {
   testWidgets('DebouncedSlider passes divisions through to underlying Slider', (tester) async {
-    var lastValue = 0.0;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: DebouncedSlider(
@@ -12,7 +11,7 @@ void main() {
           min: 0,
           max: 1,
           divisions: 10,
-          onChanged: (v) => lastValue = v,
+          onChanged: (_) {},
         ),
       ),
     ));

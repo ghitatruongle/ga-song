@@ -292,6 +292,8 @@ class AudioEffectService {
   }
 
   void dispose() {
+    _deactivateAllFilters();
+
     bassLevelNotifier.dispose();
     crossfadeDurationNotifier.dispose();
     normalizationLevelNotifier.dispose();
@@ -305,5 +307,47 @@ class AudioEffectService {
     compReleaseNotifier.dispose();
     compKneeWidthNotifier.dispose();
     compMakeupGainNotifier.dispose();
+  }
+
+  void _deactivateAllFilters() {
+    if (!_soloud.isInitialized) return;
+
+    try {
+      final bassFilter = _soloud.filters.bassBoostFilter;
+      if (_bassActive) {
+        bassFilter.deactivate();
+        bassFilter.wet.value = 0.0;
+        _bassActive = false;
+      }
+
+      final eq = _soloud.filters.parametricEqFilter;
+      if (_eqInitialized) {
+        eq.deactivate();
+        _eqInitialized = false;
+      }
+
+      final pitchFilter = _soloud.filters.pitchShiftFilter;
+      if (_pitchActive) {
+        pitchFilter.deactivate();
+        pitchFilter.wet.value = 0.0;
+        _pitchActive = false;
+      }
+
+      final reverbFilter = _soloud.filters.freeverbFilter;
+      if (_reverbActive) {
+        reverbFilter.deactivate();
+        reverbFilter.wet.value = 0.0;
+        _reverbActive = false;
+      }
+
+      final compressorFilter = _soloud.filters.compressorFilter;
+      if (_compressorActive) {
+        compressorFilter.deactivate();
+        compressorFilter.wet.value = 0.0;
+        _compressorActive = false;
+      }
+    } catch (e, stack) {
+      AppLogger.w('audio.effect_service', 'filter deactivation failed', error: e, stack: stack);
+    }
   }
 }

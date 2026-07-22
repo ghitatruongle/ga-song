@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../core/audio/playlist_service.dart';
 import '../core/audio/lyric_parser.dart';
 import '../core/services/online_lyrics_service.dart';
+import '../core/services/database_service.dart';
 import 'service_providers.dart';
 
 final lyricVisibilityProvider = StateProvider<bool>((ref) => false);
@@ -17,7 +18,7 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
   }
 
   final PlaylistService _playlistService;
-  final dynamic _databaseService;
+  final DatabaseService _databaseService;
   final OnlineLyricsService _onlineLyricsService;
 
   Future<void> _loadLyrics() async {
@@ -39,12 +40,12 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
       try {
         final cached = await _databaseService.getCachedLyrics(song.id!);
         if (cached != null) {
-          final syncedLyrics = cached['syncedLyrics'] as String?;
+          final syncedLyrics = cached['syncedLyrics'];
           if (syncedLyrics != null && syncedLyrics.isNotEmpty) {
             state = LyricParser.parse(syncedLyrics);
             return;
           }
-          final plainLyrics = cached['plainLyrics'] as String?;
+          final plainLyrics = cached['plainLyrics'];
           if (plainLyrics != null && plainLyrics.isNotEmpty) {
             // Convert plain lyrics to LyricLine format (no timestamps)
             state = plainLyrics.split('\n').map((line) => 

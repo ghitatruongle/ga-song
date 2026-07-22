@@ -4,7 +4,6 @@ import 'package:ga_song/ui/widgets/debounced_slider.dart';
 
 void main() {
   testWidgets('DebouncedSlider accepts a value, onChanged, debounceMs', (tester) async {
-    double? lastValue;
     var calls = 0;
 
     await tester.pumpWidget(MaterialApp(
@@ -14,9 +13,8 @@ void main() {
           min: 0,
           max: 1,
           debounceMs: 50,
-          onChanged: (v) {
+          onChanged: (_) {
             calls++;
-            lastValue = v;
           },
         ),
       ),

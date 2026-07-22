@@ -68,24 +68,27 @@ class CoverArtRepository with WidgetsBindingObserver {
       <String, Future<CoverArtEntry>>{};
   final Map<String, CoverArtEntry> _entries = <String, CoverArtEntry>{};
 
-  // Use LinkedHashMap for zero-allocation LRU cache
-  	  final LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>> _providerCache =
-  	      LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>>();
-  	  final LinkedHashMap<String, Future<Color?>> _dominantColorFutures =
-  	      LinkedHashMap<String, Future<Color?>>();
-  
-  	  @override
-  	  void didHaveMemoryPressure() {
-  	    super.didHaveMemoryPressure();
-  	    AppLogger.i('cover_art.repository', 'Memory pressure detected; clearing caches');
-  	    _providerCache.clear();
-  	    PaintingBinding.instance.imageCache.clear();
-  	    PaintingBinding.instance.imageCache.clearLiveImages();
-  	  }
-  
-  	  void dispose() {
-  	    WidgetsBinding.instance.removeObserver(this);
-  	  }
+  final LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>> _providerCache =
+      LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>>();
+  final LinkedHashMap<String, Future<Color?>> _dominantColorFutures =
+      LinkedHashMap<String, Future<Color?>>();
+
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    AppLogger.i('cover_art.repository', 'Memory pressure detected; clearing caches');
+    _providerCache.clear();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+  }
+
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _entryFutures.clear();
+    _entries.clear();
+    _providerCache.clear();
+    _dominantColorFutures.clear();
+  }
 
   /// Reports current provider cache size to [PerformanceProbe].
   void _reportCacheSize() {
@@ -591,12 +594,12 @@ class CoverArtRepository with WidgetsBindingObserver {
       '$parentDir/folder.jpeg',
 
       // 4. Album cover in pic folder
-      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/cover.png',
-      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/cover.jpg',
-      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/cover.jpeg',
-      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/folder.png',
-      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/folder.jpg',
-      parentDir.replaceFirst('assets/song/', 'assets/pic/') + '/folder.jpeg',
+      '${parentDir.replaceFirst('assets/song/', 'assets/pic/')}/cover.png',
+      '${parentDir.replaceFirst('assets/song/', 'assets/pic/')}/cover.jpg',
+      '${parentDir.replaceFirst('assets/song/', 'assets/pic/')}/cover.jpeg',
+      '${parentDir.replaceFirst('assets/song/', 'assets/pic/')}/folder.png',
+      '${parentDir.replaceFirst('assets/song/', 'assets/pic/')}/folder.jpg',
+      '${parentDir.replaceFirst('assets/song/', 'assets/pic/')}/folder.jpeg',
     ];
 
     for (final candidate in candidates) {

@@ -55,6 +55,33 @@ google-services.json
 # ─── Tooling artifacts ────────────────────────────────────────
 /.kilo/
 /.openclaude/
+/.zcode/
+/.zcode-screenshots/
 /Plan/
 /nul
 /test_project/
+/C:UsersAcerDesktopgit_files.txt
+
+# ─── Secrets & credentials ────────────────────────────────────
+# API keys, tokens, service accounts, signing material
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.yaml
+secrets.json
+serviceAccount*.json
+firebase-adminsdk-*.json
+google-services.json
+
+# ─── Scratch / one-off debugging files (root-level) ───────────
+# Root-level logs and ad-hoc dumps. Project docs (CHANGELOG, README,
+# CONTRIBUTING) use .md and are not affected.
+/debug_screenshots/
+*.bak
+*.tmp
+*.swp
+*.orig
+*.rej
