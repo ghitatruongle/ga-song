@@ -193,6 +193,11 @@ Future<void> main() async {
   );
   final pipService = PipService.instance;
 
+  // Initialize PiP + deep link handling on Android
+  if (caps.isAndroid) {
+    pipService.init();
+  }
+
   if (caps.isDesktop) {
     await windowManager.init();
     desktopLyricsService.init();

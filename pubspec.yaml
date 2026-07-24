@@ -2,7 +2,7 @@ name: ga_song
 description: "A full-featured music player with KTV mode, lyrics sync, and audio effects."
 publish_to: 'none'
 
-version: 0.1.1+1
+version: 0.1.2+1
 
 environment:
   sdk: ^3.11.4
@@ -94,7 +94,7 @@ debian:
   display_name: GA Song
   description: A new Flutter project.
   maintainer: ghitatruongle <ghitatruongle@gmail.com>
-  version: 0.1.1
+  version: 0.1.2
   section: utils
   priority: optional
   architecture: amd64
