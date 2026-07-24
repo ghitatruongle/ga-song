@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 seed colors -->
+    <color name="seed_primary">#6750A4</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="seed_secondary">#625B71</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="seed_tertiary">#7D5260</color>
+    <color name="on_tertiary">#FFFFFF</color>
+</resources>

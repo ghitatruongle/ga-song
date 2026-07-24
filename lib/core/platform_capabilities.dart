@@ -114,58 +114,69 @@ class PlatformCapabilities {
   // ─── Performance tuning knobs ─────────────────────────────────────────────
 
   /// Position update interval for the audio progress bar.
-  /// 250ms on desktop for smooth scrubbing; 500ms on Android to reduce wake-ups.
+  /// 250ms on desktop; 500ms on Android (low-end 800ms) to reduce wake-ups.
   Duration get positionTimerInterval {
+    if (isAndroid && deviceTier == DeviceTier.low) {
+      return const Duration(milliseconds: 800);
+    }
     if (isAndroid) return const Duration(milliseconds: 500);
     return const Duration(milliseconds: 250);
   }
 
   /// Max number of audio source buffers to keep in memory.
-  /// Android: 20 (tighter RAM budget); Desktop: 50.
+  /// Desktop: 50; Android mid: 20; Android low: 10.
   int get maxAudioSourceCacheEntries {
+    if (isAndroid && deviceTier == DeviceTier.low) return 10;
     if (isAndroid) return 20;
     return 50;
   }
 
   /// Max number of cover art image providers to keep in the LRU cache.
   int get maxCoverArtCacheEntries {
+    if (isAndroid && deviceTier == DeviceTier.low) return 12;
     if (isAndroid) return 24;
     return 60;
   }
 
   /// Whether to allow high-quality blur effects.
-  /// Desktop always allows; Android allows but may reduce sigma.
-  bool get allowHighQualityBlur => isDesktop;
+  /// Desktop always allows; Android mid allows with reduced sigma; low disables.
+  bool get allowHighQualityBlur {
+    if (isAndroid && deviceTier == DeviceTier.low) return false;
+    return isDesktop;
+  }
 
   /// Suggested blur sigma for blurred backgrounds.
   double get backgroundBlurSigma {
-    if (isAndroid) return 20.0; // Lighter blur on mobile
+    if (isAndroid && deviceTier == DeviceTier.low) return 8.0; // Very light
+    if (isAndroid) return 16.0;
     return 30.0;
   }
 
   /// Max particle count for the visualizer.
-  /// Android: 80 (reduce CPU + RAM); Desktop: 150.
+  /// Desktop: 150; Android mid: 60; Android low: 30.
   int get maxParticleCount {
-    if (isAndroid) return 80;
+    if (isAndroid && deviceTier == DeviceTier.low) return 30;
+    if (isAndroid) return 60;
     return 150;
   }
 
   /// Max star count for the starfield visualizer.
-  /// Android: 100; Desktop: 200.
+  /// Desktop: 200; Android mid: 80; Android low: 40.
   int get maxStarCount {
-    if (isAndroid) return 100;
+    if (isAndroid && deviceTier == DeviceTier.low) return 40;
+    if (isAndroid) return 80;
     return 200;
   }
 
   /// How many audio sources to preload concurrently.
-  /// Android: 1 (sequential, prevents OOM); Desktop: 3 (fast SSD).
+  /// Android low: 1 (sequential); Android mid: 2; Desktop: 3.
   int get preloadConcurrency {
-    if (isAndroid) return 1;
+    if (isAndroid && deviceTier == DeviceTier.low) return 1;
+    if (isAndroid) return 2;
     return 3;
   }
 
   /// Whether the visualizer should run in adaptive frame-rate mode.
-  /// Always true — but threshold differs per tier.
   bool get visualizerAdaptiveFps => true;
 
   /// Frame time budget in milliseconds before the visualizer drops to half-rate.
@@ -174,10 +185,34 @@ class PlatformCapabilities {
       case DeviceTier.high:
         return 14; // ~71fps budget — drops to 30fps if over
       case DeviceTier.mid:
-        return 20; // ~50fps budget — drops to 30fps if over
+        return 22; // ~45fps budget — drops to 24fps if over
       case DeviceTier.low:
-        return 33; // ~30fps budget
+        return 33; // ~30fps fixed budget, no further drop
     }
+  }
+
+  /// Whether the visualizer should process audio amplitude data at full rate.
+  /// Low-end devices sample at half rate to reduce CPU load.
+  bool get visualizerHalfRate {
+    return isAndroid && deviceTier == DeviceTier.low;
+  }
+
+  /// Whether the animated starfield background should run.
+  /// Disabled on low-end Android to save GPU cycles.
+  bool get allowStarfieldBackground {
+    return !(isAndroid && deviceTier == DeviceTier.low);
+  }
+
+  /// Whether to enable the shimmer/skeleton loading animation on lists.
+  /// Disabled on low-end Android to reduce jank.
+  bool get allowShimmerLoading {
+    return !(isAndroid && deviceTier == DeviceTier.low);
+  }
+
+  /// Whether animated page transitions (slide/fade) are enabled.
+  /// Low-end Android gets instant transitions — no animation.
+  bool get allowPageTransitions {
+    return !(isAndroid && deviceTier == DeviceTier.low);
   }
 
   /// Whether global hotkeys (system-level) are supported.
