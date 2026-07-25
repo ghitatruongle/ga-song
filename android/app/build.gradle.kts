@@ -49,7 +49,7 @@ android {
             // (armeabi-v7a được build qua ABI splits riêng)
             ndk {
                 debugSymbolLevel = "full"
-                abiFilter "arm64-v8a"
+                abiFilters += setOf("arm64-v8a")
             }
 
             // TODO: Add your own signing config for the release build.
@@ -67,14 +67,6 @@ android {
             // Bật R8 cho debug để giảm startup time (không shrink resources)
             isMinifyEnabled = true
             isShrinkResources = false
-            isDebuggable = true
-        }
-
-        profile {
-            // Profile build: R8 + resource shrinking cho accurate performance testing
-            isMinifyEnabled = true
-            isShrinkResources = true
-            isDebuggable = true
         }
     }
 
@@ -105,9 +97,8 @@ android {
     }
 
     // AAPT options — tránh nén lại native libs (.so)
-    aaptOptions {
-        noCompress += setOf("so")
-    }
+    // Note: aaptOptions is deprecated in AGP 8.11+, use androidResources in build script instead
+    // noCompress is handled by default for .so files in modern AGP
 }
 
 flutter {
