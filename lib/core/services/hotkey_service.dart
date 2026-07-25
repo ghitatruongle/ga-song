@@ -27,12 +27,19 @@ class HotkeyService {
     'previous': 'Alt + Arrow Left',
     'volumeUp': 'Alt + Arrow Up',
     'volumeDown': 'Alt + Arrow Down',
+    // Thêm media keys chuẩn cho seek forward/backward (10s)
+    'seekForward': 'Alt + Arrow Right',
+    'seekBackward': 'Alt + Arrow Left',
   };
 
   bool _isDisposed = false;
   Completer<void>? _registrationLock;
   final _registerCompleters = <Completer<void>>[];
   DateTime _lastActionTime = DateTime(2000);
+  
+  // Double-tap detection cho play/pause
+  DateTime _lastSpacePressTime = DateTime(2000);
+  static const _doubleTapThreshold = Duration(milliseconds: 300);
 
   Future<void> init() async {
     if (kIsWeb ||
@@ -117,9 +124,9 @@ class HotkeyService {
   void _handleAction(String action) {
     if (_isDisposed) return;
 
-    // Debounce: tránh trigger liên tục khi giữ phím (tối thiểu 150ms giữa mỗi lần)
+    // Debounce: tránh trigger liên tục khi giữ phím (tối thiểu 100ms giữa mỗi lần)
     final now = DateTime.now();
-    if (now.difference(_lastActionTime).inMilliseconds < 150) return;
+    if (now.difference(_lastActionTime).inMilliseconds < 100) return;
     _lastActionTime = now;
 
     final AudioEngineService? engineService = _engine;
@@ -147,6 +154,17 @@ class HotkeyService {
       case 'volumeDown':
         final currentVol = engineService.volumeNotifier.value;
         engineService.setVolume((currentVol - 0.1).clamp(0.0, 1.0).toDouble());
+        break;
+      // Seek forward/backward (10 seconds)
+      case 'seekForward':
+        final currentPosition = engineService.positionNotifier.value;
+        final newPosition = currentPosition + const Duration(seconds: 10);
+        engineService.seek(newPosition);
+        break;
+      case 'seekBackward':
+        final currentPosition = engineService.positionNotifier.value;
+        final newPosition = currentPosition - const Duration(seconds: 10);
+        engineService.seek(newPosition < Duration.zero ? Duration.zero : newPosition);
         break;
     }
   }
@@ -273,8 +291,15 @@ class HotkeyService {
             is EditableText) {
           return false;
         }
-        _handleAction('playPause');
-        return true;
+        // Double-tap detection: double-tap space để play/pause nhanh
+        final now = DateTime.now();
+        if (now.difference(_lastSpacePressTime) < _doubleTapThreshold) {
+          _lastSpacePressTime = DateTime(2000); // Reset
+          _handleAction('playPause');
+          return true;
+        }
+        _lastSpacePressTime = now;
+        return false; // Single tap — không xử lý để tránh conflict với typing
       }
       // Media keys: chỉ xử lý khi setting mediaKeyEnabled bật
       final mediaKeyEnabled = _settings.mediaKeyEnabledNotifier.value;
