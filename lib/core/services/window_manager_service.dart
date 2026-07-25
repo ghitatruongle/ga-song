@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
@@ -95,15 +96,20 @@ class WindowManagerService with WindowListener {
           }
         }
 
-        // Restore the saved window size
-        final savedSize = _settings?.savedWindowSize;
-        if (savedSize != null) {
-          try {
-            await windowManager.setSize(savedSize);
-          } catch (e) {
-            AppLogger.w('window_manager.service', 'restore window size failed', error: e);
-          }
-        }
+        // Restore the saved window size (with DPI-aware scaling)
+    final savedSize = _settings?.savedWindowSize;
+    if (savedSize != null) {
+      try {
+        final dpiScale = _getDpiScale();
+        final scaledSize = Size(
+          savedSize.width * dpiScale,
+          savedSize.height * dpiScale,
+        );
+        await windowManager.setSize(scaledSize);
+      } catch (e) {
+        AppLogger.w('window_manager.service', 'restore window size failed', error: e);
+      }
+    }
 
         try {
           await windowManager.show();
@@ -139,17 +145,66 @@ class WindowManagerService with WindowListener {
 
   // ─── Debounced effect application ────────────────────────────────────────
 
-  /// Schedules [Window.setEffect] with a 100ms debounce.
+  /// Schedules [Window.setEffect] with a 50ms debounce (giảm từ 100ms).
   /// Prevents flicker when multiple settings change in rapid succession
   /// (e.g., dragging opacity slider, toggling theme + native effect at once).
   void _scheduleApplyEffect() {
     _effectDebounce?.cancel();
-    _effectDebounce = Timer(const Duration(milliseconds: 100), () {
+    _effectDebounce = Timer(const Duration(milliseconds: 50), () {
       _applyWindowEffect();
     });
   }
 
+  // ─── DPI-aware scaling ────────────────────────────────────────────────────
+
+  /// Returns the DPI scale factor for the current display.
+  /// Returns 1.0 on non-Windows platforms or when detection fails.
+  double _getDpiScale() {
+    if (!PlatformCapabilities.instance.isWindows) return 1.0;
+    try {
+      final devicePixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
+      // DPI scale = devicePixelRatio / basePixelRatio (usually 1.0 at 96 DPI)
+      return devicePixelRatio / 1.0;
+    } catch (e) {
+      return 1.0;
+    }
+  }
+
   // ─── Core effect application with state caching ──────────────────────────
+
+  /// Returns the preferred window effect for the current platform.
+  /// - Windows 11 23H2+: MicaTabbed (Alt+Tab optimized)
+  /// - Windows 11 older: Mica
+  /// - Windows 10: Acrylic
+  /// - macOS: Sidebar
+  /// - Linux: Transparent
+  WindowEffectType _getPreferredWindowEffect() {
+    final caps = PlatformCapabilities.instance;
+    if (caps.isWindows) {
+      if (caps.supportsMica) {
+        // Windows 11 23H2+ hỗ trợ MicaTabbed — tối ưu cho Alt+Tab
+        try {
+          final version = Platform.operatingSystemVersion;
+          final parts = version.split(RegExp(r'[ .]+'));
+          for (final part in parts) {
+            final buildNum = int.tryParse(part);
+            if (buildNum != null && buildNum > 10000) {
+              // Build 22621 = 22H2, Build 22631 = 23H2, Build 26100 = 24H2
+              if (buildNum >= 22631) return WindowEffectType.tabbed;
+              break;
+            }
+          }
+        } catch (e) {
+          AppLogger.w('window_manager.service', 'build number detection failed', error: e);
+        }
+        return WindowEffectType.mica;
+      }
+      return WindowEffectType.acrylic;
+    }
+    if (caps.isMacOS) return WindowEffectType.sidebar;
+    if (caps.isLinux) return WindowEffectType.transparent;
+    return WindowEffectType.disabled;
+  }
 
   Future<void> _applyWindowEffect() async {
     final settings = _settings;
@@ -162,7 +217,7 @@ class WindowManagerService with WindowListener {
             PlatformDispatcher.instance.platformBrightness == Brightness.dark);
 
     final effectType = useNative
-        ? PlatformCapabilities.instance.preferredWindowEffect
+        ? _getPreferredWindowEffect()
         : WindowEffectType.disabled;
 
     // Compute background color

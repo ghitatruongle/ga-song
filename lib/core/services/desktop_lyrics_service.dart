@@ -103,7 +103,7 @@ class DesktopLyricsService {
     }
   }
 
-  /// Show the lyrics overlay
+  /// Show the lyrics overlay với fade-in animation
   void show(BuildContext context) {
     if (_overlayEntry != null) return;
 
@@ -116,11 +116,18 @@ class DesktopLyricsService {
     _settingsManager.setDesktopLyricsEnabled(true);
   }
 
-  /// Hide the lyrics overlay
+  /// Hide the lyrics overlay với fade-out animation
   void hide() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+    if (_overlayEntry == null) return;
+
+    // Fade-out animation trước khi remove
     isVisibleNotifier.value = false;
+    final entry = _overlayEntry!;
+    // Remove sau một khoảng thời gian để animation hoàn thành
+    Future.delayed(const Duration(milliseconds: 200), () {
+      entry.remove();
+      _overlayEntry = null;
+    });
   }
 
   /// Toggle lyrics visibility
@@ -196,36 +203,45 @@ class _DesktopLyricsOverlayState extends State<_DesktopLyricsOverlay> {
           onPanEnd: (_) {
             setState(() => _isDragging = false);
           },
-          child: ValueListenableBuilder<double>(
-            valueListenable: widget.service.opacityNotifier,
-            builder: (context, opacity, _) {
+          child: ValueListenableBuilder<bool>(
+            valueListenable: widget.service.isVisibleNotifier,
+            builder: (context, isVisible, _) {
               return AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: opacity,
-                child: Container(
-                  width: 400,
-                  constraints: const BoxConstraints(minHeight: 100, maxHeight: 300),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      width: 1,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                opacity: isVisible ? 1.0 : 0.0,
+                child: AnimatedBuilder(
+                  animation: widget.service.opacityNotifier,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: widget.service.opacityNotifier.value,
+                      child: Container(
+                    width: 400,
+                    constraints: const BoxConstraints(minHeight: 100, maxHeight: 300),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Controls bar (shown on hover)
+                        if (_showControls)
+                          _ControlsBar(service: widget.service),
+
+                        // Lyrics content
+                        Flexible(
+                          child: _LyricsContent(service: widget.service),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Controls bar (shown on hover)
-                      if (_showControls)
-                        _ControlsBar(service: widget.service),
-
-                      // Lyrics content
-                      Flexible(
-                        child: _LyricsContent(service: widget.service),
-                      ),
-                    ],
-                  ),
+                );
+                  },
                 ),
               );
             },

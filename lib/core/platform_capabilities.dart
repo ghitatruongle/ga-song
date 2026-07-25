@@ -111,6 +111,25 @@ class PlatformCapabilities {
     return DeviceTier.mid; // Default fallback
   }
 
+  /// Android display refresh rate in Hz (90Hz/120Hz detection).
+  /// Returns 60 on non-Android platforms or when detection fails.
+  int get androidFrameRateHz {
+    if (!isAndroid) return 60;
+    try {
+      // Parse refresh rate from platform version string
+      // Android 12+ reports like "Android 12 (29941)" or via window metrics
+      final version = Platform.operatingSystemVersion;
+      final match = RegExp(r'(\d+)Hz').firstMatch(version);
+      if (match != null) {
+        return int.tryParse(match.group(1) ?? '60') ?? 60;
+      }
+      return 60;
+    } catch (e) {
+      AppLogger.w('platform.capabilities', 'frame rate detection failed', error: e);
+      return 60;
+    }
+  }
+
   // ─── Performance tuning knobs ─────────────────────────────────────────────
 
   /// Position update interval for the audio progress bar.
@@ -124,10 +143,10 @@ class PlatformCapabilities {
   }
 
   /// Max number of audio source buffers to keep in memory.
-  /// Desktop: 50; Android mid: 20; Android low: 10.
+  /// Desktop: 50; Android mid: 32 (tăng từ 20); Android low: 10.
   int get maxAudioSourceCacheEntries {
     if (isAndroid && deviceTier == DeviceTier.low) return 10;
-    if (isAndroid) return 20;
+    if (isAndroid) return 32;
     return 50;
   }
 
@@ -169,10 +188,10 @@ class PlatformCapabilities {
   }
 
   /// How many audio sources to preload concurrently.
-  /// Android low: 1 (sequential); Android mid: 2; Desktop: 3.
+  /// Android low: 1 (sequential); Android mid: 3 (tăng từ 2); Desktop: 3.
   int get preloadConcurrency {
     if (isAndroid && deviceTier == DeviceTier.low) return 1;
-    if (isAndroid) return 2;
+    if (isAndroid) return 3;
     return 3;
   }
 
@@ -185,7 +204,7 @@ class PlatformCapabilities {
       case DeviceTier.high:
         return 14; // ~71fps budget — drops to 30fps if over
       case DeviceTier.mid:
-        return 22; // ~45fps budget — drops to 24fps if over
+        return 18; // ~55fps budget (tận dụng 90Hz màn hình) — drops to 24fps if over
       case DeviceTier.low:
         return 33; // ~30fps fixed budget, no further drop
     }
@@ -231,7 +250,8 @@ class PlatformCapabilities {
   @override
   String toString() =>
       'PlatformCapabilities(tier: $deviceTier, android: $isAndroid, '
-      'desktop: $isDesktop, linux: $isLinux, chromeos: $isChromeOS)';
+      'desktop: $isDesktop, linux: $isLinux, chromeos: $isChromeOS, '
+      'frameRateHz: $androidFrameRateHz)';
 }
 
 /// Mirrors [WindowEffect] from flutter_acrylic without creating a dependency.

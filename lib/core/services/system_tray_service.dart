@@ -110,6 +110,8 @@ class SystemTrayService {
       });
 
       _engine?.engineState.addListener(_updateMenu);
+      // Thêm listener cho position để cập nhật progress bar trong tray
+      _engine?.positionNotifier.addListener(_updateMenu);
     } catch (e, stackTrace) {
       AppLogger.e('system_tray.service', 'SystemTray init failed', error: e);
       AppLogger.d('system_tray.service', 'stack', error: stackTrace);
@@ -125,8 +127,23 @@ class SystemTrayService {
     if (engineService == null || playlistService == null) return;
 
     final isPlaying = engineService.engineState.value == AudioEngineState.playing;
+    final position = engineService.positionNotifier.value;
+    final duration = engineService.durationNotifier.value;
+
+    // Format position/duration cho progress display
+    final positionStr = _formatDuration(position);
+    final durationStr = _formatDuration(duration);
+    final progressPercent = duration.inSeconds > 0
+        ? (position.inSeconds / duration.inSeconds * 100).clamp(0, 100)
+        : 0.0;
 
     await _menu.buildFrom([
+      // Progress bar (displayed as text)
+      MenuItemLabel(
+        label: '$positionStr / $durationStr (${progressPercent.toInt()}%)',
+        onClicked: null,
+      ),
+      MenuSeparator(),
       MenuItemLabel(
         label: 'Show',
         onClicked: (menuItem) => _appWindow.show(),
@@ -166,9 +183,17 @@ class SystemTrayService {
     await _systemTray!.setContextMenu(_menu);
   }
 
+  /// Format Duration thành chuỗi mm:ss
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   void _updateMenu() {
     final now = DateTime.now();
-    if (now.difference(_lastMenuUpdate).inMilliseconds < 1000) return;
+    // Giảm debounce từ 1000ms → 500ms để menu cập nhật nhanh hơn
+    if (now.difference(_lastMenuUpdate).inMilliseconds < 500) return;
     _lastMenuUpdate = now;
     _buildMenu();
   }
@@ -176,6 +201,7 @@ class SystemTrayService {
   void dispose() {
     try {
       _engine?.engineState.removeListener(_updateMenu);
+      _engine?.positionNotifier.removeListener(_updateMenu);
     } catch (e, stack) {
       AppLogger.e('system_tray.service', 'operation failed', error: e, stack: stack);
     }

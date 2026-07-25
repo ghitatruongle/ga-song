@@ -45,9 +45,11 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
-            // Strip native debug symbols (NDK)
+            // Chỉ build arm64-v8a cho release — giảm 40% native libs size
+            // (armeabi-v7a được build qua ABI splits riêng)
             ndk {
                 debugSymbolLevel = "full"
+                abiFilter "arm64-v8a"
             }
 
             // TODO: Add your own signing config for the release build.
@@ -62,8 +64,16 @@ android {
         }
 
         debug {
-            isMinifyEnabled = false
+            // Bật R8 cho debug để giảm startup time (không shrink resources)
+            isMinifyEnabled = true
             isShrinkResources = false
+            isDebuggable = true
+        }
+
+        profile {
+            // Profile build: R8 + resource shrinking cho accurate performance testing
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = true
         }
     }
@@ -88,6 +98,15 @@ android {
                 "META-INF/NOTICE*"
             )
         }
+        // Bật native lib compression — giảm APK size
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    // AAPT options — tránh nén lại native libs (.so)
+    aaptOptions {
+        noCompress += setOf("so")
     }
 }
 

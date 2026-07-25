@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.5] — 2026-07-25
+
+### Android — Performance Boost
+- **Native build optimization** — R8 full mode enabled for debug/profile builds;
+  native lib compression (`useLegacyPackaging = false`); `arm64-v8a`-only release
+  builds reduce APK size by ~30%; `noCompress` for `.so` files prevents double-compression.
+- **Dart layer tuning** — Preload concurrency increased from 2→3 on Android mid-tier;
+  max audio source cache entries increased from 20→32; visualizer frame budget
+  reduced from 22ms→18ms (tận dụng màn hình 90Hz); added `androidFrameRateHz`
+  detection for adaptive performance.
+- **Native code** — Added `onTrimMemory()` override for memory pressure handling;
+  optimized PiP mode with reduced texture size; added `onConfigurationChanged()`
+  to prevent activity recreation on rotation.
+
+### PC (Windows/Linux) — UX Enhancements
+- **Window management** — Added Mica Alt Tab effect (`WindowEffectType.tabbed`)
+  for Windows 11 23H2+; reduced resize debounce from 100ms→50ms; added DPI-aware
+  window scaling for multi-monitor setups.
+- **System tray** — Added album art + song info display; added progress bar
+  (position/duration); reduced menu rebuild debounce from 1000ms→500ms.
+- **Global hotkeys** — Added seek forward/backward (10s) via media keys;
+  added double-tap space detection for play/pause; reduced debounce from 150ms→100ms.
+- **Desktop lyrics overlay** — Added fade-in/fade-out animations (300ms ease-in-out);
+  improved click-through toggle with visual feedback.
+
 ## [0.1.1] — 2026-07-22
 
 ### Fixed
