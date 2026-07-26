@@ -28,20 +28,19 @@ class SystemTrayService {
   DateTime _lastMenuUpdate = DateTime(2000);
 
   static bool get _isDesktop =>
-      !kIsWeb &&
-      (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+      !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 
   /// Stand-in AppWindow for non-desktop platforms. The system_tray
   /// plugin's AppWindow exposes its methods as instance members that
   /// forward to the platform channel; we never call them on mobile.
   AppWindow get _noOpAppWindow => throw StateError(
-        'SystemTrayService._appWindow is unavailable on non-desktop platforms',
-      );
+    'SystemTrayService._appWindow is unavailable on non-desktop platforms',
+  );
 
   /// Stand-in Menu for non-desktop platforms.
   Menu get _noOpMenu => throw StateError(
-        'SystemTrayService._menu is unavailable on non-desktop platforms',
-      );
+    'SystemTrayService._menu is unavailable on non-desktop platforms',
+  );
 
   Future<void> init() async {
     if (!_isDesktop) {
@@ -58,14 +57,26 @@ class SystemTrayService {
           : 'assets/pic/app_logo.png';
 
       if (Platform.isWindows) {
-        final iconFile = File('${Directory.systemTemp.path}\\ga_song_app_icon.ico');
+        final iconFile = File(
+          '${Directory.systemTemp.path}\\ga_song_app_icon.ico',
+        );
         final needsWrite = !iconFile.existsSync() || iconFile.lengthSync() == 0;
         if (needsWrite) {
           try {
             final byteData = await rootBundle.load(path);
-            await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
+            await iconFile.writeAsBytes(
+              byteData.buffer.asUint8List(
+                byteData.offsetInBytes,
+                byteData.lengthInBytes,
+              ),
+              flush: true,
+            );
           } catch (e) {
-            AppLogger.w('system_tray.service', 'icon extraction failed', error: e);
+            AppLogger.w(
+              'system_tray.service',
+              'icon extraction failed',
+              error: e,
+            );
           }
         }
         path = iconFile.path;
@@ -73,14 +84,26 @@ class SystemTrayService {
 
       // Linux: cần copy icon từ assets vào temp giống Windows
       if (Platform.isLinux) {
-        final iconFile = File('${Directory.systemTemp.path}/ga_song_app_icon.png');
+        final iconFile = File(
+          '${Directory.systemTemp.path}/ga_song_app_icon.png',
+        );
         final needsWrite = !iconFile.existsSync() || iconFile.lengthSync() == 0;
         if (needsWrite) {
           try {
             final byteData = await rootBundle.load(path);
-            await iconFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes), flush: true);
+            await iconFile.writeAsBytes(
+              byteData.buffer.asUint8List(
+                byteData.offsetInBytes,
+                byteData.lengthInBytes,
+              ),
+              flush: true,
+            );
           } catch (e) {
-            AppLogger.w('system_tray.service', 'icon extraction failed (Linux)', error: e);
+            AppLogger.w(
+              'system_tray.service',
+              'icon extraction failed (Linux)',
+              error: e,
+            );
           }
         }
         path = iconFile.path;
@@ -88,13 +111,16 @@ class SystemTrayService {
 
       final iconFileCheck = File(path);
       if (!iconFileCheck.existsSync()) {
-        AppLogger.i('system_tray.service', 'icon not found, skipping init: $path');
+        AppLogger.i(
+          'system_tray.service',
+          'icon not found, skipping init: $path',
+        );
         _systemTray = null;
         return;
       }
 
       await _systemTray!.initSystemTray(title: 'G.A - Song', iconPath: path);
-      
+
       await _buildMenu();
 
       _systemTray!.registerSystemTrayEventHandler((eventName) {
@@ -126,7 +152,8 @@ class SystemTrayService {
     final playlistService = _playlist;
     if (engineService == null || playlistService == null) return;
 
-    final isPlaying = engineService.engineState.value == AudioEngineState.playing;
+    final isPlaying =
+        engineService.engineState.value == AudioEngineState.playing;
     final position = engineService.positionNotifier.value;
     final duration = engineService.durationNotifier.value;
 
@@ -144,14 +171,8 @@ class SystemTrayService {
         onClicked: null,
       ),
       MenuSeparator(),
-      MenuItemLabel(
-        label: 'Show',
-        onClicked: (menuItem) => _appWindow.show(),
-      ),
-      MenuItemLabel(
-        label: 'Hide',
-        onClicked: (menuItem) => _appWindow.hide(),
-      ),
+      MenuItemLabel(label: 'Show', onClicked: (menuItem) => _appWindow.show()),
+      MenuItemLabel(label: 'Hide', onClicked: (menuItem) => _appWindow.hide()),
       MenuSeparator(),
       MenuItemLabel(
         label: isPlaying ? 'Pause' : 'Play',
@@ -203,7 +224,12 @@ class SystemTrayService {
       _engine?.engineState.removeListener(_updateMenu);
       _engine?.positionNotifier.removeListener(_updateMenu);
     } catch (e, stack) {
-      AppLogger.e('system_tray.service', 'operation failed', error: e, stack: stack);
+      AppLogger.e(
+        'system_tray.service',
+        'operation failed',
+        error: e,
+        stack: stack,
+      );
     }
     try {
       _systemTray?.destroy();

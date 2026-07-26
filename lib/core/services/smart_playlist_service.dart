@@ -1,5 +1,5 @@
 import '../../models/song.dart';
-import 'database_service.dart';
+import 'db_service_wrapper.dart';
 
 /// Types of smart playlists that are auto-generated from the library.
 enum SmartPlaylistType {
@@ -16,7 +16,7 @@ enum SmartPlaylistType {
 /// listening history. They are not stored as regular playlists but
 /// queried on demand.
 class SmartPlaylistService {
-  final DatabaseService _databaseService;
+  final DatabaseServiceWrapper _databaseService;
 
   SmartPlaylistService(this._databaseService);
 

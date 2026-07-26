@@ -13,9 +13,7 @@ class PipService {
   static final PipService instance = PipService._();
 
   static const _pipChannel = MethodChannel('com.gasong.ga_song/pip');
-  static const _deepLinkChannel = MethodChannel(
-    'com.gasong.ga_song/deep_link',
-  );
+  static const _deepLinkChannel = MethodChannel('com.gasong.ga_song/deep_link');
 
   /// Whether the app is currently in PiP mode.
   final ValueNotifier<bool> isInPipNotifier = ValueNotifier(false);

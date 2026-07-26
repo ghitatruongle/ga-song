@@ -153,6 +153,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
   void setCurrentTabIndex(int index) {
     _manager.currentTabIndexNotifier.value = index;
   }
+
   Future<void> setEqBand(int index, double value) =>
       _manager.setEqBand(index, value);
   Future<void> setEqBass(int level) => _manager.setEqBass(level);
@@ -177,8 +178,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> setCompAttack(double attack) => _manager.setCompAttack(attack);
   Future<void> setCompRelease(double release) =>
       _manager.setCompRelease(release);
-  Future<void> setCompKneeWidth(double knee) =>
-      _manager.setCompKneeWidth(knee);
+  Future<void> setCompKneeWidth(double knee) => _manager.setCompKneeWidth(knee);
   Future<void> setCompMakeupGain(double gain) =>
       _manager.setCompMakeupGain(gain);
   Future<void> setSortMode(int mode) => _manager.setSortMode(mode);
@@ -211,8 +211,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
       _manager.setCustomBackgroundImage(path);
 
   // ─── Window State (legacy setters on manager directly) ───────────
-  Future<void> setSavedWindowState(Size size, bool isMaximized, bool isFullScreen) =>
-      _manager.setSavedWindowState(size, isMaximized, isFullScreen);
+  Future<void> setSavedWindowState(
+    Size size,
+    bool isMaximized,
+    bool isFullScreen,
+  ) => _manager.setSavedWindowState(size, isMaximized, isFullScreen);
   Future<void> setSavedWindowPosition(Offset position) =>
       _manager.setSavedWindowPosition(position);
 }

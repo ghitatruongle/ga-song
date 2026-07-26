@@ -86,9 +86,7 @@ class MacOSIntegration {
     if (!isMacOS) return;
 
     try {
-      await _channel.invokeMethod('setDockBadge', {
-        'count': count,
-      });
+      await _channel.invokeMethod('setDockBadge', {'count': count});
     } catch (e) {
       // Ignore if not supported
     }

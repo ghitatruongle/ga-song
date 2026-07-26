@@ -38,16 +38,16 @@ class AlbumGridWidget extends StatelessWidget {
                 : GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 200,
-                      // Phase 4 fix: aspect 0.75 (tile is 33% taller than
-                      // wide) gives the album-name Text enough vertical
-                      // budget for 2 lines + ellipsis on narrow mobile
-                      // viewports (~111 px wide after sidebar + padding)
-                      // without silently collapsing to a single line.
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 24,
-                      mainAxisSpacing: 24,
-                    ),
+                          maxCrossAxisExtent: 200,
+                          // Phase 4 fix: aspect 0.75 (tile is 33% taller than
+                          // wide) gives the album-name Text enough vertical
+                          // budget for 2 lines + ellipsis on narrow mobile
+                          // viewports (~111 px wide after sidebar + padding)
+                          // without silently collapsing to a single line.
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 24,
+                          mainAxisSpacing: 24,
+                        ),
                     itemCount: albums.length,
                     itemBuilder: (context, index) {
                       final albumName = albums[index];
@@ -57,10 +57,11 @@ class AlbumGridWidget extends StatelessWidget {
                         songCount: count,
                         onTap: () {
                           final playlistSongs = songs
-                              .where((s) =>
-                                  albumName == 'Chưa phân loại'
-                                      ? (s.album == null || s.album!.isEmpty)
-                                      : s.album == albumName)
+                              .where(
+                                (s) => albumName == 'Chưa phân loại'
+                                    ? (s.album == null || s.album!.isEmpty)
+                                    : s.album == albumName,
+                              )
                               .toList();
                           onAlbumTap(albumName, playlistSongs);
                         },
@@ -144,10 +145,11 @@ class _AlbumTileState extends State<_AlbumTile> {
       curve: AppCurves.decelerate,
       transform: Matrix4.identity()
         ..scaleByDouble(
-            _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
-            _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
-            1.0,
-            1.0),
+          _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
+          _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
+          1.0,
+          1.0,
+        ),
       transformAlignment: Alignment.center,
       child: GestureDetector(
         onTap: _onTap,
@@ -216,10 +218,9 @@ class _AlbumTileState extends State<_AlbumTile> {
                 const SizedBox(height: 4),
                 Flexible(
                   child: Text(
-                    AppLocalizations.of(context).translateWith(
-                      'songCount',
-                      {'count': widget.songCount.toString()},
-                    ),
+                    AppLocalizations.of(context).translateWith('songCount', {
+                      'count': widget.songCount.toString(),
+                    }),
                     style: TextStyle(
                       fontSize: 13,
                       color: adaptiveColor.withValues(alpha: 0.6),

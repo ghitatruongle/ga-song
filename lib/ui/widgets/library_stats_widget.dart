@@ -16,9 +16,7 @@ class LibraryStatsWidget extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => const Dialog(
-        child: LibraryStatsWidget(),
-      ),
+      builder: (context) => const Dialog(child: LibraryStatsWidget()),
     );
   }
 
@@ -131,7 +129,9 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
                               child: Text(
                                 genre,
                                 style: TextStyle(
-                                  color: context.adaptive.withValues(alpha: 0.7),
+                                  color: context.adaptive.withValues(
+                                    alpha: 0.7,
+                                  ),
                                 ),
                               ),
                             ),

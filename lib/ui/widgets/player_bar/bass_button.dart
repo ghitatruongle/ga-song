@@ -42,10 +42,7 @@ class BassButton extends ConsumerWidget {
                   return Row(
                     children: [
                       IconButton(
-                        icon: const Icon(
-                          Icons.timer_outlined,
-                          size: 22,
-                        ),
+                        icon: const Icon(Icons.timer_outlined, size: 22),
                         color: remaining != null
                             ? Theme.of(context).primaryColor
                             : context.adaptive.withValues(alpha: 0.7),

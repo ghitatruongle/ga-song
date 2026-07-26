@@ -16,7 +16,11 @@ void main() {
     setUp(() {
       mockEngine = MockAudioEngineService();
       mockEffect = MockAudioEffectService();
-      service = PlaylistService(mockEngine, mockEffect, MockDatabaseService());
+      service = PlaylistService(
+        mockEngine,
+        mockEffect,
+        MockDatabaseServiceWrapper(),
+      );
     });
 
     tearDown(() {
@@ -172,9 +176,27 @@ void main() {
 
       setUp(() {
         songs = [
-          createTestSong(name: 'Banana', artist: 'Zebra', sourcePath: 'a.mp3', durationMs: 300000, dateAdded: DateTime(2026, 1, 1)),
-          createTestSong(name: 'Apple', artist: 'Apple', sourcePath: 'b.mp3', durationMs: 120000, dateAdded: DateTime(2026, 3, 1)),
-          createTestSong(name: 'Cherry', artist: 'Monkey', sourcePath: 'c.mp3', durationMs: 180000, dateAdded: DateTime(2026, 2, 1)),
+          createTestSong(
+            name: 'Banana',
+            artist: 'Zebra',
+            sourcePath: 'a.mp3',
+            durationMs: 300000,
+            dateAdded: DateTime(2026, 1, 1),
+          ),
+          createTestSong(
+            name: 'Apple',
+            artist: 'Apple',
+            sourcePath: 'b.mp3',
+            durationMs: 120000,
+            dateAdded: DateTime(2026, 3, 1),
+          ),
+          createTestSong(
+            name: 'Cherry',
+            artist: 'Monkey',
+            sourcePath: 'c.mp3',
+            durationMs: 180000,
+            dateAdded: DateTime(2026, 2, 1),
+          ),
         ];
       });
 
@@ -265,7 +287,8 @@ void main() {
       test('resumes if engine is paused', () async {
         final songs = createTestSongList(3);
         await service.setPlaylist(songs);
-        mockEngine.engineState.value = mockEngine.engineState.value; // set to playing first
+        mockEngine.engineState.value =
+            mockEngine.engineState.value; // set to playing first
         await mockEngine.pause();
 
         await service.play();
@@ -351,7 +374,10 @@ void main() {
     group('sleep timer', () {
       test('startSleepTimer sets remaining notifier', () {
         service.startSleepTimer(const Duration(minutes: 30));
-        expect(service.sleepTimerRemainingNotifier.value, const Duration(minutes: 30));
+        expect(
+          service.sleepTimerRemainingNotifier.value,
+          const Duration(minutes: 30),
+        );
         expect(service.isSleepTimerActive, isTrue);
       });
 
@@ -365,7 +391,10 @@ void main() {
       test('startSleepTimer cancels previous timer', () {
         service.startSleepTimer(const Duration(minutes: 30));
         service.startSleepTimer(const Duration(minutes: 60));
-        expect(service.sleepTimerRemainingNotifier.value, const Duration(minutes: 60));
+        expect(
+          service.sleepTimerRemainingNotifier.value,
+          const Duration(minutes: 60),
+        );
       });
     });
 
@@ -377,7 +406,7 @@ void main() {
         final s = PlaylistService(
           MockAudioEngineService(),
           MockAudioEffectService(),
-          MockDatabaseService(),
+          MockDatabaseServiceWrapper(),
         );
         expect(() => s.dispose(), returnsNormally);
       });

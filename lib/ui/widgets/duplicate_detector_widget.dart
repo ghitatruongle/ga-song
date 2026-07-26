@@ -19,17 +19,17 @@ class DuplicateDetectorWidget extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => const Dialog(
-        child: DuplicateDetectorWidget(),
-      ),
+      builder: (context) => const Dialog(child: DuplicateDetectorWidget()),
     );
   }
 
   @override
-  ConsumerState<DuplicateDetectorWidget> createState() => _DuplicateDetectorWidgetState();
+  ConsumerState<DuplicateDetectorWidget> createState() =>
+      _DuplicateDetectorWidgetState();
 }
 
-class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidget> {
+class _DuplicateDetectorWidgetState
+    extends ConsumerState<DuplicateDetectorWidget> {
   List<List<Song>> _duplicateGroups = [];
   final Set<int> _selectedForDeletion = {};
   bool _isLoading = true;
@@ -49,7 +49,8 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
     final Map<String, List<Song>> groups = {};
     for (final song in songs) {
       if (song.isBuiltIn) continue; // Skip built-in songs
-      final key = '${song.name.toLowerCase()}|${song.artist?.toLowerCase() ?? ''}';
+      final key =
+          '${song.name.toLowerCase()}|${song.artist?.toLowerCase() ?? ''}';
       groups.putIfAbsent(key, () => []).add(song);
     }
 
@@ -91,7 +92,9 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
     if (mounted) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã xóa ${_selectedForDeletion.length} bài trùng')),
+        SnackBar(
+          content: Text('Đã xóa ${_selectedForDeletion.length} bài trùng'),
+        ),
       );
     }
   }
@@ -123,44 +126,44 @@ class _DuplicateDetectorWidgetState extends ConsumerState<DuplicateDetectorWidge
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _duplicateGroups.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline,
-                                size: 64,
-                                color: AppColors.success.withValues(alpha: 0.5),
-                              ),
-                              SizedBox(height: spacing.md),
-                              Text(
-                                'Không tìm thấy bài trùng',
-                                style: TextStyle(
-                                  color: context.adaptive.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 64,
+                            color: AppColors.success.withValues(alpha: 0.5),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: _duplicateGroups.length,
-                          itemBuilder: (context, groupIndex) {
-                            final group = _duplicateGroups[groupIndex];
-                            return _DuplicateGroup(
-                              songs: group,
-                              selectedIds: _selectedForDeletion,
-                              onToggle: (id, selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedForDeletion.add(id);
-                                  } else {
-                                    _selectedForDeletion.remove(id);
-                                  }
-                                });
-                              },
-                            );
+                          SizedBox(height: spacing.md),
+                          Text(
+                            'Không tìm thấy bài trùng',
+                            style: TextStyle(
+                              color: context.adaptive.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _duplicateGroups.length,
+                      itemBuilder: (context, groupIndex) {
+                        final group = _duplicateGroups[groupIndex];
+                        return _DuplicateGroup(
+                          songs: group,
+                          selectedIds: _selectedForDeletion,
+                          onToggle: (id, selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedForDeletion.add(id);
+                              } else {
+                                _selectedForDeletion.remove(id);
+                              }
+                            });
                           },
-                        ),
+                        );
+                      },
+                    ),
             ),
 
             // Actions
@@ -245,7 +248,12 @@ class _DuplicateGroupState extends State<_DuplicateGroup> {
       duration: animations ? AppDurations.short : Duration.zero,
       curve: AppCurves.decelerate,
       transform: Matrix4.identity()
-        ..scaleByDouble(_isHovered ? 1.01 : 1.0, _isHovered ? 1.01 : 1.0, 1.0, 1.0),
+        ..scaleByDouble(
+          _isHovered ? 1.01 : 1.0,
+          _isHovered ? 1.01 : 1.0,
+          1.0,
+          1.0,
+        ),
       margin: EdgeInsets.only(bottom: spacing.sm + spacing.xxs),
       decoration: BoxDecoration(
         color: groupBg,
@@ -274,114 +282,118 @@ class _DuplicateGroupState extends State<_DuplicateGroup> {
           if (animations) setState(() => _isHovered = false);
         },
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Group header
-          Padding(
-            padding: EdgeInsets.all(spacing.sm + spacing.xxs),
-            child: Text(
-              '${widget.songs.first.name} - ${widget.songs.first.artist ?? "Unknown"}',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: context.adaptive,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-
-          // Songs in group
-          ...widget.songs.asMap().entries.map((entry) {
-            final index = entry.key;
-            final song = entry.value;
-            final isSelected = widget.selectedIds.contains(song.id);
-            final isRecommended = index == 0; // First is newest (keep this one)
-
-            return Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: spacing.sm + spacing.xxs,
-                vertical: AppSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: dividerColor),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Group header
+            Padding(
+              padding: EdgeInsets.all(spacing.sm + spacing.xxs),
+              child: Text(
+                '${widget.songs.first.name} - ${widget.songs.first.artist ?? "Unknown"}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: context.adaptive,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              child: Row(
-                children: [
-                  // Checkbox
-                  if (!isRecommended)
-                    Checkbox(
-                      value: isSelected,
-                      onChanged: (value) {
-                        if (song.id != null) {
-                          widget.onToggle(song.id!, value ?? false);
-                        }
-                      },
-                    )
-                  else
-                    SizedBox(width: spacing.sm + spacing.md + spacing.sm),
+            ),
 
-                  const SizedBox(width: AppSpacing.sm),
+            // Songs in group
+            ...widget.songs.asMap().entries.map((entry) {
+              final index = entry.key;
+              final song = entry.value;
+              final isSelected = widget.selectedIds.contains(song.id);
+              final isRecommended =
+                  index == 0; // First is newest (keep this one)
 
-                  // Song info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            if (isRecommended)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.sm - 2,
-                                  vertical: AppSpacing.xxs,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.2),
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.sm - 4),
-                                ),
-                                child: const Text(
-                                  'GIỮ LẠI',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.success,
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.sm + spacing.xxs,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: dividerColor)),
+                ),
+                child: Row(
+                  children: [
+                    // Checkbox
+                    if (!isRecommended)
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (value) {
+                          if (song.id != null) {
+                            widget.onToggle(song.id!, value ?? false);
+                          }
+                        },
+                      )
+                    else
+                      SizedBox(width: spacing.sm + spacing.md + spacing.sm),
+
+                    const SizedBox(width: AppSpacing.sm),
+
+                    // Song info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              if (isRecommended)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.sm - 2,
+                                    vertical: AppSpacing.xxs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.success.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.sm - 4,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'GIỮ LẠI',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.success,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                song.fileName,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.adaptive.withValues(alpha: 0.5),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  song.fileName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context.adaptive.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                          if (song.dateAdded != null)
+                            Text(
+                              'Thêm: ${song.dateAdded!.day}/${song.dateAdded!.month}/${song.dateAdded!.year}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.adaptive.withValues(alpha: 0.4),
                               ),
                             ),
-                          ],
-                        ),
-                        if (song.dateAdded != null)
-                          Text(
-                            'Thêm: ${song.dateAdded!.day}/${song.dateAdded!.month}/${song.dateAdded!.year}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: context.adaptive.withValues(alpha: 0.4),
-                            ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }

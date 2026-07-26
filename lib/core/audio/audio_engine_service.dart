@@ -26,10 +26,10 @@ const int _kCrossfadeSteps = 20;
 enum CrossfadeCurve {
   /// Linear interpolation (equal power)
   linear,
-  
+
   /// Exponential curve (faster start, slower end)
   exponential,
-  
+
   /// S-curve (smooth start and end)
   sCurve,
 }
@@ -58,7 +58,7 @@ class AudioEngineService with WidgetsBindingObserver {
   // ─── LRU Cache ───────────────────────────────────────────────────────────
   final Map<String, _CacheEntry> _sourceCache = {};
   final Map<String, Future<AudioSource?>> _sourceLoadFutures = {};
-  
+
   /// Tracks last-access timestamps for LRU eviction.
   int _cacheAccessCounter = 0;
   int _totalCacheHits = 0;
@@ -68,8 +68,9 @@ class AudioEngineService with WidgetsBindingObserver {
   SoundHandle? _crossfadeHandle;
   StreamSubscription<void>? _songEndSub;
 
-  final ValueNotifier<AudioEngineState> engineState =
-      ValueNotifier(AudioEngineState.idle);
+  final ValueNotifier<AudioEngineState> engineState = ValueNotifier(
+    AudioEngineState.idle,
+  );
   final ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> durationNotifier = ValueNotifier(Duration.zero);
   final ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
@@ -161,12 +162,18 @@ class AudioEngineService with WidgetsBindingObserver {
       final epsilon = PlatformCapabilities.instance.isWindows
           ? _kPositionEpsilonDesktop
           : _kPositionEpsilonMobile;
-      final delta = (pos.inMilliseconds - positionNotifier.value.inMilliseconds).abs();
+      final delta = (pos.inMilliseconds - positionNotifier.value.inMilliseconds)
+          .abs();
       if (delta > epsilon) {
         positionNotifier.value = pos;
       }
     } catch (e, stack) {
-      AppLogger.e('audio.engine_service', 'position tick failed', error: e, stack: stack);
+      AppLogger.e(
+        'audio.engine_service',
+        'position tick failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -189,7 +196,10 @@ class AudioEngineService with WidgetsBindingObserver {
         if (normalizedPath.startsWith('assets/')) {
           // Load asset bytes on main thread (required by rootBundle)
           final bytes = await rootBundle.load(normalizedPath);
-          data = bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
+          data = bytes.buffer.asUint8List(
+            bytes.offsetInBytes,
+            bytes.lengthInBytes,
+          );
         } else {
           // Load local file bytes
           final file = File(normalizedPath);
@@ -198,22 +208,27 @@ class AudioEngineService with WidgetsBindingObserver {
           }
           data = await file.readAsBytes();
         }
-        
+
         // Decode audio via SoLoud (native C++ — runs off main thread internally)
-        final source = await _soloud.loadMem(
-          normalizedPath,
-          data,
-        );
-        
+        final source = await _soloud.loadMem(normalizedPath, data);
+
         // Enforce LRU cache max size
         _evictIfNeeded();
-        
-        _sourceCache[normalizedPath] = _CacheEntry(source, ++_cacheAccessCounter);
+
+        _sourceCache[normalizedPath] = _CacheEntry(
+          source,
+          ++_cacheAccessCounter,
+        );
         // Track cache size for performance profiling
         PerformanceProbe.instance.recordCacheSize(_sourceCache.length);
         return source;
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'Source load failed for $normalizedPath', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'Source load failed for $normalizedPath',
+          error: e,
+          stack: stack,
+        );
         return null;
       } finally {
         _sourceLoadFutures.remove(normalizedPath);
@@ -225,11 +240,11 @@ class AudioEngineService with WidgetsBindingObserver {
   void _evictIfNeeded() {
     final maxEntries = PlatformCapabilities.instance.maxAudioSourceCacheEntries;
     if (_sourceCache.length <= maxEntries) return;
-    
+
     // Sort by access order (oldest first) and remove excess
     final entries = _sourceCache.entries.toList()
       ..sort((a, b) => a.value.accessOrder.compareTo(b.value.accessOrder));
-    
+
     final toRemove = entries.take(_sourceCache.length - maxEntries);
     for (final entry in toRemove) {
       final removed = _sourceCache.remove(entry.key);
@@ -238,7 +253,12 @@ class AudioEngineService with WidgetsBindingObserver {
         try {
           _soloud.disposeSource(removed.source);
         } catch (e, stack) {
-          AppLogger.e('audio.engine_service', 'source dispose failed during eviction', error: e, stack: stack);
+          AppLogger.e(
+            'audio.engine_service',
+            'source dispose failed during eviction',
+            error: e,
+            stack: stack,
+          );
         }
       }
     }
@@ -252,7 +272,9 @@ class AudioEngineService with WidgetsBindingObserver {
   }
 
   Future<void> evictSources(Set<String> keepAssetPaths) async {
-    final normalizedKeepPaths = keepAssetPaths.map((path) => path.replaceAll('\\', '/')).toSet();
+    final normalizedKeepPaths = keepAssetPaths
+        .map((path) => path.replaceAll('\\', '/'))
+        .toSet();
     final toRemove = _sourceCache.keys
         .where((path) => !normalizedKeepPaths.contains(path))
         .toList();
@@ -263,7 +285,12 @@ class AudioEngineService with WidgetsBindingObserver {
       try {
         await _soloud.disposeSource(entry.source);
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'source dispose failed during eviction', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'source dispose failed during eviction',
+          error: e,
+          stack: stack,
+        );
       }
     }
   }
@@ -316,12 +343,17 @@ class AudioEngineService with WidgetsBindingObserver {
         if (!_isDisposed && !_isPlayingNext) {
           engineState.value = AudioEngineState.stopped;
           if (!_isCrossfading && !_songCompletedController.isClosed) {
-             _songCompletedController.add(null);
+            _songCompletedController.add(null);
           }
         }
       });
     } catch (e, stack) {
-      AppLogger.e('audio.engine_service', 'playAsset failed', error: e, stack: stack);
+      AppLogger.e(
+        'audio.engine_service',
+        'playAsset failed',
+        error: e,
+        stack: stack,
+      );
       engineState.value = AudioEngineState.error;
     } finally {
       _isPlayingNext = false;
@@ -339,7 +371,12 @@ class AudioEngineService with WidgetsBindingObserver {
           _soloud.setPause(handle, false);
         }
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'resume failed', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'resume failed',
+          error: e,
+          stack: stack,
+        );
       }
     }
     if (crossHandle != null) {
@@ -348,7 +385,12 @@ class AudioEngineService with WidgetsBindingObserver {
           _soloud.setPause(crossHandle, false);
         }
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'resume crossfade failed', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'resume crossfade failed',
+          error: e,
+          stack: stack,
+        );
       }
     }
     if (hadAnyHandle) {
@@ -363,7 +405,12 @@ class AudioEngineService with WidgetsBindingObserver {
       try {
         _soloud.setPause(handle, true);
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'pause failed', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'pause failed',
+          error: e,
+          stack: stack,
+        );
       }
     }
     final crossHandle = _crossfadeHandle;
@@ -371,7 +418,12 @@ class AudioEngineService with WidgetsBindingObserver {
       try {
         _soloud.setPause(crossHandle, true);
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'pause crossfade failed', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'pause crossfade failed',
+          error: e,
+          stack: stack,
+        );
       }
     }
     engineState.value = AudioEngineState.paused;
@@ -392,7 +444,12 @@ class AudioEngineService with WidgetsBindingObserver {
       _soloud.seek(handle, position);
       positionNotifier.value = position;
     } catch (e, stack) {
-      AppLogger.e('audio.engine_service', 'seek failed', error: e, stack: stack);
+      AppLogger.e(
+        'audio.engine_service',
+        'seek failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -415,7 +472,12 @@ class AudioEngineService with WidgetsBindingObserver {
         _soloud.setVolume(_currentHandle!, _volume * _normalizationGain);
       }
     } catch (e, stack) {
-      AppLogger.e('audio.engine_service', 'applyVolume failed', error: e, stack: stack);
+      AppLogger.e(
+        'audio.engine_service',
+        'applyVolume failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -469,28 +531,27 @@ class AudioEngineService with WidgetsBindingObserver {
         try {
           // Calculate progress (0.0 → 1.0)
           final progress = currentStep / _kCrossfadeSteps;
-          
+
           // Apply curve transformation
           final curvedProgress = _applyCrossfadeCurve(progress, curve);
-          
+
           if (_currentHandle != null) {
             // Fade out current song
             final fadeOutVolume = currentFullVolume * (1.0 - curvedProgress);
-            _soloud.setVolume(
-              _currentHandle!,
-              fadeOutVolume.clamp(0.0, 1.0),
-            );
+            _soloud.setVolume(_currentHandle!, fadeOutVolume.clamp(0.0, 1.0));
           }
           if (_crossfadeHandle != null) {
             // Fade in next song
             final fadeInVolume = targetVolume * curvedProgress;
-            _soloud.setVolume(
-              _crossfadeHandle!,
-              fadeInVolume.clamp(0.0, 1.0),
-            );
+            _soloud.setVolume(_crossfadeHandle!, fadeInVolume.clamp(0.0, 1.0));
           }
         } catch (e, stack) {
-          AppLogger.e('audio.engine_service', 'crossfade step failed', error: e, stack: stack);
+          AppLogger.e(
+            'audio.engine_service',
+            'crossfade step failed',
+            error: e,
+            stack: stack,
+          );
         }
 
         if (currentStep >= _kCrossfadeSteps) {
@@ -529,7 +590,12 @@ class AudioEngineService with WidgetsBindingObserver {
         });
       }
     } catch (e, stack) {
-      AppLogger.e('audio.engine_service', 'crossfade failed', error: e, stack: stack);
+      AppLogger.e(
+        'audio.engine_service',
+        'crossfade failed',
+        error: e,
+        stack: stack,
+      );
     } finally {
       _isCrossfading = false;
       _crossfadeHandle = null;
@@ -559,10 +625,15 @@ class AudioEngineService with WidgetsBindingObserver {
         try {
           _soloud.stop(handle);
         } catch (e, stack) {
-          AppLogger.e('audio.engine_service', 'cleanup handle failed', error: e, stack: stack);
+          AppLogger.e(
+            'audio.engine_service',
+            'cleanup handle failed',
+            error: e,
+            stack: stack,
+          );
         }
       }
-      
+
       final crossHandle = _crossfadeHandle;
       _crossfadeHandle = null;
       _isCrossfading = false;
@@ -572,7 +643,12 @@ class AudioEngineService with WidgetsBindingObserver {
         try {
           _soloud.stop(crossHandle);
         } catch (e, stack) {
-          AppLogger.e('audio.engine_service', 'cleanup crossfade handle failed', error: e, stack: stack);
+          AppLogger.e(
+            'audio.engine_service',
+            'cleanup crossfade handle failed',
+            error: e,
+            stack: stack,
+          );
         }
       }
     } finally {
@@ -585,7 +661,12 @@ class AudioEngineService with WidgetsBindingObserver {
       try {
         await _soloud.disposeSource(entry.source);
       } catch (e, stack) {
-        AppLogger.e('audio.engine_service', 'dispose cached source failed', error: e, stack: stack);
+        AppLogger.e(
+          'audio.engine_service',
+          'dispose cached source failed',
+          error: e,
+          stack: stack,
+        );
       }
     }
     _sourceCache.clear();
@@ -602,12 +683,12 @@ class AudioEngineService with WidgetsBindingObserver {
     switch (curve) {
       case CrossfadeCurve.linear:
         return progress;
-      
+
       case CrossfadeCurve.exponential:
         // Exponential: faster start, slower end
         // Uses x² curve for smoother transition
         return progress * progress;
-      
+
       case CrossfadeCurve.sCurve:
         // S-curve: smooth start and end
         // Uses smoothstep function: 3x² - 2x³
@@ -616,7 +697,7 @@ class AudioEngineService with WidgetsBindingObserver {
   }
 
   // ─── Diagnostics ───────────────────────────────────────────────────────────
-  
+
   /// Returns cache performance metrics for debugging/profiling.
   Map<String, dynamic> get cacheDiagnostics => {
     'cacheSize': _sourceCache.length,
@@ -624,7 +705,8 @@ class AudioEngineService with WidgetsBindingObserver {
     'hits': _totalCacheHits,
     'misses': _totalCacheMisses,
     'hitRate': _totalCacheHits + _totalCacheMisses > 0
-        ? (_totalCacheHits / (_totalCacheHits + _totalCacheMisses) * 100).toStringAsFixed(1)
+        ? (_totalCacheHits / (_totalCacheHits + _totalCacheMisses) * 100)
+              .toStringAsFixed(1)
         : 'N/A',
     'loadFutures': _sourceLoadFutures.length,
   };

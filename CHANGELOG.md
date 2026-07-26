@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.0] — 2026-07-26
+
+### 🚀 Major Update (The "Next-Gen" Architecture)
+
+#### Core & Architecture
+- **Drift ORM Migration**: Completely replaced raw `sqflite` with `Drift` for type-safe database queries and reactive streams.
+- **Auto Data Migration**: Safely migrates user playlists and play history from v0.1.x without data loss via `MigrationService`.
+- **Riverpod 3.0**: Upgraded state management to modern `NotifierProvider` and removed obsolete `StateNotifier`.
+
+#### UI/UX & Material 3
+- **Dynamic Color (Color Seed)**: The app's entire theme now automatically extracts and adapts to the dominant color of the currently playing song's cover art using `PaletteGenerator`.
+- **Haptic Feedback**: Added `FeedbackService` to trigger highly satisfying subtle physical vibrations on user interactions (play, pause, next, sliders).
+
+#### New Features
+- **Smart Playlists**: Auto-generated dynamic playlists based on user listening history (Most Played, Recently Played, Favorites, Recently Added, Discovery).
+- **Tag Editor**: View and modify internal ID3 audio tags (Title, Artist, Album, Year, Genre) of local files directly within the app using `audiotags`.
+
 ## [0.1.5] — 2026-07-25
 
 ### Android — Performance Boost

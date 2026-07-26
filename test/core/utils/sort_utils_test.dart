@@ -42,7 +42,11 @@ void main() {
     });
 
     test('sort by name descending', () {
-      final result = SongSortUtils.sorted(songs, SortMode.name, ascending: false);
+      final result = SongSortUtils.sorted(
+        songs,
+        SortMode.name,
+        ascending: false,
+      );
       expect(result[0].name, 'Delta');
       expect(result[1].name, 'Charlie');
       expect(result[2].name, 'Alpha');
@@ -56,7 +60,11 @@ void main() {
     });
 
     test('sort by artist descending', () {
-      final result = SongSortUtils.sorted(songs, SortMode.artist, ascending: false);
+      final result = SongSortUtils.sorted(
+        songs,
+        SortMode.artist,
+        ascending: false,
+      );
       expect(result[0].artist, 'Zeta');
       expect(result[1].artist, 'Beta');
       expect(result[2].artist, 'Alpha');
@@ -66,34 +74,38 @@ void main() {
       final original = List<Song>.from(songs);
       SongSortUtils.sorted(songs, SortMode.name);
       expect(songs.map((s) => s.name).toList(), ['Delta', 'Alpha', 'Charlie']);
-      expect(original.map((s) => s.name).toList(), ['Delta', 'Alpha', 'Charlie']);
+      expect(original.map((s) => s.name).toList(), [
+        'Delta',
+        'Alpha',
+        'Charlie',
+      ]);
     });
 
     group('null / empty artist handling', () {
       test('empty artist sorts to end ascending', () {
         final songsWithNull = [
           Song(name: 'A', sourcePath: 'a.mp3', artist: 'Beta'),
-          Song(name: 'B', sourcePath: 'b.mp3', artist: ''),  // empty artist
+          Song(name: 'B', sourcePath: 'b.mp3', artist: ''), // empty artist
           Song(name: 'C', sourcePath: 'c.mp3', artist: 'Alpha'),
         ];
         final result = SongSortUtils.sorted(songsWithNull, SortMode.artist);
         // '' should be last — songs with no artist metadata should not
         // interrupt alphabetically ordered groups.
-        expect(result[0].name, 'C');  // Alpha
-        expect(result[1].name, 'A');  // Beta
-        expect(result[2].name, 'B');  // '' (empty — pushed to end)
+        expect(result[0].name, 'C'); // Alpha
+        expect(result[1].name, 'A'); // Beta
+        expect(result[2].name, 'B'); // '' (empty — pushed to end)
       });
 
       test('null artist sorts to end ascending', () {
         final songsWithNull = [
           Song(name: 'A', sourcePath: 'a.mp3', artist: 'Beta'),
-          Song(name: 'B', sourcePath: 'b.mp3'),  // null artist
+          Song(name: 'B', sourcePath: 'b.mp3'), // null artist
           Song(name: 'C', sourcePath: 'c.mp3', artist: 'Alpha'),
         ];
         final result = SongSortUtils.sorted(songsWithNull, SortMode.artist);
-        expect(result[0].name, 'C');  // Alpha
-        expect(result[1].name, 'A');  // Beta
-        expect(result[2].name, 'B');  // null
+        expect(result[0].name, 'C'); // Alpha
+        expect(result[1].name, 'A'); // Beta
+        expect(result[2].name, 'B'); // null
       });
     });
 
@@ -104,7 +116,10 @@ void main() {
           Song(name: 'Short', sourcePath: 's.mp3', durationMs: 120000),
           Song(name: 'Medium', sourcePath: 'm.mp3', durationMs: 200000),
         ];
-        final result = SongSortUtils.sorted(songsWithDuration, SortMode.duration);
+        final result = SongSortUtils.sorted(
+          songsWithDuration,
+          SortMode.duration,
+        );
         expect(result[0].name, 'Short');
         expect(result[1].name, 'Medium');
         expect(result[2].name, 'Long');
@@ -126,9 +141,21 @@ void main() {
     group('dateAdded sorting', () {
       test('sort by dateAdded ascending', () {
         final songsWithDates = [
-          Song(name: 'Old', sourcePath: 'old.mp3', dateAdded: DateTime(2026, 1, 1)),
-          Song(name: 'New', sourcePath: 'new.mp3', dateAdded: DateTime(2026, 5, 18)),
-          Song(name: 'Mid', sourcePath: 'mid.mp3', dateAdded: DateTime(2026, 3, 10)),
+          Song(
+            name: 'Old',
+            sourcePath: 'old.mp3',
+            dateAdded: DateTime(2026, 1, 1),
+          ),
+          Song(
+            name: 'New',
+            sourcePath: 'new.mp3',
+            dateAdded: DateTime(2026, 5, 18),
+          ),
+          Song(
+            name: 'Mid',
+            sourcePath: 'mid.mp3',
+            dateAdded: DateTime(2026, 3, 10),
+          ),
         ];
         final result = SongSortUtils.sorted(songsWithDates, SortMode.dateAdded);
         expect(result[0].name, 'Old');
@@ -138,11 +165,22 @@ void main() {
 
       test('null dateAdded treated as epoch (sorts first ascending)', () {
         final songsMixedDates = [
-          Song(name: 'Has Date', sourcePath: 'a.mp3', dateAdded: DateTime(2026, 5, 1)),
+          Song(
+            name: 'Has Date',
+            sourcePath: 'a.mp3',
+            dateAdded: DateTime(2026, 5, 1),
+          ),
           Song(name: 'No Date', sourcePath: 'b.mp3'),
-          Song(name: 'Old', sourcePath: 'c.mp3', dateAdded: DateTime(2026, 1, 1)),
+          Song(
+            name: 'Old',
+            sourcePath: 'c.mp3',
+            dateAdded: DateTime(2026, 1, 1),
+          ),
         ];
-        final result = SongSortUtils.sorted(songsMixedDates, SortMode.dateAdded);
+        final result = SongSortUtils.sorted(
+          songsMixedDates,
+          SortMode.dateAdded,
+        );
         expect(result[0].name, 'No Date');
         expect(result[1].name, 'Old');
         expect(result[2].name, 'Has Date');

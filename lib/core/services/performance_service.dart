@@ -31,7 +31,10 @@ class PerformanceService {
     _metrics.putIfAbsent(name, () => []).add(timer.elapsed);
 
     if (kDebugMode) {
-      AppLogger.d('performance.service', '$name took ${timer.elapsedMilliseconds}ms');
+      AppLogger.d(
+        'performance.service',
+        '$name took ${timer.elapsedMilliseconds}ms',
+      );
     }
 
     return timer.elapsed;
@@ -94,12 +97,10 @@ class PerformanceService {
   /// Gets all metrics as a map.
   Map<String, Duration> getAllAverages() {
     return Map.fromEntries(
-      _metrics.keys
-          .map((name) {
-            final avg = getAverageTime(name);
-            return avg != null ? MapEntry(name, avg) : null;
-          })
-          .whereType<MapEntry<String, Duration>>(),
+      _metrics.keys.map((name) {
+        final avg = getAverageTime(name);
+        return avg != null ? MapEntry(name, avg) : null;
+      }).whereType<MapEntry<String, Duration>>(),
     );
   }
 

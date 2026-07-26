@@ -45,7 +45,8 @@ class AppLocalizations {
     'errorInit': 'Lỗi khởi tạo Audio Engine',
     'errorRestart': 'Vui lòng khởi động lại ứng dụng',
     'permissionMic': 'Ứng dụng cần quyền truy cập Microphone để hát KTV!',
-    'permissionDenied': 'Quyền Microphone đã bị từ chối. Vui lòng cấp lại trong Cài đặt.',
+    'permissionDenied':
+        'Quyền Microphone đã bị từ chối. Vui lòng cấp lại trong Cài đặt.',
     'greetingMorning': 'Chào buổi sáng,',
     'greetingAfternoon': 'Chào buổi chiều,',
     'greetingEvening': 'Chào buổi tối,',
@@ -61,7 +62,8 @@ class AppLocalizations {
     'find': 'Tìm',
     'nowPlaying': 'Đang phát âm thanh',
     'guide': 'Hướng dẫn',
-    'guideContent': 'Giúp bạn nghe bất kỳ bài hát nào từ kho tàng YouTube.\n\nDán link YouTube vào ô tìm kiếm và nhấn Tìm.',
+    'guideContent':
+        'Giúp bạn nghe bất kỳ bài hát nào từ kho tàng YouTube.\n\nDán link YouTube vào ô tìm kiếm và nhấn Tìm.',
     'playing': 'Đang phát',
     'hideVideo': 'Ẩn Video (Chỉ nghe nhạc)',
     'showVideo': 'Hiện Video',
@@ -87,7 +89,8 @@ class AppLocalizations {
     'shortcuts': 'Phím tắt',
     'advanced': 'Nâng cao',
     'noSongsYet': 'Chưa có bài hát nào',
-    'addSongsHint': 'Thêm file nhạc vào thư mục assets/song/\nvà cập nhật file songs.json',
+    'addSongsHint':
+        'Thêm file nhạc vào thư mục assets/song/\nvà cập nhật file songs.json',
     'cannotLoadLibrary': 'Không thể tải thư viện bài hát',
     'retry': 'Thử tải lại',
     'allSongs': 'Tất cả bài hát',
@@ -132,7 +135,8 @@ class AppLocalizations {
     'errorInit': 'Audio Engine initialization error',
     'errorRestart': 'Please restart the application',
     'permissionMic': 'Microphone permission is required for KTV!',
-    'permissionDenied': 'Microphone permission denied. Please grant it in Settings.',
+    'permissionDenied':
+        'Microphone permission denied. Please grant it in Settings.',
     'greetingMorning': 'Good morning,',
     'greetingAfternoon': 'Good afternoon,',
     'greetingEvening': 'Good evening,',
@@ -148,7 +152,8 @@ class AppLocalizations {
     'find': 'Search',
     'nowPlaying': 'Now playing',
     'guide': 'Guide',
-    'guideContent': 'Help you listen to any song from YouTube.\n\nPaste a YouTube link in the search box and press Search.',
+    'guideContent':
+        'Help you listen to any song from YouTube.\n\nPaste a YouTube link in the search box and press Search.',
     'playing': 'Playing',
     'hideVideo': 'Hide Video (Audio only)',
     'showVideo': 'Show Video',
@@ -298,7 +303,8 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   bool isSupported(Locale locale) => ['vi', 'en'].contains(locale.languageCode);
 
   @override
-  Future<AppLocalizations> load(Locale locale) async => AppLocalizations(locale);
+  Future<AppLocalizations> load(Locale locale) async =>
+      AppLocalizations(locale);
 
   @override
   bool shouldReload(AppLocalizationsDelegate old) => false;

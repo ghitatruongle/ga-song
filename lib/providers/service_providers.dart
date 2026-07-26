@@ -9,18 +9,31 @@ import '../core/settings_manager.dart';
 import '../core/services/hotkey_service.dart';
 import '../core/services/system_tray_service.dart';
 import '../core/services/window_manager_service.dart';
-import '../core/services/database_service.dart';
+import '../core/services/db_service_wrapper.dart';
+import '../core/database/app_database.dart';
 import '../core/services/desktop_lyrics_service.dart';
 import '../core/services/smart_playlist_service.dart';
 import '../core/services/online_lyrics_service.dart';
+import '../core/services/feedback_service.dart';
 export '../core/settings/settings_notifier.dart';
 export 'state_providers.dart';
 
 // ─── Core services ─────────────────────────────────────────────────────
 
+final feedbackServiceProvider = Provider<FeedbackService>((ref) {
+  return FeedbackService(ref.watch(settingsManagerProvider));
+});
+
 /// Database service for songs, playlists, and cover art cache.
-final databaseServiceProvider = Provider<DatabaseService>((ref) {
-  final service = DatabaseService();
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase();
+  ref.onDispose(() => db.close());
+  return db;
+});
+
+/// Database service for songs, playlists, and cover art cache.
+final databaseServiceProvider = Provider<DatabaseServiceWrapper>((ref) {
+  final service = DatabaseServiceWrapper(ref.watch(appDatabaseProvider));
   ref.onDispose(() => service.dispose());
   return service;
 });

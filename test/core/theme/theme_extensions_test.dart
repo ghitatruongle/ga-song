@@ -8,15 +8,8 @@ void main() {
     // Helper: build an AppSpacingExtension with the given md and zero for
     // all other fields. The lerp tests only assert on `md`, so other
     // field values are arbitrary — they just need to compile.
-    AppSpacingExtension withMd(double md) => AppSpacingExtension(
-          xxs: 0,
-          xs: 0,
-          sm: 0,
-          md: md,
-          lg: 0,
-          xl: 0,
-          xxl: 0,
-        );
+    AppSpacingExtension withMd(double md) =>
+        AppSpacingExtension(xxs: 0, xs: 0, sm: 0, md: md, lg: 0, xl: 0, xxl: 0);
 
     test('lerp returns interpolated value at t=0.5', () {
       final a = withMd(8.0);
@@ -64,8 +57,18 @@ void main() {
 
   group('AppElevationExtension', () {
     test('lerp interpolates level0 to level2', () {
-      const a = AppElevationExtension(level0: 0, level1: 0, level2: 0, level3: 0);
-      const b = AppElevationExtension(level0: 4, level1: 6, level2: 8, level3: 12);
+      const a = AppElevationExtension(
+        level0: 0,
+        level1: 0,
+        level2: 0,
+        level3: 0,
+      );
+      const b = AppElevationExtension(
+        level0: 4,
+        level1: 6,
+        level2: 8,
+        level3: 12,
+      );
       final lerped = a.lerp(b, 0.5);
       expect(lerped.level0, 2.0);
       expect(lerped.level1, 3.0);
@@ -78,15 +81,23 @@ void main() {
   });
 
   group('ThemeData integration', () {
-    testWidgets('extensions are retrievable via Theme.of(context)', (tester) async {
+    testWidgets('extensions are retrievable via Theme.of(context)', (
+      tester,
+    ) async {
       const ext = AppSpacingExtension.defaults();
-      await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(extensions: const [ext]),
-        home: Builder(builder: (context) {
-          final spacing = Theme.of(context).extension<AppSpacingExtension>()!;
-          return Text('md=${spacing.md}');
-        }),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [ext]),
+          home: Builder(
+            builder: (context) {
+              final spacing = Theme.of(
+                context,
+              ).extension<AppSpacingExtension>()!;
+              return Text('md=${spacing.md}');
+            },
+          ),
+        ),
+      );
       expect(find.text('md=${AppSpacing.md}'), findsOneWidget);
     });
   });

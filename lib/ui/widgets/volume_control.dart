@@ -28,8 +28,8 @@ class _VolumeControlState extends ConsumerState<VolumeControl> {
             volume == 0
                 ? Icons.volume_off_rounded
                 : volume < 0.5
-                    ? Icons.volume_down_rounded
-                    : Icons.volume_up_rounded,
+                ? Icons.volume_down_rounded
+                : Icons.volume_up_rounded,
             color: context.adaptiveSecondary,
             size: 22,
           ),
@@ -50,20 +50,13 @@ class _VolumeControlState extends ConsumerState<VolumeControl> {
           child: SliderTheme(
             data: SliderThemeData(
               trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(
-                enabledThumbRadius: 5,
-              ),
-              overlayShape: const RoundSliderOverlayShape(
-                overlayRadius: 10,
-              ),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
               activeTrackColor: context.adaptive,
               inactiveTrackColor: context.adaptive.withValues(alpha: 0.2),
               thumbColor: context.adaptive,
             ),
-            child: Slider(
-              value: volume,
-              onChanged: engine.setVolume,
-            ),
+            child: Slider(value: volume, onChanged: engine.setVolume),
           ),
         ),
       ],

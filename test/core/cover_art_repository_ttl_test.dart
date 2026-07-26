@@ -11,15 +11,18 @@ void main() {
       isAsset: false,
     );
     final after = DateTime.now();
-    expect(entry.capturedAt.isAfter(before.subtract(const Duration(seconds: 1))), isTrue);
-    expect(entry.capturedAt.isBefore(after.add(const Duration(seconds: 1))), isTrue);
+    expect(
+      entry.capturedAt.isAfter(before.subtract(const Duration(seconds: 1))),
+      isTrue,
+    );
+    expect(
+      entry.capturedAt.isBefore(after.add(const Duration(seconds: 1))),
+      isTrue,
+    );
   });
 
   test('CoverArtEntry.isFresh returns true when within TTL', () {
-    final entry = _entryWith(
-      fileName: 'a.png',
-      capturedAt: DateTime.now(),
-    );
+    final entry = _entryWith(fileName: 'a.png', capturedAt: DateTime.now());
     expect(entry.isFresh(ttl: const Duration(minutes: 30)), isTrue);
   });
 

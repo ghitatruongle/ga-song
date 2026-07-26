@@ -159,9 +159,12 @@ StarFieldSnapshot computeStarField(StarFieldComputeInput input) {
   const paletteSize = 20;
   final palette = List<int>.generate(
     paletteSize,
-    (i) => HSVColor.fromAHSV(1.0, (i * 360.0 / paletteSize) % 360.0, 0.8, 0.9)
-        .toColor()
-        .toARGB32(),
+    (i) => HSVColor.fromAHSV(
+      1.0,
+      (i * 360.0 / paletteSize) % 360.0,
+      0.8,
+      0.9,
+    ).toColor().toARGB32(),
   );
 
   // Guard against zero-sized inputs (degenerate but possible before first
@@ -240,7 +243,8 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
       _isAppInBackground = true;
       _stopTicker();
     } else if (state == AppLifecycleState.resumed) {
@@ -252,19 +256,18 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   static const int fftSampleCount = 256;
   static final int maxParticleCount =
       PlatformCapabilities.instance.maxParticleCount;
-  static final int starCount =
-      PlatformCapabilities.instance.maxStarCount;
+  static final int starCount = PlatformCapabilities.instance.maxStarCount;
 
   static const double _fftSmoothFactor = 0.45;
   static const double _fftNewFactor = 0.55;
   static const double _energyDivisor = 64.0;
 
   static const List<double> _frequencyWeights = [
-    2.0,  // 0-51:   Sub-bass — nhạy gấp đôi
-    1.8,  // 52-102: Bass
-    1.4,  // 103-153: Low-mid
-    1.0,  // 154-204: Mid — bình thường
-    0.8,  // 205-255: High — giảm noise
+    2.0, // 0-51:   Sub-bass — nhạy gấp đôi
+    1.8, // 52-102: Bass
+    1.4, // 103-153: Low-mid
+    1.0, // 154-204: Mid — bình thường
+    0.8, // 205-255: High — giảm noise
   ];
 
   final AudioEngineService _audioService;
@@ -313,8 +316,10 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   // P1.3: Pre-computed star color palette (20 slots, ~18° hue apart).
   // Updated only when baseHue drifts >1° — avoids 200× HSVColor.toColor()/frame.
   static const int _starPaletteSize = 20;
-  final List<Color> _starColorPalette =
-      List<Color>.filled(_starPaletteSize, Colors.transparent);
+  final List<Color> _starColorPalette = List<Color>.filled(
+    _starPaletteSize,
+    Colors.transparent,
+  );
   double _lastPaletteHue = -999.0;
 
   // P3.2: Snapshot captured from the isolate call in `_handleTick`.
@@ -350,7 +355,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
 
   void _handleActivityChanged() {
     if (_isAppInBackground) return;
-    
+
     if (isAudioReactive || _activeParticleCount > 0) {
       _startTicker();
     } else {
@@ -452,7 +457,10 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       _overBudgetCount++;
       if (_overBudgetCount >= 3 && !_halfRateMode) {
         _halfRateMode = true;
-        AppLogger.i('visualizer.controller', 'entering half-rate mode (frame ${frameMs.toStringAsFixed(1)}ms > ${_frameBudgetMs}ms)');
+        AppLogger.i(
+          'visualizer.controller',
+          'entering half-rate mode (frame ${frameMs.toStringAsFixed(1)}ms > ${_frameBudgetMs}ms)',
+        );
       }
     } else {
       if (_overBudgetCount > 0) _overBudgetCount--;
@@ -494,14 +502,15 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
         final bandIndex = (i * 5 / fftSampleCount).floor().clamp(0, 4);
         final sample = samples[i] * _frequencyWeights[bandIndex] * sensitivity;
         _fftData[i] = sample;
-        _smoothedFft[i] = _smoothedFft[i] * _fftSmoothFactor + sample * _fftNewFactor;
+        _smoothedFft[i] =
+            _smoothedFft[i] * _fftSmoothFactor + sample * _fftNewFactor;
         if (i < 64) {
           currentEnergy += sample;
         }
       }
 
       currentEnergy /= _energyDivisor;
-      
+
       // Attack nhanh (bắt beat), Release chậm (đuôi mượt)
       if (currentEnergy > _smoothEnergy) {
         _smoothEnergy = _smoothEnergy * 0.6 + currentEnergy * 0.4;
@@ -533,9 +542,13 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
           _beatCooldown = 12; // ~200ms cooldown to avoid double-triggering
         }
       }
-
     } catch (e, stack) {
-      AppLogger.e('visualizer.controller', 'operation failed', error: e, stack: stack);
+      AppLogger.e(
+        'visualizer.controller',
+        'operation failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -685,7 +698,12 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     try {
       _audioData?.dispose();
     } catch (e, stack) {
-      AppLogger.e('visualizer.controller', 'operation failed', error: e, stack: stack);
+      AppLogger.e(
+        'visualizer.controller',
+        'operation failed',
+        error: e,
+        stack: stack,
+      );
     }
     super.dispose();
   }

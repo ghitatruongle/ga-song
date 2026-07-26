@@ -131,10 +131,7 @@ void main() {
     test('items returns unmodifiable list', () async {
       await lazyList.loadMore();
 
-      expect(
-        () => lazyList.items.add(999),
-        throwsUnsupportedError,
-      );
+      expect(() => lazyList.items.add(999), throwsUnsupportedError);
     });
 
     test('toString returns descriptive string', () async {

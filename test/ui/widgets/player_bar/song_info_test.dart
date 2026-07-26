@@ -31,7 +31,9 @@ void main() {
     expect(find.text('Test Artist'), findsOneWidget);
   });
 
-  testWidgets('SongInfo shows Unknown Artist when artist is null', (tester) async {
+  testWidgets('SongInfo shows Unknown Artist when artist is null', (
+    tester,
+  ) async {
     final song = Song(
       id: 2,
       name: 'No Artist Song',

@@ -29,7 +29,9 @@ class CoverArtImage extends ConsumerStatefulWidget {
 }
 
 class _CoverArtImageState extends ConsumerState<CoverArtImage> {
-  late final CoverArtRepository _repository = ref.read(coverArtRepositoryProvider);
+  late final CoverArtRepository _repository = ref.read(
+    coverArtRepositoryProvider,
+  );
   CoverArtEntry? _entry;
   Object? _requestToken;
 
@@ -60,7 +62,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
 
     final token = Object();
     _requestToken = token;
-    
+
     // C5 fix: Added try-catch to handle async resolve errors gracefully
     try {
       final entry = await _repository.resolveEntry(widget.song);
@@ -72,7 +74,11 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
         _entry = entry;
       });
     } catch (e) {
-      AppLogger.w('ui.cover_art_image', 'resolve failed for ${widget.song.fileName}', error: e);
+      AppLogger.w(
+        'ui.cover_art_image',
+        'resolve failed for ${widget.song.fileName}',
+        error: e,
+      );
       if (!mounted || _requestToken != token) return;
       setState(() {
         _entry = CoverArtEntry(
@@ -104,7 +110,11 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
       filterQuality: widget.filterQuality,
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) {
-        AppLogger.w('ui.cover_art_image', 'rendering failed for ${widget.song.fileName}', error: error);
+        AppLogger.w(
+          'ui.cover_art_image',
+          'rendering failed for ${widget.song.fileName}',
+          error: error,
+        );
         return widget.fallbackBuilder(context);
       },
     );

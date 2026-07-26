@@ -28,7 +28,9 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
+    final textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black87;
     final bgColor = Theme.of(context).brightness == Brightness.dark
         ? AppColors.darkSurface
         : AppColors.lightSurface;
@@ -59,7 +61,8 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                 // C6 fix: Show active timer state and cancel button
                 final minutes = remaining.inMinutes;
                 final seconds = remaining.inSeconds % 60;
-                final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+                final timeStr =
+                    '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -100,7 +103,9 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                             onPressed: () => Navigator.of(context).pop(),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: textColor,
-                              side: BorderSide(color: textColor.withValues(alpha: 0.3)),
+                              side: BorderSide(
+                                color: textColor.withValues(alpha: 0.3),
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -165,7 +170,9 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                       final isSelected = _selectedMinutes == minutes;
                       return ChoiceChip(
                         label: Text(
-                          minutes < 60 ? '$minutes phút' : '${minutes ~/ 60} giờ ${minutes % 60 > 0 ? '${minutes % 60} phút' : ''}',
+                          minutes < 60
+                              ? '$minutes phút'
+                              : '${minutes ~/ 60} giờ ${minutes % 60 > 0 ? '${minutes % 60} phút' : ''}',
                           style: TextStyle(
                             color: isSelected ? Colors.white : textColor,
                             fontSize: 13,
@@ -178,7 +185,8 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        onSelected: (_) => setState(() => _selectedMinutes = minutes),
+                        onSelected: (_) =>
+                            setState(() => _selectedMinutes = minutes),
                       );
                     }).toList(),
                   ),
@@ -190,11 +198,15 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                     divisions: 179,
                     label: '$_selectedMinutes phút',
                     activeColor: Theme.of(context).primaryColor,
-                    onChanged: (value) => setState(() => _selectedMinutes = value.round()),
+                    onChanged: (value) =>
+                        setState(() => _selectedMinutes = value.round()),
                   ),
                   Text(
                     '$_selectedMinutes phút',
-                    style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -204,7 +216,9 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                           onPressed: () => Navigator.of(context).pop(),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: textColor,
-                            side: BorderSide(color: textColor.withValues(alpha: 0.3)),
+                            side: BorderSide(
+                              color: textColor.withValues(alpha: 0.3),
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -217,7 +231,9 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            _playlistService.startSleepTimer(Duration(minutes: _selectedMinutes));
+                            _playlistService.startSleepTimer(
+                              Duration(minutes: _selectedMinutes),
+                            );
                             Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(

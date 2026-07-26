@@ -30,15 +30,18 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
   void _initAudioContext() {
     if (_audioContext != null) return;
     try {
-      final jsContextClass = js.context['AudioContext'] ?? js.context['webkitAudioContext'];
+      final jsContextClass =
+          js.context['AudioContext'] ?? js.context['webkitAudioContext'];
       if (jsContextClass != null) {
         _audioContext = js.JsObject(jsContextClass as js.JsFunction);
       }
       if (_audioElement != null && _audioContext != null) {
-        _sourceNode = _audioContext.callMethod('createMediaElementSource', [_audioElement]);
+        _sourceNode = _audioContext.callMethod('createMediaElementSource', [
+          _audioElement,
+        ]);
         _analyserNode = _audioContext.callMethod('createAnalyser');
         _analyserNode['fftSize'] = 512;
-        
+
         // Connect: source -> analyser -> destination
         _sourceNode.callMethod('connect', [_analyserNode]);
         final destination = _audioContext['destination'];
@@ -52,7 +55,7 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
   @override
   Future<void> play(String assetPath) async {
     await stop();
-    
+
     String url = assetPath;
     if (assetPath.startsWith('assets/')) {
       // Flutter web assets are served under 'assets/' prefix.
@@ -61,7 +64,7 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
 
     _audioElement?.src = url;
     _audioElement?.load();
-    
+
     _initAudioContext();
     if (_audioContext != null && _audioContext['state'] == 'suspended') {
       try {
@@ -166,7 +169,7 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
     final int binCount = _analyserNode['frequencyBinCount'] as int;
     final buffer = Float32List(binCount);
     _analyserNode.callMethod('getFloatFrequencyData', [buffer]);
-    
+
     // Float frequency data is in dB (ranges from -100 to 0).
     // Normalize it to 0.0 to 1.0.
     final List<double> fft = List<double>.filled(binCount, 0.0);

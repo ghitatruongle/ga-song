@@ -5,9 +5,13 @@ import 'package:ga_song/core/audio/audio_engine_service.dart';
 
 /// Mock implementation of [AudioEngineService] for testing.
 /// Simulates playback state without requiring SoLoud native initialization.
-class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
+class MockAudioEngineService
+    with WidgetsBindingObserver
+    implements AudioEngineService {
   @override
-  ValueNotifier<AudioEngineState> engineState = ValueNotifier(AudioEngineState.idle);
+  ValueNotifier<AudioEngineState> engineState = ValueNotifier(
+    AudioEngineState.idle,
+  );
   @override
   ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
   @override
@@ -15,7 +19,8 @@ class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineS
   @override
   ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
 
-  final StreamController<void> _songCompletedController = StreamController<void>.broadcast();
+  final StreamController<void> _songCompletedController =
+      StreamController<void>.broadcast();
   @override
   Stream<void> get onSongCompleted => _songCompletedController.stream;
 
@@ -78,7 +83,12 @@ class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineS
   }
 
   @override
-  Future<void> crossfadeTo(String nextAssetPath, double crossfadeDuration, {double? nextNormalizationGain, CrossfadeCurve curve = CrossfadeCurve.linear}) async {
+  Future<void> crossfadeTo(
+    String nextAssetPath,
+    double crossfadeDuration, {
+    double? nextNormalizationGain,
+    CrossfadeCurve curve = CrossfadeCurve.linear,
+  }) async {
     lastPlayedAsset = nextAssetPath;
     lastNormalizationGain = nextNormalizationGain;
     engineState.value = AudioEngineState.playing;

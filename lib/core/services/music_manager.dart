@@ -5,11 +5,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:audiotags/audiotags.dart';
 import 'package:path/path.dart' as p;
 import '../../models/song.dart';
-import 'database_service.dart';
+import 'db_service_wrapper.dart';
 
 /// Quan ly import/xoa bai hat local
 class MusicManager {
-  final DatabaseService _db;
+  final DatabaseServiceWrapper _db;
 
   MusicManager(this._db);
 
@@ -60,7 +60,11 @@ class MusicManager {
             }
           }
         } catch (e) {
-          AppLogger.w('music_manager.service', 'audio tags read failed', error: e);
+          AppLogger.w(
+            'music_manager.service',
+            'audio tags read failed',
+            error: e,
+          );
         }
 
         final song = Song(
@@ -75,7 +79,11 @@ class MusicManager {
         await _db.putSong(song);
       }
     } catch (e) {
-      AppLogger.w('music_manager.service', 'local songs import failed', error: e);
+      AppLogger.w(
+        'music_manager.service',
+        'local songs import failed',
+        error: e,
+      );
       rethrow;
     }
   }

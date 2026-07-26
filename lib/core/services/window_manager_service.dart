@@ -34,7 +34,7 @@ WindowEffect _toWindowEffect(WindowEffectType type) {
 
 class WindowManagerService with WindowListener {
   WindowManagerService({SettingsManager? settingsManager})
-      : _settings = settingsManager;
+    : _settings = settingsManager;
 
   final SettingsManager? _settings;
   // ─── Debounce & resize state ──────────────────────────────────────────────
@@ -92,30 +92,42 @@ class WindowManagerService with WindowListener {
           try {
             await windowManager.setPosition(savedPosition);
           } catch (e) {
-            AppLogger.w('window_manager.service', 'restore window position failed', error: e);
+            AppLogger.w(
+              'window_manager.service',
+              'restore window position failed',
+              error: e,
+            );
           }
         }
 
         // Restore the saved window size (with DPI-aware scaling)
-    final savedSize = _settings?.savedWindowSize;
-    if (savedSize != null) {
-      try {
-        final dpiScale = _getDpiScale();
-        final scaledSize = Size(
-          savedSize.width * dpiScale,
-          savedSize.height * dpiScale,
-        );
-        await windowManager.setSize(scaledSize);
-      } catch (e) {
-        AppLogger.w('window_manager.service', 'restore window size failed', error: e);
-      }
-    }
+        final savedSize = _settings?.savedWindowSize;
+        if (savedSize != null) {
+          try {
+            final dpiScale = _getDpiScale();
+            final scaledSize = Size(
+              savedSize.width * dpiScale,
+              savedSize.height * dpiScale,
+            );
+            await windowManager.setSize(scaledSize);
+          } catch (e) {
+            AppLogger.w(
+              'window_manager.service',
+              'restore window size failed',
+              error: e,
+            );
+          }
+        }
 
         try {
           await windowManager.show();
           await windowManager.focus();
         } catch (e) {
-          AppLogger.w('window_manager.service', 'show/focus window failed', error: e);
+          AppLogger.w(
+            'window_manager.service',
+            'show/focus window failed',
+            error: e,
+          );
         }
 
         _applyWindowEffect();
@@ -132,15 +144,9 @@ class WindowManagerService with WindowListener {
     windowManager.addListener(this);
 
     // Subscribe to settings changes — debounced to avoid flicker
-    _settings
-        ?.useNativeWindowEffectNotifier
-        .addListener(_scheduleApplyEffect);
-    _settings
-        ?.windowOpacityNotifier
-        .addListener(_scheduleApplyEffect);
-    _settings
-        ?.themeModeNotifier
-        .addListener(_scheduleApplyEffect);
+    _settings?.useNativeWindowEffectNotifier.addListener(_scheduleApplyEffect);
+    _settings?.windowOpacityNotifier.addListener(_scheduleApplyEffect);
+    _settings?.themeModeNotifier.addListener(_scheduleApplyEffect);
   }
 
   // ─── Debounced effect application ────────────────────────────────────────
@@ -162,7 +168,12 @@ class WindowManagerService with WindowListener {
   double _getDpiScale() {
     if (!PlatformCapabilities.instance.isWindows) return 1.0;
     try {
-      final devicePixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
+      final devicePixelRatio = WidgetsBinding
+          .instance
+          .platformDispatcher
+          .views
+          .first
+          .devicePixelRatio;
       // DPI scale = devicePixelRatio / basePixelRatio (usually 1.0 at 96 DPI)
       return devicePixelRatio / 1.0;
     } catch (e) {
@@ -195,7 +206,11 @@ class WindowManagerService with WindowListener {
             }
           }
         } catch (e) {
-          AppLogger.w('window_manager.service', 'build number detection failed', error: e);
+          AppLogger.w(
+            'window_manager.service',
+            'build number detection failed',
+            error: e,
+          );
         }
         return WindowEffectType.mica;
       }
@@ -212,7 +227,8 @@ class WindowManagerService with WindowListener {
     final useNative = settings.useNativeWindowEffectNotifier.value;
     final theme = settings.themeModeNotifier.value;
     final opacity = settings.windowOpacityNotifier.value;
-    final isDark = theme == ThemeMode.dark ||
+    final isDark =
+        theme == ThemeMode.dark ||
         (theme == ThemeMode.system &&
             PlatformDispatcher.instance.platformBrightness == Brightness.dark);
 
@@ -283,10 +299,13 @@ class WindowManagerService with WindowListener {
   /// without the blur/transparency pipeline that causes flicker.
   Future<void> _setSolidBackgroundDuringResize() async {
     final theme = _settings?.themeModeNotifier.value ?? ThemeMode.system;
-    final isDark = theme == ThemeMode.dark ||
+    final isDark =
+        theme == ThemeMode.dark ||
         (theme == ThemeMode.system &&
             PlatformDispatcher.instance.platformBrightness == Brightness.dark);
-    final solidColor = isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F5F5);
+    final solidColor = isDark
+        ? const Color(0xFF0F0F0F)
+        : const Color(0xFFF5F5F5);
 
     // Invalidate cache so the next _applyWindowEffect actually fires
     _cachedEffectType = null;
@@ -296,10 +315,7 @@ class WindowManagerService with WindowListener {
     // Switch to solid effect — this bypasses the DWM compositor blur pipeline
     // that causes visible flicker during resize.
     try {
-      await Window.setEffect(
-        effect: WindowEffect.solid,
-        color: solidColor,
-      );
+      await Window.setEffect(effect: WindowEffect.solid, color: solidColor);
     } catch (_) {}
   }
 
@@ -329,15 +345,11 @@ class WindowManagerService with WindowListener {
     _effectDebounce?.cancel();
     _resizeDebounce?.cancel();
 
-    _settings
-        ?.useNativeWindowEffectNotifier
-        .removeListener(_scheduleApplyEffect);
-    _settings
-        ?.windowOpacityNotifier
-        .removeListener(_scheduleApplyEffect);
-    _settings
-        ?.themeModeNotifier
-        .removeListener(_scheduleApplyEffect);
+    _settings?.useNativeWindowEffectNotifier.removeListener(
+      _scheduleApplyEffect,
+    );
+    _settings?.windowOpacityNotifier.removeListener(_scheduleApplyEffect);
+    _settings?.themeModeNotifier.removeListener(_scheduleApplyEffect);
 
     windowManager.removeListener(this);
   }

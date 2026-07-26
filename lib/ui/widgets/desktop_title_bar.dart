@@ -10,11 +10,7 @@ import 'window_caption_button.dart';
 /// Returns an empty [SizedBox] on mobile/web platforms.
 /// On desktop, renders a [DragToMoveArea] with minimize/maximize/close buttons.
 class DesktopTitleBar extends StatelessWidget {
-  const DesktopTitleBar({
-    super.key,
-    this.iconColor,
-    this.height = 50,
-  });
+  const DesktopTitleBar({super.key, this.iconColor, this.height = 50});
 
   /// Color for the window control icons.
   /// Defaults to the current theme's adaptive color if null.

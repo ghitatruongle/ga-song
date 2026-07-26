@@ -8,7 +8,11 @@ import 'package:flutter/material.dart';
 /// This eliminates the per-frame GPU cost that made the old approach a
 /// performance bottleneck.
 class BlurredBackground extends StatelessWidget {
-  const BlurredBackground({super.key, required this.blurLevel, required this.child});
+  const BlurredBackground({
+    super.key,
+    required this.blurLevel,
+    required this.child,
+  });
 
   final double blurLevel;
   final Widget child;

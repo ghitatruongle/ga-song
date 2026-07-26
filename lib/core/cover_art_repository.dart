@@ -8,7 +8,7 @@ import '../models/song.dart';
 import '../models/cover_art_cache.dart';
 import 'settings_manager.dart';
 import 'platform_capabilities.dart';
-import 'services/database_service.dart';
+import 'services/db_service_wrapper.dart';
 import 'performance_probe.dart';
 
 /// P3.3: cache entries older than this are evicted even if LRU hasn't
@@ -54,29 +54,32 @@ int get _maxDominantColorCacheSize =>
 /// Dependencies are injected via constructor for testability.
 class CoverArtRepository with WidgetsBindingObserver {
   CoverArtRepository({
-    DatabaseService? databaseService,
+    DatabaseServiceWrapper? databaseService,
     SettingsManager? settingsManager,
   }) : _databaseService = databaseService,
        _settingsManager = settingsManager {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  final DatabaseService? _databaseService;
+  final DatabaseServiceWrapper? _databaseService;
   final SettingsManager? _settingsManager;
 
   final Map<String, Future<CoverArtEntry>> _entryFutures =
       <String, Future<CoverArtEntry>>{};
   final Map<String, CoverArtEntry> _entries = <String, CoverArtEntry>{};
 
-  final LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>> _providerCache =
-      LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>>();
+  final LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>>
+  _providerCache = LinkedHashMap<_CoverArtVariantKey, ImageProvider<Object>>();
   final LinkedHashMap<String, Future<Color?>> _dominantColorFutures =
       LinkedHashMap<String, Future<Color?>>();
 
   @override
   void didHaveMemoryPressure() {
     super.didHaveMemoryPressure();
-    AppLogger.i('cover_art.repository', 'Memory pressure detected; clearing caches');
+    AppLogger.i(
+      'cover_art.repository',
+      'Memory pressure detected; clearing caches',
+    );
     _providerCache.clear();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
@@ -99,7 +102,11 @@ class CoverArtRepository with WidgetsBindingObserver {
     await Future.wait(songs.map(resolveEntry));
   }
 
-  Future<void> preloadNextSongs(List<Song> songs, int currentIndex, int count) async {
+  Future<void> preloadNextSongs(
+    List<Song> songs,
+    int currentIndex,
+    int count,
+  ) async {
     final concurrency = PlatformCapabilities.instance.preloadConcurrency;
     final toPreload = <int>[];
     for (int i = 1; i <= count; i++) {
@@ -111,21 +118,23 @@ class CoverArtRepository with WidgetsBindingObserver {
 
     if (concurrency >= toPreload.length) {
       // Desktop: parallel preload
-      await Future.wait(toPreload.map((idx) async {
-        try {
-          final song = songs[idx];
-          await resolveEntry(song);
-          getCachedProvider(song.fileName, cacheWidth: 200, cacheHeight: 200);
-          PerformanceProbe.instance.recordPreload();
-        } catch (e, stack) {
-          AppLogger.w(
-            'cover_art.repository',
-            'preload cover art failed at index $idx',
-            error: e,
-            stack: stack,
-          );
-        }
-      }));
+      await Future.wait(
+        toPreload.map((idx) async {
+          try {
+            final song = songs[idx];
+            await resolveEntry(song);
+            getCachedProvider(song.fileName, cacheWidth: 200, cacheHeight: 200);
+            PerformanceProbe.instance.recordPreload();
+          } catch (e, stack) {
+            AppLogger.w(
+              'cover_art.repository',
+              'preload cover art failed at index $idx',
+              error: e,
+              stack: stack,
+            );
+          }
+        }),
+      );
     } else {
       // Android: sequential preload to prevent OOM
       for (final idx in toPreload) {
@@ -318,7 +327,12 @@ class CoverArtRepository with WidgetsBindingObserver {
           }
         }
       } catch (e, stack) {
-        AppLogger.w('cover_art.repository', 'disk cache error', error: e, stack: stack);
+        AppLogger.w(
+          'cover_art.repository',
+          'disk cache error',
+          error: e,
+          stack: stack,
+        );
         // Database not ready yet — will fall through to source load
       }
 
@@ -349,7 +363,12 @@ class CoverArtRepository with WidgetsBindingObserver {
         _reportCacheSize();
       }
     } catch (e, stack) {
-      AppLogger.w('cover_art.repository', 'pre-populate failed for $fileName', error: e, stack: stack);
+      AppLogger.w(
+        'cover_art.repository',
+        'pre-populate failed for $fileName',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -367,7 +386,12 @@ class CoverArtRepository with WidgetsBindingObserver {
         }
       }
     } catch (e, stack) {
-      AppLogger.w('cover_art.repository', 'load cover bytes failed', error: e, stack: stack);
+      AppLogger.w(
+        'cover_art.repository',
+        'load cover bytes failed',
+        error: e,
+        stack: stack,
+      );
     }
     return null;
   }
@@ -388,11 +412,13 @@ class CoverArtRepository with WidgetsBindingObserver {
           ..lastAccessed = DateTime.now();
         await db.putCoverArtCache(existing);
       } else {
-        await db.putCoverArtCache(CoverArtCache(
-          fileName: fileName,
-          bytes: bytes.toList(),
-          lastAccessed: DateTime.now(),
-        ));
+        await db.putCoverArtCache(
+          CoverArtCache(
+            fileName: fileName,
+            bytes: bytes.toList(),
+            lastAccessed: DateTime.now(),
+          ),
+        );
       }
     } catch (e, stack) {
       // If save failed (e.g. database full), force-evict and retry once.
@@ -401,16 +427,28 @@ class CoverArtRepository with WidgetsBindingObserver {
         try {
           final db = _databaseService;
           if (db == null) return;
-          await db.putCoverArtCache(CoverArtCache(
-            fileName: fileName,
-            bytes: bytes.toList(),
-            lastAccessed: DateTime.now(),
-          ));
+          await db.putCoverArtCache(
+            CoverArtCache(
+              fileName: fileName,
+              bytes: bytes.toList(),
+              lastAccessed: DateTime.now(),
+            ),
+          );
         } catch (retryError, retryStack) {
-          AppLogger.w('cover_art.repository', 'save after eviction failed', error: retryError, stack: retryStack);
+          AppLogger.w(
+            'cover_art.repository',
+            'save after eviction failed',
+            error: retryError,
+            stack: retryStack,
+          );
         }
       } else {
-        AppLogger.w('cover_art.repository', 'save cover art failed', error: e, stack: stack);
+        AppLogger.w(
+          'cover_art.repository',
+          'save cover art failed',
+          error: e,
+          stack: stack,
+        );
       }
     }
   }
@@ -420,8 +458,9 @@ class CoverArtRepository with WidgetsBindingObserver {
     final db = _databaseService;
     if (db == null) return;
     try {
-      final maxEntries =
-          CoverArtCache.maxDiskCacheEntries(PlatformCapabilities.instance.isAndroid);
+      final maxEntries = CoverArtCache.maxDiskCacheEntries(
+        PlatformCapabilities.instance.isAndroid,
+      );
       final count = await db.getCoverArtCacheCount();
       if (count <= maxEntries) return;
 
@@ -434,7 +473,12 @@ class CoverArtRepository with WidgetsBindingObserver {
         oldest.map((e) => e.fileName).toList(),
       );
     } catch (e, stack) {
-      AppLogger.w('cover_art.repository', 'evict disk cache failed', error: e, stack: stack);
+      AppLogger.w(
+        'cover_art.repository',
+        'evict disk cache failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -456,7 +500,12 @@ class CoverArtRepository with WidgetsBindingObserver {
       );
       AppLogger.i('cover_art.repository', 'force-evicted \$toRemove entries');
     } catch (e, stack) {
-      AppLogger.w('cover_art.repository', 'force-evict failed', error: e, stack: stack);
+      AppLogger.w(
+        'cover_art.repository',
+        'force-evict failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -481,7 +530,12 @@ class CoverArtRepository with WidgetsBindingObserver {
         await db.deleteCoverArtCache(fileName);
       }
     } catch (e, stack) {
-      AppLogger.w('cover_art.repository', 'remove disk cache error', error: e, stack: stack);
+      AppLogger.w(
+        'cover_art.repository',
+        'remove disk cache error',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -537,14 +591,21 @@ class CoverArtRepository with WidgetsBindingObserver {
     }
 
     try {
-      final colorScheme = await ColorScheme.fromImageProvider(provider: provider);
+      final colorScheme = await ColorScheme.fromImageProvider(
+        provider: provider,
+      );
       final color = colorScheme.primary;
 
       // 3. Persist to disk so we never compute again
       await _settingsManager?.saveSongColor(song.fileName, color);
       return color;
     } catch (e, stack) {
-      AppLogger.w('cover_art.repository', 'compute dominant color failed', error: e, stack: stack);
+      AppLogger.w(
+        'cover_art.repository',
+        'compute dominant color failed',
+        error: e,
+        stack: stack,
+      );
       return null;
     }
   }
@@ -576,9 +637,15 @@ class CoverArtRepository with WidgetsBindingObserver {
     // List of candidate paths in order of preference
     final candidates = [
       // 1. Default mapped path (assets/pic/...)
-      path.replaceFirst('assets/song/', 'assets/pic/').replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png'),
-      path.replaceFirst('assets/song/', 'assets/pic/').replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.jpg'),
-      path.replaceFirst('assets/song/', 'assets/pic/').replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.jpeg'),
+      path
+          .replaceFirst('assets/song/', 'assets/pic/')
+          .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png'),
+      path
+          .replaceFirst('assets/song/', 'assets/pic/')
+          .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.jpg'),
+      path
+          .replaceFirst('assets/song/', 'assets/pic/')
+          .replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.jpeg'),
 
       // 2. Sibling path in same folder (assets/song/...)
       '$parentDir/$fileNameWithoutExt.png',
@@ -624,7 +691,9 @@ class CoverArtRepository with WidgetsBindingObserver {
     final parentDir = file.parent.path.replaceAll('\\', '/');
     final fileName = file.path.split(RegExp(r'[/\\]')).last;
     final lastDot = fileName.lastIndexOf('.');
-    final fileNameWithoutExt = lastDot != -1 ? fileName.substring(0, lastDot) : fileName;
+    final fileNameWithoutExt = lastDot != -1
+        ? fileName.substring(0, lastDot)
+        : fileName;
 
     final candidates = [
       // 1. Sibling with extension appended (legacy)

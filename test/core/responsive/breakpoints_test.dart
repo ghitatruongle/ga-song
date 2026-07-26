@@ -59,7 +59,10 @@ void main() {
     });
 
     test('contentMaxWidth returns correct value', () {
-      expect(Breakpoints.contentMaxWidth(300), equals(300)); // mobile: full width
+      expect(
+        Breakpoints.contentMaxWidth(300),
+        equals(300),
+      ); // mobile: full width
       expect(Breakpoints.contentMaxWidth(700), equals(720)); // tablet: 720
       expect(Breakpoints.contentMaxWidth(1400), equals(1200)); // desktop: 1200
     });

@@ -27,10 +27,7 @@ void main() {
     });
 
     test('on the last track, only returns currentIndex', () {
-      final result = policy.linearWindow(
-        currentIndex: 9,
-        playlistLength: 10,
-      );
+      final result = policy.linearWindow(currentIndex: 9, playlistLength: 10);
       expect(result.contains(9), isTrue);
       // No next track exists, so result is at most {9}.
       expect(result.length, 1);
@@ -39,17 +36,11 @@ void main() {
 
   group('shuffleWindow', () {
     test('returns empty for empty playlist', () {
-      expect(
-        policy.shuffleWindow(currentIndex: 0, playlistLength: 0),
-        isEmpty,
-      );
+      expect(policy.shuffleWindow(currentIndex: 0, playlistLength: 0), isEmpty);
     });
 
     test('always includes currentIndex', () {
-      final result = policy.shuffleWindow(
-        currentIndex: 3,
-        playlistLength: 10,
-      );
+      final result = policy.shuffleWindow(currentIndex: 3, playlistLength: 10);
       expect(result.contains(3), isTrue);
     });
 

@@ -23,9 +23,7 @@ void main() {
             coverArtRepositoryProvider.overrideWithValue(CoverArtRepository()),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: SongInfo(song: song),
-            ),
+            home: Scaffold(body: SongInfo(song: song)),
           ),
         ),
       );
@@ -48,9 +46,7 @@ void main() {
             coverArtRepositoryProvider.overrideWithValue(CoverArtRepository()),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: SongInfo(song: song),
-            ),
+            home: Scaffold(body: SongInfo(song: song)),
           ),
         ),
       );

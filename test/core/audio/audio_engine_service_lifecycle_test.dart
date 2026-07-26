@@ -24,15 +24,16 @@ void main() {
   AudioEngineService? probeType() => null;
 
   test(
-      'AudioEngineService is a WidgetsBindingObserver (compile-time anchor)',
-      () {
-    final AudioEngineService? maybeEngine = probeType();
-    // The `is` check below is the actual type assertion. Because
-    // maybeEngine is null, the test only checks the type at runtime
-    // when we cast; but the *static* type check is what matters.
-    final WidgetsBindingObserver? observer = maybeEngine;
-    expect(observer, isNull); // runtime is null; compile-time is the gate
-  });
+    'AudioEngineService is a WidgetsBindingObserver (compile-time anchor)',
+    () {
+      final AudioEngineService? maybeEngine = probeType();
+      // The `is` check below is the actual type assertion. Because
+      // maybeEngine is null, the test only checks the type at runtime
+      // when we cast; but the *static* type check is what matters.
+      final WidgetsBindingObserver? observer = maybeEngine;
+      expect(observer, isNull); // runtime is null; compile-time is the gate
+    },
+  );
 
   // ─── Behavioural tests via the mock ─────────────────────────────────────
 

@@ -26,7 +26,8 @@ class CoverArtCache {
 
   static int maxDiskCacheEntries(bool isAndroid) => isAndroid ? 24 : 60;
 
-  factory CoverArtCache.fromJson(Map<String, dynamic> json) => _$CoverArtCacheFromJson(json);
+  factory CoverArtCache.fromJson(Map<String, dynamic> json) =>
+      _$CoverArtCacheFromJson(json);
 
   Map<String, dynamic> toJson() => _$CoverArtCacheToJson(this);
 }

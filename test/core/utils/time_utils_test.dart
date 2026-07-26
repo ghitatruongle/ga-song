@@ -29,12 +29,18 @@ void main() {
 
     test('caps minutes at 59 for durations >= 1 hour', () {
       // 1 hour = 60 minutes, but inMinutes.remainder(60) = 0
-      expect(formatDuration(const Duration(hours: 1, minutes: 0, seconds: 0)), '00:00');
+      expect(
+        formatDuration(const Duration(hours: 1, minutes: 0, seconds: 0)),
+        '00:00',
+      );
     });
 
     test('formats 1 hour 30 minutes correctly', () {
       // 90 minutes → 90.remainder(60) = 30
-      expect(formatDuration(const Duration(hours: 1, minutes: 30, seconds: 15)), '30:15');
+      expect(
+        formatDuration(const Duration(hours: 1, minutes: 30, seconds: 15)),
+        '30:15',
+      );
     });
 
     test('formats 2 hours correctly', () {

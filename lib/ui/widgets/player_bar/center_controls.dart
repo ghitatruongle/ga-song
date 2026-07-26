@@ -65,8 +65,8 @@ class CenterControls extends ConsumerWidget {
                     isLoading
                         ? Icons.hourglass_empty
                         : isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
                     color: context.onAdaptive,
                     size: 28,
                   ),

@@ -79,7 +79,10 @@ class CircleVisualizerPainter extends CustomPainter {
   // P1.4: Color LUT — 20 buckets covering intensityRatio 0..1.
   // Rebuilt only when baseHue drifts >0.5°.
   static const int _lutSize = 20;
-  final List<Color> _colorLut = List<Color>.filled(_lutSize, Colors.transparent);
+  final List<Color> _colorLut = List<Color>.filled(
+    _lutSize,
+    Colors.transparent,
+  );
   double _lastBaseHue = -999.0;
 
   void _rebuildLut(double baseHue) {
@@ -114,7 +117,10 @@ class CircleVisualizerPainter extends CustomPainter {
       final height = ((value * 350 * multiplier) + 4).clamp(4.0, 180.0);
       final intensityRatio = ((height - 4) / 176.0).clamp(0.0, 1.0);
       // P1.4: Look up from pre-computed LUT instead of HSV→RGB per bar.
-      final lutIdx = (intensityRatio * (_lutSize - 1)).round().clamp(0, _lutSize - 1);
+      final lutIdx = (intensityRatio * (_lutSize - 1)).round().clamp(
+        0,
+        _lutSize - 1,
+      );
       _paint.color = _colorLut[lutIdx];
 
       final angle = i * angleStep + (pi / 2);
@@ -189,10 +195,16 @@ class BarVisualizerPainter extends CustomPainter {
       final multiplier = 1.0 + (dataIndex / 40);
       final height = ((value * 300 * multiplier) + 4).clamp(4.0, size.height);
       final intensityRatio = ((height - 4) / size.height).clamp(0.0, 1.0);
-      final lutIdx = (intensityRatio * (_lutSize - 1)).round().clamp(0, _lutSize - 1);
+      final lutIdx = (intensityRatio * (_lutSize - 1)).round().clamp(
+        0,
+        _lutSize - 1,
+      );
 
       final reflectionRect = Rect.fromLTWH(
-        i * barWidth, size.height, barWidth - gap, height * 0.4,
+        i * barWidth,
+        size.height,
+        barWidth - gap,
+        height * 0.4,
       );
       _reflectionPaint.color = _refLut[lutIdx];
       canvas.drawRRect(
@@ -201,7 +213,10 @@ class BarVisualizerPainter extends CustomPainter {
       );
 
       final barRect = Rect.fromLTWH(
-        i * barWidth, size.height - height, barWidth - gap, height,
+        i * barWidth,
+        size.height - height,
+        barWidth - gap,
+        height,
       );
       _barPaint.color = _barLut[lutIdx];
       canvas.drawRRect(
@@ -241,7 +256,11 @@ class WaveVisualizerPainter extends CustomPainter {
 
   // #11: Cache per-layer shaders — only recreate when size or layer color changes
   Size _cachedShaderSize = Size.zero;
-  final List<Color> _cachedLayerColors = [Colors.transparent, Colors.transparent, Colors.transparent];
+  final List<Color> _cachedLayerColors = [
+    Colors.transparent,
+    Colors.transparent,
+    Colors.transparent,
+  ];
   final List<Shader?> _cachedShaders = [null, null, null];
 
   Shader _getLayerShader(int layer, Color layerColor, Size size) {
@@ -431,7 +450,8 @@ class SpectrumTunnelPainter extends CustomPainter {
     }
 
     final glowBlurIndex = (snapshot.smoothEnergy * 20).floor().clamp(0, 20);
-    final glowHueIdx = (((baseHue + snapshot.time * 20) % 360) / 10.0).floor() % 36;
+    final glowHueIdx =
+        (((baseHue + snapshot.time * 20) % 360) / 10.0).floor() % 36;
     _glowPaint
       ..color = _hueLut[glowHueIdx].withValues(
         alpha: (0.3 + snapshot.smoothEnergy * 0.4).clamp(0.0, 0.7),
@@ -529,8 +549,7 @@ class StarfieldPainter extends CustomPainter {
       final alpha = ((0.5 + z * 0.5) * 255).toInt() & 0xFF;
 
       // B4 fix: reuse cached MaskFilter by quantized star radius.
-      final blurIdx =
-          ((projectedRadius - 0.5) / 0.25).floor().clamp(0, 15);
+      final blurIdx = ((projectedRadius - 0.5) / 0.25).floor().clamp(0, 15);
 
       // Combine the snapshot's RGB with our z-derived alpha without
       // allocating a Color object.
@@ -737,7 +756,8 @@ class OscilloscopePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant OscilloscopePainter oldDelegate) => oldDelegate.controller != controller;
+  bool shouldRepaint(covariant OscilloscopePainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class RadialBurstPainter extends CustomPainter {
@@ -757,7 +777,7 @@ class RadialBurstPainter extends CustomPainter {
     21,
     (i) => MaskFilter.blur(BlurStyle.solid, 2.0 + (i / 20.0) * 4.0),
   );
-  
+
   static final List<MaskFilter> _glowBlurCache = List<MaskFilter>.generate(
     21,
     (i) => MaskFilter.blur(BlurStyle.normal, 20.0 + (i / 20.0) * 40.0),
@@ -777,7 +797,7 @@ class RadialBurstPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final maxRadius = min(size.width, size.height) * 0.45;
     final baseHue = (1.0 - min(snapshot.smoothEnergy * 2.5, 1.0)) * 270.0;
-    
+
     final glowBlurIdx = (snapshot.smoothEnergy * 20).floor().clamp(0, 20);
     // P1.4: Use hue LUT for glow color.
     final glowHueIdx = (baseHue / 10.0).floor() % 36;
@@ -786,7 +806,7 @@ class RadialBurstPainter extends CustomPainter {
         alpha: (0.4 + snapshot.smoothEnergy * 0.5).clamp(0.0, 0.8),
       )
       ..maskFilter = _glowBlurCache[glowBlurIdx];
-    
+
     canvas.drawCircle(center, 40 + snapshot.smoothEnergy * 30, _glowPaint);
 
     const numRays = 60;
@@ -796,7 +816,7 @@ class RadialBurstPainter extends CustomPainter {
       final dataIndex = (i * (120 / numRays)).floor();
       final value = snapshot.fftData[dataIndex];
       final rayLength = 60 + value * maxRadius * 1.5;
-      
+
       final angle = i * angleStep + snapshot.time;
       final innerPoint = Offset(
         center.dx + cos(angle) * 50,
@@ -806,7 +826,7 @@ class RadialBurstPainter extends CustomPainter {
         center.dx + cos(angle) * rayLength,
         center.dy + sin(angle) * rayLength,
       );
-      
+
       final rayHue = (baseHue + i * 2) % 360.0;
       final rayBlurIdx = (value * 20).floor().clamp(0, 20);
       // P1.4: Use hue LUT for ray color.
@@ -815,11 +835,12 @@ class RadialBurstPainter extends CustomPainter {
         ..strokeWidth = 3.0 + value * 5.0
         ..color = _hueLut[rayHueIdx].withValues(alpha: 0.8)
         ..maskFilter = _rayBlurCache[rayBlurIdx];
-        
+
       canvas.drawLine(innerPoint, outerPoint, _rayPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant RadialBurstPainter oldDelegate) => oldDelegate.controller != controller;
+  bool shouldRepaint(covariant RadialBurstPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }

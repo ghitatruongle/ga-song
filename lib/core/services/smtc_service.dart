@@ -12,7 +12,7 @@ import '../cover_art_repository.dart';
 class SmtcService {
   final AudioEngineService _engineService;
   final PlaylistService _playlistService;
-  
+
   SmtcPlatform? _smtc;
   StreamSubscription<PressedButton>? _buttonSubscription;
 
@@ -32,16 +32,16 @@ class SmtcService {
 
     try {
       smtc ??= await WindowsSmtcPlatform.create(
-          config: const SMTCConfig(
-            playEnabled: true,
-            pauseEnabled: true,
-            nextEnabled: true,
-            prevEnabled: true,
-            stopEnabled: true,
-            fastForwardEnabled: false,
-            rewindEnabled: false,
-          ),
-        );
+        config: const SMTCConfig(
+          playEnabled: true,
+          pauseEnabled: true,
+          nextEnabled: true,
+          prevEnabled: true,
+          stopEnabled: true,
+          fastForwardEnabled: false,
+          rewindEnabled: false,
+        ),
+      );
       _smtc = smtc;
 
       // Listen to SMTC buttons
@@ -69,14 +69,15 @@ class SmtcService {
 
       // Listen to engine state to update SMTC status
       _engineService.engineState.addListener(_onEngineStateChanged);
-      
+
       // Listen to playlist changes to update metadata
-      _playlistService.currentIndexNotifier.addListener(_onPlaylistIndexChanged);
-      
+      _playlistService.currentIndexNotifier.addListener(
+        _onPlaylistIndexChanged,
+      );
+
       // Update timeline
       _engineService.positionNotifier.addListener(_onPositionChanged);
       _engineService.durationNotifier.addListener(_onDurationChanged);
-
     } catch (e) {
       AppLogger.e('smtc.service', 'SMTC init failed', error: e);
     }
@@ -114,7 +115,7 @@ class SmtcService {
     final song = _playlistService.currentSong;
     if (song != null) {
       String? thumbnailPath;
-      
+
       // Try to extract cover art to a temp file for SMTC
       try {
         // Get the correct cover art path from sourcePath
@@ -124,10 +125,13 @@ class SmtcService {
         } else {
           resolvedPath = CoverArtRepository.findLocalCoverPath(song);
         }
-        
-        final fileName = song.fileName.replaceAll(RegExp(r'\.(mp3|flac|wav|m4a)$'), '.png');
+
+        final fileName = song.fileName.replaceAll(
+          RegExp(r'\.(mp3|flac|wav|m4a)$'),
+          '.png',
+        );
         final tempFile = File('${Directory.systemTemp.path}\\$fileName');
-        
+
         // Cleanup old thumbnail khi chuyển bài
         if (_lastThumbnailPath != null) {
           try {
@@ -171,11 +175,13 @@ class SmtcService {
       }
 
       try {
-        _smtc!.updateMetadata(MusicMetadata(
-          title: song.name,
-          artist: song.artist ?? 'Unknown Artist',
-          thumbnail: thumbnailPath,
-        ));
+        _smtc!.updateMetadata(
+          MusicMetadata(
+            title: song.name,
+            artist: song.artist ?? 'Unknown Artist',
+            thumbnail: thumbnailPath,
+          ),
+        );
         _lastReportedPosition = Duration.zero;
         _onDurationChanged();
       } catch (e) {
@@ -203,7 +209,7 @@ class SmtcService {
       AppLogger.w('smtc.service', 'position update failed', error: e);
     }
   }
-  
+
   void _onDurationChanged() {
     if (_smtc == null) return;
     try {
@@ -220,10 +226,14 @@ class SmtcService {
     if (_smtc != null) {
       try {
         _buttonSubscription?.cancel();
-      } catch (e) { AppLogger.w('smtc.service', 'dispose failed', error: e); }
+      } catch (e) {
+        AppLogger.w('smtc.service', 'dispose failed', error: e);
+      }
       try {
         _engineService.engineState.removeListener(_onEngineStateChanged);
-        _playlistService.currentIndexNotifier.removeListener(_onPlaylistIndexChanged);
+        _playlistService.currentIndexNotifier.removeListener(
+          _onPlaylistIndexChanged,
+        );
         _engineService.positionNotifier.removeListener(_onPositionChanged);
         _engineService.durationNotifier.removeListener(_onDurationChanged);
       } catch (e, stack) {

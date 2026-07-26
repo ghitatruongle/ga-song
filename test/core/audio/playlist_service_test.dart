@@ -1,17 +1,21 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/audio_effect_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
-import 'package:ga_song/core/services/database_service.dart';
+import 'package:ga_song/core/services/db_service_wrapper.dart';
 import 'package:ga_song/models/song.dart';
 
-class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
+class MockAudioEngineService
+    with WidgetsBindingObserver
+    implements AudioEngineService {
   @override
-  ValueNotifier<AudioEngineState> engineState = ValueNotifier(AudioEngineState.idle);
+  ValueNotifier<AudioEngineState> engineState = ValueNotifier(
+    AudioEngineState.idle,
+  );
   @override
   ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
   @override
@@ -19,7 +23,8 @@ class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineS
   @override
   ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
 
-  final StreamController<void> _songCompletedController = StreamController<void>.broadcast();
+  final StreamController<void> _songCompletedController =
+      StreamController<void>.broadcast();
   @override
   Stream<void> get onSongCompleted => _songCompletedController.stream;
 
@@ -42,7 +47,12 @@ class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineS
   @override
   void setNormalizationGain(double gain) {}
   @override
-  Future<void> crossfadeTo(String nextAssetPath, double crossfadeDuration, {double? nextNormalizationGain, CrossfadeCurve curve = CrossfadeCurve.linear}) async {}
+  Future<void> crossfadeTo(
+    String nextAssetPath,
+    double crossfadeDuration, {
+    double? nextNormalizationGain,
+    CrossfadeCurve curve = CrossfadeCurve.linear,
+  }) async {}
   @override
   Future<void> preload(String assetPath) async {}
   @override
@@ -64,7 +74,7 @@ class MockAudioEffectService implements AudioEffectService {
   ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(0.0);
   @override
   ValueNotifier<int> bassLevelNotifier = ValueNotifier(0);
-  
+
   @override
   double calculateNormalizationGain(double? peakDb) => 1.0;
 
@@ -72,10 +82,10 @@ class MockAudioEffectService implements AudioEffectService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockDatabaseService implements DatabaseService {
+class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   @override
   Future<void> incrementPlayCount(int songId) async {}
-  
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -94,7 +104,11 @@ void main() {
   setUp(() {
     mockEngine = MockAudioEngineService();
     mockEffect = MockAudioEffectService();
-    playlistService = PlaylistService(mockEngine, mockEffect, MockDatabaseService());
+    playlistService = PlaylistService(
+      mockEngine,
+      mockEffect,
+      MockDatabaseServiceWrapper(),
+    );
   });
 
   tearDown(() {
@@ -112,7 +126,7 @@ void main() {
     test('next() increments index in sequential mode', () async {
       await playlistService.setPlaylist(testSongs);
       playlistService.setPlayMode(PlayMode.sequential);
-      
+
       await playlistService.next();
       expect(playlistService.currentIndex, 1);
       expect(playlistService.currentSong?.name, 'Song C');
@@ -170,9 +184,9 @@ void main() {
 
       playlistService.setSortMode(SortMode.duration);
       final sorted = playlistService.getSortedPlaylist(songsWithDuration);
-      expect(sorted[0].name, 'Short');  // 120s
+      expect(sorted[0].name, 'Short'); // 120s
       expect(sorted[1].name, 'Medium'); // 200s
-      expect(sorted[2].name, 'Long');   // 300s
+      expect(sorted[2].name, 'Long'); // 300s
     });
 
     test('Sorting by duration descending toggles correctly', () async {
@@ -187,9 +201,9 @@ void main() {
       // Second call toggles to descending
       playlistService.setSortMode(SortMode.duration);
       final sorted = playlistService.getSortedPlaylist(songsWithDuration);
-      expect(sorted[0].name, 'Long');   // 300s first
+      expect(sorted[0].name, 'Long'); // 300s first
       expect(sorted[1].name, 'Medium'); // 200s
-      expect(sorted[2].name, 'Short');  // 120s last
+      expect(sorted[2].name, 'Short'); // 120s last
     });
 
     test('Sorting by duration handles null durationMs', () async {
@@ -209,9 +223,21 @@ void main() {
 
     test('Sorting by dateAdded works correctly', () async {
       final songsWithDates = [
-        Song(name: 'Old', sourcePath: 'old.mp3', dateAdded: DateTime(2026, 1, 1)),
-        Song(name: 'New', sourcePath: 'new.mp3', dateAdded: DateTime(2026, 5, 18)),
-        Song(name: 'Mid', sourcePath: 'mid.mp3', dateAdded: DateTime(2026, 3, 10)),
+        Song(
+          name: 'Old',
+          sourcePath: 'old.mp3',
+          dateAdded: DateTime(2026, 1, 1),
+        ),
+        Song(
+          name: 'New',
+          sourcePath: 'new.mp3',
+          dateAdded: DateTime(2026, 5, 18),
+        ),
+        Song(
+          name: 'Mid',
+          sourcePath: 'mid.mp3',
+          dateAdded: DateTime(2026, 3, 10),
+        ),
       ];
 
       playlistService.setSortMode(SortMode.dateAdded);
@@ -223,7 +249,11 @@ void main() {
 
     test('Sorting by dateAdded handles null dates', () async {
       final songsMixedDates = [
-        Song(name: 'Has Date', sourcePath: 'a.mp3', dateAdded: DateTime(2026, 5, 1)),
+        Song(
+          name: 'Has Date',
+          sourcePath: 'a.mp3',
+          dateAdded: DateTime(2026, 5, 1),
+        ),
         Song(name: 'No Date', sourcePath: 'b.mp3'), // dateAdded is null
         Song(name: 'Old', sourcePath: 'c.mp3', dateAdded: DateTime(2026, 1, 1)),
       ];

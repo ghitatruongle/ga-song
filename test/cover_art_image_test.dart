@@ -13,13 +13,16 @@ void main() {
     final repo = CoverArtRepository();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          coverArtRepositoryProvider.overrideWithValue(repo),
-        ],
+        overrides: [coverArtRepositoryProvider.overrideWithValue(repo)],
         child: MaterialApp(
           home: Scaffold(
             body: CoverArtImage(
-              song: (Song(id: 1, name: 'Test', sourcePath: 'assets/song/missing.mp3', isBuiltIn: true)),
+              song: (Song(
+                id: 1,
+                name: 'Test',
+                sourcePath: 'assets/song/missing.mp3',
+                isBuiltIn: true,
+              )),
               fallbackBuilder: _fallbackBuilder,
             ),
           ),

@@ -23,7 +23,8 @@ class SongPlaybackInheritedWidget extends InheritedWidget {
   final bool isPlaying;
 
   static SongPlaybackInheritedWidget of(BuildContext context) {
-    final widget = context.dependOnInheritedWidgetOfExactType<SongPlaybackInheritedWidget>();
+    final widget = context
+        .dependOnInheritedWidgetOfExactType<SongPlaybackInheritedWidget>();
     assert(widget != null, 'No SongPlaybackInheritedWidget found in context');
     return widget!;
   }
@@ -31,7 +32,7 @@ class SongPlaybackInheritedWidget extends InheritedWidget {
   @override
   bool updateShouldNotify(SongPlaybackInheritedWidget oldWidget) {
     return currentIndex != oldWidget.currentIndex ||
-           isPlaying != oldWidget.isPlaying;
+        isPlaying != oldWidget.isPlaying;
   }
 }
 
@@ -63,7 +64,9 @@ class SongGridTile extends ConsumerWidget {
         child: Container(
           decoration: BoxDecoration(
             color: isCurrent
-                ? (isDark ? AppColors.darkSidebarHover : AppColors.lightSurface2)
+                ? (isDark
+                      ? AppColors.darkSidebarHover
+                      : AppColors.lightSurface2)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -125,7 +128,9 @@ class SongGridTile extends ConsumerWidget {
                           song.name,
                           style: TextStyle(
                             color: context.adaptive,
-                            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: isCurrent
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             fontSize: 13,
                           ),
                           maxLines: 1,
@@ -202,8 +207,8 @@ class _SongListTileState extends ConsumerState<SongListTile> {
             decoration: BoxDecoration(
               color: _isHovered && !isCurrent
                   ? (isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : Colors.black.withValues(alpha: 0.03))
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : Colors.black.withValues(alpha: 0.03))
                   : Colors.transparent,
               border: Border(
                 bottom: BorderSide(
@@ -241,7 +246,9 @@ class _SongListTileState extends ConsumerState<SongListTile> {
                                 '${widget.songIndex + 1}',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: context.adaptive.withValues(alpha: 0.35),
+                                  color: context.adaptive.withValues(
+                                    alpha: 0.35,
+                                  ),
                                   fontWeight: FontWeight.w400,
                                 ),
                                 textAlign: TextAlign.center,
@@ -286,7 +293,9 @@ class _SongListTileState extends ConsumerState<SongListTile> {
                             widget.song.name,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               color: isCurrent
                                   ? Theme.of(context).colorScheme.primary
                                   : context.adaptive,
@@ -313,7 +322,10 @@ class _SongListTileState extends ConsumerState<SongListTile> {
                     // convenience.
                     if (_isHovered && !isNarrow)
                       GestureDetector(
-                        onTap: () => PlaylistManagerWidget.showAddToPlaylist(context, widget.song),
+                        onTap: () => PlaylistManagerWidget.showAddToPlaylist(
+                          context,
+                          widget.song,
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(4),
                           child: Icon(

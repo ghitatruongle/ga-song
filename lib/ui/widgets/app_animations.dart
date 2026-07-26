@@ -31,10 +31,7 @@ class AppAnimations {
     required Animation<double> animation,
   }) {
     return FadeTransition(
-      opacity: CurvedAnimation(
-        parent: animation,
-        curve: standard,
-      ),
+      opacity: CurvedAnimation(parent: animation, curve: standard),
       child: child,
     );
   }
@@ -48,14 +45,8 @@ class AppAnimations {
       position: Tween<Offset>(
         begin: const Offset(0, 0.3),
         end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: animation,
-        curve: enter,
-      )),
-      child: FadeTransition(
-        opacity: animation,
-        child: child,
-      ),
+      ).animate(CurvedAnimation(parent: animation, curve: enter)),
+      child: FadeTransition(opacity: animation, child: child),
     );
   }
 
@@ -65,10 +56,7 @@ class AppAnimations {
     required Animation<double> animation,
   }) {
     return ScaleTransition(
-      scale: CurvedAnimation(
-        parent: animation,
-        curve: standard,
-      ),
+      scale: CurvedAnimation(parent: animation, curve: standard),
       child: child,
     );
   }
@@ -88,14 +76,8 @@ class AppAnimations {
   }
 
   /// Creates a hero animation wrapper.
-  static Widget hero({
-    required String tag,
-    required Widget child,
-  }) {
-    return Hero(
-      tag: tag,
-      child: child,
-    );
+  static Widget hero({required String tag, required Widget child}) {
+    return Hero(tag: tag, child: child);
   }
 
   /// Creates an animated switcher for swapping widgets.
@@ -106,12 +88,11 @@ class AppAnimations {
   }) {
     return AnimatedSwitcher(
       duration: duration ?? medium,
-      transitionBuilder: transitionBuilder ?? (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
-      },
+      transitionBuilder:
+          transitionBuilder ??
+          (child, animation) {
+            return FadeTransition(opacity: animation, child: child);
+          },
       child: child,
     );
   }

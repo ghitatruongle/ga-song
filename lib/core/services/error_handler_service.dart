@@ -18,10 +18,7 @@ class ErrorHandlerService {
   ///
   /// Catches [AppException] and unexpected exceptions, logs them,
   /// and returns a [Failure] with the error message.
-  Result<T> handle<T>(
-    T Function() operation, {
-    String? context,
-  }) {
+  Result<T> handle<T>(T Function() operation, {String? context}) {
     try {
       final result = operation();
       return Success(result);
@@ -68,23 +65,19 @@ class ErrorHandlerService {
   }
 
   /// Reports an error to the crash reporter and debug console.
-  void _reportError(
-    Object error,
-    StackTrace stackTrace, {
-    String? context,
-  }) {
+  void _reportError(Object error, StackTrace stackTrace, {String? context}) {
     // Log to debug console
     if (kDebugMode) {
-      AppLogger.w('error_handler.service', 'Error${context != null ? ' in $context' : ''}', error: error);
+      AppLogger.w(
+        'error_handler.service',
+        'Error${context != null ? ' in $context' : ''}',
+        error: error,
+      );
       AppLogger.d('error_handler.service', 'stack', error: stackTrace);
     }
 
     // Report to crash reporter
-    _crashReporter.reportError(
-      error,
-      stackTrace,
-      context: context,
-    );
+    _crashReporter.reportError(error, stackTrace, context: context);
   }
 
   /// Creates a [Failure] from an exception.

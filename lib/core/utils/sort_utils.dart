@@ -63,8 +63,11 @@ class SongSortUtils {
   /// Returns a new sorted [List] based on [mode] and [ascending].
   ///
   /// The original list is not modified.
-  static List<Song> sorted(List<Song> songs, SortMode mode,
-      {bool ascending = true}) {
+  static List<Song> sorted(
+    List<Song> songs,
+    SortMode mode, {
+    bool ascending = true,
+  }) {
     final result = List<Song>.from(songs);
     sort(result, mode, ascending: ascending);
     return result;

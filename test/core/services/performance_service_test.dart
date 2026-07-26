@@ -26,10 +26,7 @@ void main() {
     });
 
     test('stopTimer throws for non-existent timer', () {
-      expect(
-        () => service.stopTimer('nonexistent'),
-        throwsStateError,
-      );
+      expect(() => service.stopTimer('nonexistent'), throwsStateError);
     });
 
     test('measure records duration', () {

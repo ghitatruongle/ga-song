@@ -37,8 +37,9 @@ class BottomPlayerBarWidget extends ConsumerWidget {
         // layout overflows by ~50 px.  Collapse to a vertical layout
         // (SongInfo on top, controls below) which scales gracefully.
         final isNarrow = constraints.maxWidth < _kNarrowPlayerBarThreshold;
-        final barHeight =
-            isNarrow ? _kPlayerBarHeightNarrow : _kPlayerBarHeightWide;
+        final barHeight = isNarrow
+            ? _kPlayerBarHeightNarrow
+            : _kPlayerBarHeightWide;
 
         return Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -74,8 +75,8 @@ class BottomPlayerBarWidget extends ConsumerWidget {
                           ),
                         )
                       : (isNarrow
-                          ? _CompactPlayerContent(song: song)
-                          : _WidePlayerContent(song: song)),
+                            ? _CompactPlayerContent(song: song)
+                            : _WidePlayerContent(song: song)),
                 ),
               ],
             ),
@@ -106,10 +107,7 @@ class _WidePlayerContent extends StatelessWidget {
           flex: 4,
           child: RepaintBoundary(child: CenterControls()),
         ),
-        const Expanded(
-          flex: 3,
-          child: RepaintBoundary(child: RightControls()),
-        ),
+        const Expanded(flex: 3, child: RepaintBoundary(child: RightControls())),
       ],
     );
   }

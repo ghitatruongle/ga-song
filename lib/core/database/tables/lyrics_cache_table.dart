@@ -14,5 +14,7 @@ class LyricsCache extends Table {
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override
-  List<Set<Column>> get uniqueKeys => [{songId}];
+  List<Set<Column>> get uniqueKeys => [
+    {songId},
+  ];
 }

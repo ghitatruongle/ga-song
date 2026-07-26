@@ -75,7 +75,8 @@ class Song {
   String get assetPath => sourcePath;
 
   /// Duration as a Duration object, or null if durationMs is not set.
-  Duration? get duration => durationMs != null ? Duration(milliseconds: durationMs!) : null;
+  Duration? get duration =>
+      durationMs != null ? Duration(milliseconds: durationMs!) : null;
 
   /// Copy with new values
   Song copyWith({
