@@ -21,7 +21,9 @@ class AccessiblePlayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: isPlaying ? 'Pause' : 'Play',
-      hint: isPlaying ? 'Tap to pause current song' : 'Tap to play current song',
+      hint: isPlaying
+          ? 'Tap to pause current song'
+          : 'Tap to play current song',
       button: true,
       enabled: true,
       child: IconButton(
@@ -71,7 +73,8 @@ class AccessibleSongTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '$title by $artist, duration $duration${isPlaying ? ', currently playing' : ''}',
+      label:
+          '$title by $artist, duration $duration${isPlaying ? ', currently playing' : ''}',
       hint: 'Tap to play, double tap to toggle favorite',
       button: true,
       selected: isPlaying,
@@ -91,7 +94,9 @@ class AccessibleSongTile extends StatelessWidget {
                   color: isFavorite ? Colors.red : null,
                 ),
                 onPressed: onFavoriteToggle,
-                tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+                tooltip: isFavorite
+                    ? 'Remove from favorites'
+                    : 'Add to favorites',
               ),
             ),
           ],

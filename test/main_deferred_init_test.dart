@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('addPostFrameCallback fires after a frame is pumped', (tester) async {
+  testWidgets('addPostFrameCallback fires after a frame is pumped', (
+    tester,
+  ) async {
     var fired = false;
     await tester.pumpWidget(
       MaterialApp(
@@ -19,7 +21,9 @@ void main() {
     expect(fired, isTrue);
   });
 
-  testWidgets('addPostFrameCallback runs after first frame, not before', (tester) async {
+  testWidgets('addPostFrameCallback runs after first frame, not before', (
+    tester,
+  ) async {
     var order = <String>[];
     order.add('before-pump');
     await tester.pumpWidget(

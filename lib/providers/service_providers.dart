@@ -24,7 +24,6 @@ final feedbackServiceProvider = Provider<FeedbackService>((ref) {
   return FeedbackService(ref.watch(settingsManagerProvider));
 });
 
-
 /// Database service for songs, playlists, and cover art cache.
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();

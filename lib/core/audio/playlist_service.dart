@@ -52,7 +52,11 @@ class PlaylistService {
   Timer? _sleepTimer;
   StreamSubscription<void>? _songCompletedSub;
 
-  PlaylistService(this._engineService, this._effectService, this._databaseService) {
+  PlaylistService(
+    this._engineService,
+    this._effectService,
+    this._databaseService,
+  ) {
     _songCompletedSub = _engineService.onSongCompleted.listen((_) {
       _onSongCompleted();
     });
@@ -159,10 +163,15 @@ class PlaylistService {
         // Fire-and-forget: don't block playback for a DB write.
         final updated = song.copyWith(durationMs: dur.inMilliseconds);
         _databaseService.putSong(updated).catchError((Object e) {
-          AppLogger.w('audio.playlist_service', 'Failed to persist duration for ${song.name}', error: e);
+          AppLogger.w(
+            'audio.playlist_service',
+            'Failed to persist duration for ${song.name}',
+            error: e,
+          );
         });
       }
     }
+
     _engineService.durationNotifier.addListener(listener);
   }
 
@@ -271,10 +280,11 @@ class PlaylistService {
 
     final nextSong = _playlist[nextIndex];
     final gain = _effectService.calculateNormalizationGain(nextSong.peakDb);
-    
+
     // Get crossfade curve from settings
     final curveIndex = _effectService.crossfadeCurveNotifier.value;
-    final curve = CrossfadeCurve.values[curveIndex.clamp(0, CrossfadeCurve.values.length - 1)];
+    final curve = CrossfadeCurve
+        .values[curveIndex.clamp(0, CrossfadeCurve.values.length - 1)];
 
     await _engineService.crossfadeTo(
       nextSong.assetPath,
@@ -360,7 +370,7 @@ class PlaylistService {
     if (index >= _playlist.length) return;
     // Do not modify history if we are navigating backwards
     if (_historyOffset > 0) return;
-    
+
     _shuffleHistory.remove(index);
     _shuffleHistory.add(index);
     if (_shuffleHistory.length > _playlist.length) {
@@ -447,7 +457,9 @@ class PlaylistService {
       if (concurrency >= indicesToPreload.length) {
         // Fast path: parallel preload (desktop)
         await Future.wait(
-          indicesToPreload.map((i) => _engineService.preload(_playlist[i].assetPath)),
+          indicesToPreload.map(
+            (i) => _engineService.preload(_playlist[i].assetPath),
+          ),
         );
       } else {
         // Throttled path: sequential preload (Android)

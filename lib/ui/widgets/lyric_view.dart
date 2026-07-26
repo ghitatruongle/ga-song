@@ -55,12 +55,12 @@ class _LyricViewState extends ConsumerState<LyricView> {
 
   void _scrollToCurrentIndex() {
     if (!_scrollController.hasClients) return;
-    
+
     // Approximate line height
     final lineHeight = widget.isFullScreen ? 70.0 : 48.0;
     final viewportHeight = MediaQuery.of(context).size.height;
     final offset = (_currentIndex * lineHeight) - (viewportHeight / 3);
-    
+
     _scrollController.animateTo(
       offset.clamp(0.0, _scrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 400),
@@ -135,31 +135,30 @@ class _LyricViewState extends ConsumerState<LyricView> {
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
               style: TextStyle(
-                color: isActive 
-                    ? Colors.white 
+                color: isActive
+                    ? Colors.white
                     : Colors.white.withValues(alpha: opacity),
-                fontSize: widget.isFullScreen 
+                fontSize: widget.isFullScreen
                     ? (isActive ? 40 : 26)
                     : (isActive ? 24 : 17),
                 fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                 letterSpacing: isActive ? 0.5 : 0,
                 height: 1.4,
-                shadows: isActive && widget.isFullScreen ? [
-                  Shadow(
-                    color: accentColor.withValues(alpha: 0.5),
-                    blurRadius: 16,
-                  ),
-                  const Shadow(
-                    color: Colors.black54,
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ] : isActive ? [
-                  const Shadow(
-                    color: Colors.black38,
-                    blurRadius: 4,
-                  ),
-                ] : null,
+                shadows: isActive && widget.isFullScreen
+                    ? [
+                        Shadow(
+                          color: accentColor.withValues(alpha: 0.5),
+                          blurRadius: 16,
+                        ),
+                        const Shadow(
+                          color: Colors.black54,
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                    : isActive
+                    ? [const Shadow(color: Colors.black38, blurRadius: 4)]
+                    : null,
               ),
               child: ShaderMask(
                 shaderCallback: (bounds) {
@@ -170,18 +169,12 @@ class _LyricViewState extends ConsumerState<LyricView> {
                   }
                   // Gradient effect on active line
                   return LinearGradient(
-                    colors: [
-                      accentColor,
-                      Colors.white,
-                    ],
+                    colors: [accentColor, Colors.white],
                     stops: const [0.0, 0.6],
                   ).createShader(bounds);
                 },
                 blendMode: BlendMode.srcIn,
-                child: Text(
-                  line.text,
-                  textAlign: TextAlign.center,
-                ),
+                child: Text(line.text, textAlign: TextAlign.center),
               ),
             ),
           ),

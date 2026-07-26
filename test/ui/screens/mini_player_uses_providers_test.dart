@@ -5,9 +5,9 @@ import 'package:ga_song/core/settings_manager.dart';
 
 void main() {
   test('settingsManagerProvider resolves under test container', () {
-    final container = ProviderContainer(overrides: [
-      settingsManagerProvider.overrideWithValue(SettingsManager()),
-    ]);
+    final container = ProviderContainer(
+      overrides: [settingsManagerProvider.overrideWithValue(SettingsManager())],
+    );
     addTearDown(container.dispose);
     expect(container.read(settingsManagerProvider), isNotNull);
   });
@@ -18,9 +18,9 @@ void main() {
     // Provider (compile-time type assertion) and that the providers it
     // depends on can be constructed under overrides.
     expect(audioEngineServiceProvider, isA<Provider>());
-    final container = ProviderContainer(overrides: [
-      settingsManagerProvider.overrideWithValue(SettingsManager()),
-    ]);
+    final container = ProviderContainer(
+      overrides: [settingsManagerProvider.overrideWithValue(SettingsManager())],
+    );
     addTearDown(container.dispose);
     // Trigger lazy creation chain by reading a sibling that depends on
     // the engine — we just verify no crash for an unrelated provider.

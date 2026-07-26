@@ -4,7 +4,11 @@ import 'package:ga_song/models/song.dart';
 void main() {
   group('Song Model', () {
     test('duration getter returns Duration when durationMs is set', () {
-      final song = Song(name: 'Test', sourcePath: 'test.mp3', durationMs: 180000);
+      final song = Song(
+        name: 'Test',
+        sourcePath: 'test.mp3',
+        durationMs: 180000,
+      );
       expect(song.duration, const Duration(minutes: 3));
     });
 
@@ -25,7 +29,10 @@ void main() {
     });
 
     test('fileName handles nested forward slash paths', () {
-      final song = Song(name: 'Test', sourcePath: 'assets/song/album/track.mp3');
+      final song = Song(
+        name: 'Test',
+        sourcePath: 'assets/song/album/track.mp3',
+      );
       expect(song.fileName, 'track.mp3');
     });
 
@@ -97,21 +104,35 @@ void main() {
     });
 
     test('fromJson handles integer isBuiltIn (SQLite format)', () {
-      final json = {'isBuiltIn': 1, 'isFavorite': 1, 'name': 'Test', 'sourcePath': 'test.mp3'};
+      final json = {
+        'isBuiltIn': 1,
+        'isFavorite': 1,
+        'name': 'Test',
+        'sourcePath': 'test.mp3',
+      };
       final song = Song.fromJson(json);
       expect(song.isBuiltIn, isTrue);
       expect(song.isFavorite, isTrue);
     });
 
     test('fromJson handles boolean isBuiltIn (JSON format)', () {
-      final json = {'isBuiltIn': true, 'isFavorite': false, 'name': 'Test', 'sourcePath': 'test.mp3'};
+      final json = {
+        'isBuiltIn': true,
+        'isFavorite': false,
+        'name': 'Test',
+        'sourcePath': 'test.mp3',
+      };
       final song = Song.fromJson(json);
       expect(song.isBuiltIn, isTrue);
       expect(song.isFavorite, isFalse);
     });
 
     test('fromJson handles invalid dateAdded gracefully', () {
-      final json = {'name': 'Test', 'sourcePath': 'test.mp3', 'dateAdded': 'invalid'};
+      final json = {
+        'name': 'Test',
+        'sourcePath': 'test.mp3',
+        'dateAdded': 'invalid',
+      };
       final song = Song.fromJson(json);
       expect(song.dateAdded, isNull);
     });

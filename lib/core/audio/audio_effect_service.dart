@@ -11,7 +11,9 @@ class AudioEffectService {
 
   final ValueNotifier<int> bassLevelNotifier = ValueNotifier(0);
   final ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3.0);
-  final ValueNotifier<int> crossfadeCurveNotifier = ValueNotifier(0); // 0=linear, 1=exponential, 2=sCurve
+  final ValueNotifier<int> crossfadeCurveNotifier = ValueNotifier(
+    0,
+  ); // 0=linear, 1=exponential, 2=sCurve
   final ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(0.0);
   final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1.0);
   final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0.0);
@@ -186,7 +188,8 @@ class AudioEffectService {
     reverbRoomSizeNotifier.value = size.clamp(0.0, 1.0);
     if (!_soloud.isInitialized || !_reverbActive) return;
     try {
-      _soloud.filters.freeverbFilter.roomSize.value = reverbRoomSizeNotifier.value;
+      _soloud.filters.freeverbFilter.roomSize.value =
+          reverbRoomSizeNotifier.value;
     } catch (e) {
       AppLogger.w('audio.effect_service', 'setReverbRoomSize failed', error: e);
     }
@@ -231,7 +234,11 @@ class AudioEffectService {
         filter.makeupGain.value = compMakeupGainNotifier.value;
       }
     } catch (e) {
-      AppLogger.w('audio.effect_service', 'setCompressionRatio failed', error: e);
+      AppLogger.w(
+        'audio.effect_service',
+        'setCompressionRatio failed',
+        error: e,
+      );
     }
   }
 
@@ -239,7 +246,8 @@ class AudioEffectService {
     compThresholdNotifier.value = threshold.clamp(-80.0, 0.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
-      _soloud.filters.compressorFilter.threshold.value = compThresholdNotifier.value;
+      _soloud.filters.compressorFilter.threshold.value =
+          compThresholdNotifier.value;
     } catch (e) {
       AppLogger.w('audio.effect_service', 'compThreshold failed', error: e);
     }
@@ -249,7 +257,8 @@ class AudioEffectService {
     compAttackNotifier.value = attack.clamp(0.0, 100.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
-      _soloud.filters.compressorFilter.attackTime.value = compAttackNotifier.value;
+      _soloud.filters.compressorFilter.attackTime.value =
+          compAttackNotifier.value;
     } catch (e) {
       AppLogger.w('audio.effect_service', 'compAttack failed', error: e);
     }
@@ -259,7 +268,8 @@ class AudioEffectService {
     compReleaseNotifier.value = release.clamp(0.0, 1000.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
-      _soloud.filters.compressorFilter.releaseTime.value = compReleaseNotifier.value;
+      _soloud.filters.compressorFilter.releaseTime.value =
+          compReleaseNotifier.value;
     } catch (e) {
       AppLogger.w('audio.effect_service', 'compRelease failed', error: e);
     }
@@ -269,7 +279,8 @@ class AudioEffectService {
     compKneeWidthNotifier.value = knee.clamp(0.0, 40.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
-      _soloud.filters.compressorFilter.kneeWidth.value = compKneeWidthNotifier.value;
+      _soloud.filters.compressorFilter.kneeWidth.value =
+          compKneeWidthNotifier.value;
     } catch (e) {
       AppLogger.w('audio.effect_service', 'compKneeWidth failed', error: e);
     }
@@ -279,7 +290,8 @@ class AudioEffectService {
     compMakeupGainNotifier.value = gain.clamp(-40.0, 40.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
-      _soloud.filters.compressorFilter.makeupGain.value = compMakeupGainNotifier.value;
+      _soloud.filters.compressorFilter.makeupGain.value =
+          compMakeupGainNotifier.value;
     } catch (e) {
       AppLogger.w('audio.effect_service', 'compMakeupGain failed', error: e);
     }
@@ -347,7 +359,12 @@ class AudioEffectService {
         _compressorActive = false;
       }
     } catch (e, stack) {
-      AppLogger.w('audio.effect_service', 'filter deactivation failed', error: e, stack: stack);
+      AppLogger.w(
+        'audio.effect_service',
+        'filter deactivation failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 }

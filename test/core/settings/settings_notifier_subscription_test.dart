@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 import 'package:ga_song/core/settings_manager.dart';
 import 'package:ga_song/providers/service_providers.dart';
 
@@ -45,12 +44,17 @@ void main() {
 
       final newState = container.read(settingsNotifierProvider);
       expect(newState.blurLevel, 77.0);
-      expect(identical(initialState, newState), isFalse,
-          reason: 'state object should be a fresh instance after rebuild');
+      expect(
+        identical(initialState, newState),
+        isFalse,
+        reason: 'state object should be a fresh instance after rebuild',
+      );
     });
 
     test('setter call eventually reflects in state', () async {
-      await container.read(settingsNotifierProvider.notifier).setBlurLevel(42.0);
+      await container
+          .read(settingsNotifierProvider.notifier)
+          .setBlurLevel(42.0);
       // Debounced refresh — wait for it to settle.
       await Future<void>.delayed(const Duration(milliseconds: 20));
       final state = container.read(settingsNotifierProvider);
@@ -82,10 +86,7 @@ void main() {
 
       // Mutating underlying notifier after dispose must NOT throw — the
       // listener should have been removed via the subscription disposal.
-      expect(
-        () => manager.blurLevelNotifier.value = 99.0,
-        returnsNormally,
-      );
+      expect(() => manager.blurLevelNotifier.value = 99.0, returnsNormally);
     });
   });
 }

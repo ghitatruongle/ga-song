@@ -79,9 +79,9 @@ class _SmartPlaylistCard extends ConsumerWidget {
               Text(
                 SmartPlaylistService.getDisplayName(type),
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               playlistAsync.when(
@@ -99,7 +99,9 @@ class _SmartPlaylistCard extends ConsumerWidget {
                 ),
                 error: (error, stackTrace) => Text(
                   'Lỗi tải',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.red),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.red),
                 ),
               ),
             ],
@@ -109,7 +111,11 @@ class _SmartPlaylistCard extends ConsumerWidget {
     );
   }
 
-  void _showPlaylistDetails(BuildContext context, WidgetRef ref, SmartPlaylistType type) {
+  void _showPlaylistDetails(
+    BuildContext context,
+    WidgetRef ref,
+    SmartPlaylistType type,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => _SmartPlaylistDetailsScreen(type: type),
@@ -131,7 +137,9 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
       backgroundColor: context.adaptive,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('${SmartPlaylistService.getIcon(type)} ${SmartPlaylistService.getDisplayName(type)}'),
+        title: Text(
+          '${SmartPlaylistService.getIcon(type)} ${SmartPlaylistService.getDisplayName(type)}',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.play_arrow_rounded),
@@ -143,7 +151,7 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
                     playlist.setPlaylist(songs, startIndex: 0);
                     playlist.play();
                   }
-                }
+                },
               );
             },
           ),
@@ -165,10 +173,7 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
                   playlist.setPlaylist(songs, startIndex: index);
                   playlist.play();
                 },
-                child: SongListTile(
-                  song: song,
-                  songIndex: index,
-                ),
+                child: SongListTile(song: song, songIndex: index),
               );
             },
           );

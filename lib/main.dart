@@ -84,8 +84,11 @@ Future<void> main() async {
   // Bắt lỗi UI (Render exceptions)
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    crashReporter.reportError(details.exception, details.stack ?? StackTrace.current,
-        context: 'FlutterError');
+    crashReporter.reportError(
+      details.exception,
+      details.stack ?? StackTrace.current,
+      context: 'FlutterError',
+    );
   };
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -97,11 +100,19 @@ Future<void> main() async {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 64),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 64,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Đã xảy ra lỗi hiển thị',
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -133,7 +144,11 @@ Future<void> main() async {
 
   final engineService = AudioEngineService();
   final effectService = AudioEffectService();
-  final playlistService = PlaylistService(engineService, effectService, dbService);
+  final playlistService = PlaylistService(
+    engineService,
+    effectService,
+    dbService,
+  );
   final coverArtRepo = CoverArtRepository();
 
   Widget initialScreen;
@@ -165,19 +180,30 @@ Future<void> main() async {
     }
 
     try {
-      effectService.setCrossfadeDuration(settings.crossfadeDurationNotifier.value);
-      effectService.crossfadeCurveNotifier.value = settings.crossfadeCurveNotifier.value;
-      effectService.setNormalizationLevel(settings.normalizationLevelNotifier.value);
-      effectService.enableNormalization(settings.normalizationEnabledNotifier.value);
+      effectService.setCrossfadeDuration(
+        settings.crossfadeDurationNotifier.value,
+      );
+      effectService.crossfadeCurveNotifier.value =
+          settings.crossfadeCurveNotifier.value;
+      effectService.setNormalizationLevel(
+        settings.normalizationLevelNotifier.value,
+      );
+      effectService.enableNormalization(
+        settings.normalizationEnabledNotifier.value,
+      );
       effectService.setPitchShift(settings.pitchShiftNotifier.value);
       effectService.setReverbMix(settings.reverbMixNotifier.value);
-      effectService.setCompressionRatio(settings.compressionRatioNotifier.value);
+      effectService.setCompressionRatio(
+        settings.compressionRatioNotifier.value,
+      );
     } catch (e) {
       AppLogger.w('main', 'audio effects init failed', error: e);
     }
 
     try {
-      SoLoud.instance.setVisualizationEnabled(settings.visualizerEnabledNotifier.value);
+      SoLoud.instance.setVisualizationEnabled(
+        settings.visualizerEnabledNotifier.value,
+      );
     } catch (e) {
       AppLogger.w('main', 'enable visualization failed', error: e);
     }
@@ -244,8 +270,12 @@ Future<void> main() async {
         await hotkeyService.init();
         if (!kDebugMode) await systemTrayService.init();
       } catch (e, stack) {
-        AppLogger.w('main', 'deferred desktop service init failed',
-            error: e, stack: stack);
+        AppLogger.w(
+          'main',
+          'deferred desktop service init failed',
+          error: e,
+          stack: stack,
+        );
       }
     });
   }
@@ -295,11 +325,10 @@ class _GASongAppState extends ConsumerState<GASongApp> {
     ]);
   }
 
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.read(settingsManagerProvider);
-    
+
     // Automatically update dynamic color when song changes
     ref.listen(currentSongDominantColorProvider, (previous, next) {
       if (next.hasValue && next.value != null) {
@@ -308,7 +337,6 @@ class _GASongAppState extends ConsumerState<GASongApp> {
     });
 
     return AnimatedBuilder(
-
       animation: _themeListenable,
       builder: (context, _) {
         final themeMode = settings.themeModeNotifier.value;
@@ -332,11 +360,10 @@ class _GASongAppState extends ConsumerState<GASongApp> {
             colorScheme: ColorScheme.fromSeed(
               seedColor: primaryColor,
               brightness: Brightness.light,
-            ).copyWith(
-              surface: AppColors.lightSurface,
-            ),
-            scaffoldBackgroundColor:
-                useNative ? Colors.transparent : AppColors.lightSurface2,
+            ).copyWith(surface: AppColors.lightSurface),
+            scaffoldBackgroundColor: useNative
+                ? Colors.transparent
+                : AppColors.lightSurface2,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
@@ -344,11 +371,10 @@ class _GASongAppState extends ConsumerState<GASongApp> {
             colorScheme: ColorScheme.fromSeed(
               seedColor: primaryColor,
               brightness: Brightness.dark,
-            ).copyWith(
-              surface: AppColors.darkSurface2,
-            ),
-            scaffoldBackgroundColor:
-                useNative ? Colors.transparent : AppColors.darkBackground,
+            ).copyWith(surface: AppColors.darkSurface2),
+            scaffoldBackgroundColor: useNative
+                ? Colors.transparent
+                : AppColors.darkBackground,
           ),
           builder: (context, child) {
             // Honor reduced-motion preference: disable all tickers

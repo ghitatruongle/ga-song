@@ -4,10 +4,7 @@ import 'package:drift/drift.dart';
 
 extension PlaylistEntryMapper on PlaylistEntry {
   Playlist toPlaylist() {
-    return Playlist(
-      id: id,
-      name: name,
-    );
+    return Playlist(id: id, name: name);
   }
 }
 

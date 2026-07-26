@@ -60,7 +60,11 @@ class MusicManager {
             }
           }
         } catch (e) {
-          AppLogger.w('music_manager.service', 'audio tags read failed', error: e);
+          AppLogger.w(
+            'music_manager.service',
+            'audio tags read failed',
+            error: e,
+          );
         }
 
         final song = Song(
@@ -75,7 +79,11 @@ class MusicManager {
         await _db.putSong(song);
       }
     } catch (e) {
-      AppLogger.w('music_manager.service', 'local songs import failed', error: e);
+      AppLogger.w(
+        'music_manager.service',
+        'local songs import failed',
+        error: e,
+      );
       rethrow;
     }
   }

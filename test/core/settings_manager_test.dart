@@ -261,11 +261,7 @@ void main() {
       });
 
       test('setSavedWindowState persists size and flags', () async {
-        await manager.setSavedWindowState(
-          const Size(1280, 720),
-          true,
-          false,
-        );
+        await manager.setSavedWindowState(const Size(1280, 720), true, false);
         expect(manager.savedWindowSize, const Size(1280, 720));
         expect(manager.savedWindowMaximized, isTrue);
         expect(manager.savedWindowFullScreen, isFalse);
@@ -293,7 +289,10 @@ void main() {
     group('setCustomBackgroundImage', () {
       test('sets path', () async {
         await manager.setCustomBackgroundImage('/path/to/image.png');
-        expect(manager.customBackgroundImageNotifier.value, '/path/to/image.png');
+        expect(
+          manager.customBackgroundImageNotifier.value,
+          '/path/to/image.png',
+        );
       });
 
       test('removes when null', () async {
@@ -539,34 +538,37 @@ void main() {
 
     // ─── Sort ──────────────────────────────────────────────────────────
 
-	    group('sort setters', () {
-	      test('setSortMode persists', () async {
-	        await manager.setSortMode(2);
-	        expect(manager.sortModeNotifier.value, 2);
-	      });
+    group('sort setters', () {
+      test('setSortMode persists', () async {
+        await manager.setSortMode(2);
+        expect(manager.sortModeNotifier.value, 2);
+      });
 
-	      test('setSortMode accepts all 6 modes (0-5)', () async {
-	        // After fix: _kSortModeCount changed from 4 to 6
-	        for (int mode = 0; mode <= 5; mode++) {
-	          await manager.setSortMode(mode);
-	          expect(manager.sortModeNotifier.value, mode,
-		      reason: 'Sort mode $mode should be settable');
-	        }
-	      });
+      test('setSortMode accepts all 6 modes (0-5)', () async {
+        // After fix: _kSortModeCount changed from 4 to 6
+        for (int mode = 0; mode <= 5; mode++) {
+          await manager.setSortMode(mode);
+          expect(
+            manager.sortModeNotifier.value,
+            mode,
+            reason: 'Sort mode $mode should be settable',
+          );
+        }
+      });
 
-	      test('setSortMode clamps to valid range', () async {
-	        await manager.setSortMode(-1);
-	        expect(manager.sortModeNotifier.value, inInclusiveRange(0, 5));
+      test('setSortMode clamps to valid range', () async {
+        await manager.setSortMode(-1);
+        expect(manager.sortModeNotifier.value, inInclusiveRange(0, 5));
 
-	        await manager.setSortMode(99);
-	        expect(manager.sortModeNotifier.value, inInclusiveRange(0, 5));
-	      });
+        await manager.setSortMode(99);
+        expect(manager.sortModeNotifier.value, inInclusiveRange(0, 5));
+      });
 
-	      test('setSortAscending persists', () async {
-	        await manager.setSortAscending(false);
-	        expect(manager.sortAscendingNotifier.value, isFalse);
-	      });
-	    });
+      test('setSortAscending persists', () async {
+        await manager.setSortAscending(false);
+        expect(manager.sortAscendingNotifier.value, isFalse);
+      });
+    });
 
     // ─── Custom Hotkeys ────────────────────────────────────────────────
 
@@ -579,7 +581,10 @@ void main() {
       test('removeCustomHotkey removes hotkey', () async {
         await manager.setCustomHotkey('play', 'Ctrl+P');
         await manager.removeCustomHotkey('play');
-        expect(manager.customHotkeysNotifier.value.containsKey('play'), isFalse);
+        expect(
+          manager.customHotkeysNotifier.value.containsKey('play'),
+          isFalse,
+        );
       });
     });
 

@@ -5,7 +5,6 @@ import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
 import 'package:ga_song/providers/service_providers.dart';
 
-
 import '../mocks/mock_audio_effect_service.dart';
 import '../mocks/mock_audio_engine_service.dart';
 import '../mocks/mock_database_service.dart';
@@ -53,12 +52,14 @@ void main() {
       expect(container.read(volumeProvider), closeTo(0.42, 1e-9));
     });
 
-    test('currentPlayingIndexProvider follows playlist.currentIndexNotifier',
-        () {
-      expect(container.read(currentPlayingIndexProvider), -1);
-      playlist.currentIndexNotifier.value = 3;
-      expect(container.read(currentPlayingIndexProvider), 3);
-    });
+    test(
+      'currentPlayingIndexProvider follows playlist.currentIndexNotifier',
+      () {
+        expect(container.read(currentPlayingIndexProvider), -1);
+        playlist.currentIndexNotifier.value = 3;
+        expect(container.read(currentPlayingIndexProvider), 3);
+      },
+    );
 
     test('playModeProvider follows playlist.playModeNotifier', () {
       expect(container.read(playModeProvider), PlayMode.sequential);
@@ -66,11 +67,9 @@ void main() {
       expect(container.read(playModeProvider), PlayMode.shuffle);
     });
 
-    test('sleepTimerProvider follows playlist.sleepTimerRemainingNotifier',
-        () {
+    test('sleepTimerProvider follows playlist.sleepTimerRemainingNotifier', () {
       expect(container.read(sleepTimerProvider), isNull);
-      playlist.sleepTimerRemainingNotifier.value =
-          const Duration(minutes: 5);
+      playlist.sleepTimerRemainingNotifier.value = const Duration(minutes: 5);
       expect(container.read(sleepTimerProvider), const Duration(minutes: 5));
     });
   });

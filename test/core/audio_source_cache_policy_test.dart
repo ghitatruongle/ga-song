@@ -54,7 +54,10 @@ void main() {
       });
 
       test('returns empty set for negative index', () {
-        final result = policy.shuffleWindow(currentIndex: -1, playlistLength: 5);
+        final result = policy.shuffleWindow(
+          currentIndex: -1,
+          playlistLength: 5,
+        );
         expect(result, isEmpty);
       });
 
@@ -98,10 +101,7 @@ void main() {
       });
 
       test('works without planned next index', () {
-        final result = policy.shuffleWindow(
-          currentIndex: 2,
-          playlistLength: 5,
-        );
+        final result = policy.shuffleWindow(currentIndex: 2, playlistLength: 5);
         expect(result, contains(2));
       });
     });

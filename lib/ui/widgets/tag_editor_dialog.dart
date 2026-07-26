@@ -77,7 +77,8 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
           _artistController.text = tag.trackArtist ?? widget.song.artist ?? '';
           _albumController.text = tag.album ?? widget.song.album ?? '';
           _genreController.text = tag.genre ?? widget.song.genre ?? '';
-          _yearController.text = (tag.year ?? widget.song.year)?.toString() ?? '';
+          _yearController.text =
+              (tag.year ?? widget.song.year)?.toString() ?? '';
         }
       });
     } catch (e) {
@@ -132,9 +133,9 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã lưu tags')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã lưu tags')));
       }
     } catch (e) {
       setState(() {
@@ -160,115 +161,119 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
                 ),
               )
             : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text(_error!, textAlign: TextAlign.center),
-                        ],
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
                       ),
-                    ),
-                  )
-                : Form(
-                    key: _formKey,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Cover art preview
-                          if (_originalTag?.pictures.isNotEmpty == true)
-                            Center(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  _originalTag!.pictures.first.bytes,
-                                  width: 120,
-                                  height: 120,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Container(
-                                    width: 120,
-                                    height: 120,
-                                    color: isDark
-                                        ? AppColors.darkSurface2
-                                        : AppColors.lightSidebarHover,
-                                    child: const Icon(Icons.music_note, size: 48),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (_originalTag?.pictures.isNotEmpty == true)
-                            const SizedBox(height: 16),
-
-                          // Title
-                          TextFormField(
-                            controller: _titleController,
-                            decoration: const InputDecoration(
-                              labelText: 'Tiêu đề',
-                              prefixIcon: Icon(Icons.title),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Vui lòng nhập tiêu đề';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Artist
-                          TextFormField(
-                            controller: _artistController,
-                            decoration: const InputDecoration(
-                              labelText: 'Nghệ sĩ',
-                              prefixIcon: Icon(Icons.person),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Album
-                          TextFormField(
-                            controller: _albumController,
-                            decoration: const InputDecoration(
-                              labelText: 'Album',
-                              prefixIcon: Icon(Icons.album),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Genre + Year (side by side)
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _genreController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Thể loại',
-                                    prefixIcon: Icon(Icons.category),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _yearController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Năm',
-                                    prefixIcon: Icon(Icons.calendar_today),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                      const SizedBox(height: 16),
+                      Text(_error!, textAlign: TextAlign.center),
+                    ],
                   ),
+                ),
+              )
+            : Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cover art preview
+                      if (_originalTag?.pictures.isNotEmpty == true)
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              _originalTag!.pictures.first.bytes,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 120,
+                                height: 120,
+                                color: isDark
+                                    ? AppColors.darkSurface2
+                                    : AppColors.lightSidebarHover,
+                                child: const Icon(Icons.music_note, size: 48),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (_originalTag?.pictures.isNotEmpty == true)
+                        const SizedBox(height: 16),
+
+                      // Title
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Tiêu đề',
+                          prefixIcon: Icon(Icons.title),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Vui lòng nhập tiêu đề';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Artist
+                      TextFormField(
+                        controller: _artistController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nghệ sĩ',
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Album
+                      TextFormField(
+                        controller: _albumController,
+                        decoration: const InputDecoration(
+                          labelText: 'Album',
+                          prefixIcon: Icon(Icons.album),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Genre + Year (side by side)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _genreController,
+                              decoration: const InputDecoration(
+                                labelText: 'Thể loại',
+                                prefixIcon: Icon(Icons.category),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _yearController,
+                              decoration: const InputDecoration(
+                                labelText: 'Năm',
+                                prefixIcon: Icon(Icons.calendar_today),
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
       ),
       actions: [
         TextButton(

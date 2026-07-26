@@ -40,7 +40,7 @@ void main() {
     });
 
     test('maxDiskCacheEntries returns correct values', () {
-      expect(CoverArtCache.maxDiskCacheEntries(true), 24);  // Android
+      expect(CoverArtCache.maxDiskCacheEntries(true), 24); // Android
       expect(CoverArtCache.maxDiskCacheEntries(false), 60); // Desktop
     });
 

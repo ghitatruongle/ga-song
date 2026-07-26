@@ -36,7 +36,7 @@ class HotkeyService {
   Completer<void>? _registrationLock;
   final _registerCompleters = <Completer<void>>[];
   DateTime _lastActionTime = DateTime(2000);
-  
+
   // Double-tap detection cho play/pause
   DateTime _lastSpacePressTime = DateTime(2000);
   static const _doubleTapThreshold = Duration(milliseconds: 300);
@@ -49,9 +49,7 @@ class HotkeyService {
     }
     HardwareKeyboard.instance.addHandler(_handleLocalKey);
     await _registerGlobalHotkeys();
-    _settings.customHotkeysNotifier.addListener(
-      _onHotkeysSettingsChanged,
-    );
+    _settings.customHotkeysNotifier.addListener(_onHotkeysSettingsChanged);
   }
 
   void _onHotkeysSettingsChanged() {
@@ -68,9 +66,7 @@ class HotkeyService {
     }
     _isDisposed = true;
     HardwareKeyboard.instance.removeHandler(_handleLocalKey);
-    _settings.customHotkeysNotifier.removeListener(
-      _onHotkeysSettingsChanged,
-    );
+    _settings.customHotkeysNotifier.removeListener(_onHotkeysSettingsChanged);
     for (final completer in _registerCompleters) {
       if (!completer.isCompleted) completer.complete();
     }
@@ -164,7 +160,9 @@ class HotkeyService {
       case 'seekBackward':
         final currentPosition = engineService.positionNotifier.value;
         final newPosition = currentPosition - const Duration(seconds: 10);
-        engineService.seek(newPosition < Duration.zero ? Duration.zero : newPosition);
+        engineService.seek(
+          newPosition < Duration.zero ? Duration.zero : newPosition,
+        );
         break;
     }
   }
@@ -230,54 +228,92 @@ class HotkeyService {
       'Home': PhysicalKeyboardKey.home,
       'End': PhysicalKeyboardKey.end,
     };
-    
+
     if (keyMap.containsKey(keyLabel)) return keyMap[keyLabel];
-    
+
     final label = keyLabel.toLowerCase();
     if (label.length == 1) {
       final charCode = label.codeUnitAt(0);
-      if (charCode >= 97 && charCode <= 122) { // a-z
+      if (charCode >= 97 && charCode <= 122) {
+        // a-z
         switch (label) {
-          case 'a': return PhysicalKeyboardKey.keyA;
-          case 'b': return PhysicalKeyboardKey.keyB;
-          case 'c': return PhysicalKeyboardKey.keyC;
-          case 'd': return PhysicalKeyboardKey.keyD;
-          case 'e': return PhysicalKeyboardKey.keyE;
-          case 'f': return PhysicalKeyboardKey.keyF;
-          case 'g': return PhysicalKeyboardKey.keyG;
-          case 'h': return PhysicalKeyboardKey.keyH;
-          case 'i': return PhysicalKeyboardKey.keyI;
-          case 'j': return PhysicalKeyboardKey.keyJ;
-          case 'k': return PhysicalKeyboardKey.keyK;
-          case 'l': return PhysicalKeyboardKey.keyL;
-          case 'm': return PhysicalKeyboardKey.keyM;
-          case 'n': return PhysicalKeyboardKey.keyN;
-          case 'o': return PhysicalKeyboardKey.keyO;
-          case 'p': return PhysicalKeyboardKey.keyP;
-          case 'q': return PhysicalKeyboardKey.keyQ;
-          case 'r': return PhysicalKeyboardKey.keyR;
-          case 's': return PhysicalKeyboardKey.keyS;
-          case 't': return PhysicalKeyboardKey.keyT;
-          case 'u': return PhysicalKeyboardKey.keyU;
-          case 'v': return PhysicalKeyboardKey.keyV;
-          case 'w': return PhysicalKeyboardKey.keyW;
-          case 'x': return PhysicalKeyboardKey.keyX;
-          case 'y': return PhysicalKeyboardKey.keyY;
-          case 'z': return PhysicalKeyboardKey.keyZ;
+          case 'a':
+            return PhysicalKeyboardKey.keyA;
+          case 'b':
+            return PhysicalKeyboardKey.keyB;
+          case 'c':
+            return PhysicalKeyboardKey.keyC;
+          case 'd':
+            return PhysicalKeyboardKey.keyD;
+          case 'e':
+            return PhysicalKeyboardKey.keyE;
+          case 'f':
+            return PhysicalKeyboardKey.keyF;
+          case 'g':
+            return PhysicalKeyboardKey.keyG;
+          case 'h':
+            return PhysicalKeyboardKey.keyH;
+          case 'i':
+            return PhysicalKeyboardKey.keyI;
+          case 'j':
+            return PhysicalKeyboardKey.keyJ;
+          case 'k':
+            return PhysicalKeyboardKey.keyK;
+          case 'l':
+            return PhysicalKeyboardKey.keyL;
+          case 'm':
+            return PhysicalKeyboardKey.keyM;
+          case 'n':
+            return PhysicalKeyboardKey.keyN;
+          case 'o':
+            return PhysicalKeyboardKey.keyO;
+          case 'p':
+            return PhysicalKeyboardKey.keyP;
+          case 'q':
+            return PhysicalKeyboardKey.keyQ;
+          case 'r':
+            return PhysicalKeyboardKey.keyR;
+          case 's':
+            return PhysicalKeyboardKey.keyS;
+          case 't':
+            return PhysicalKeyboardKey.keyT;
+          case 'u':
+            return PhysicalKeyboardKey.keyU;
+          case 'v':
+            return PhysicalKeyboardKey.keyV;
+          case 'w':
+            return PhysicalKeyboardKey.keyW;
+          case 'x':
+            return PhysicalKeyboardKey.keyX;
+          case 'y':
+            return PhysicalKeyboardKey.keyY;
+          case 'z':
+            return PhysicalKeyboardKey.keyZ;
         }
       }
-      if (charCode >= 48 && charCode <= 57) { // 0-9
+      if (charCode >= 48 && charCode <= 57) {
+        // 0-9
         switch (label) {
-          case '0': return PhysicalKeyboardKey.digit0;
-          case '1': return PhysicalKeyboardKey.digit1;
-          case '2': return PhysicalKeyboardKey.digit2;
-          case '3': return PhysicalKeyboardKey.digit3;
-          case '4': return PhysicalKeyboardKey.digit4;
-          case '5': return PhysicalKeyboardKey.digit5;
-          case '6': return PhysicalKeyboardKey.digit6;
-          case '7': return PhysicalKeyboardKey.digit7;
-          case '8': return PhysicalKeyboardKey.digit8;
-          case '9': return PhysicalKeyboardKey.digit9;
+          case '0':
+            return PhysicalKeyboardKey.digit0;
+          case '1':
+            return PhysicalKeyboardKey.digit1;
+          case '2':
+            return PhysicalKeyboardKey.digit2;
+          case '3':
+            return PhysicalKeyboardKey.digit3;
+          case '4':
+            return PhysicalKeyboardKey.digit4;
+          case '5':
+            return PhysicalKeyboardKey.digit5;
+          case '6':
+            return PhysicalKeyboardKey.digit6;
+          case '7':
+            return PhysicalKeyboardKey.digit7;
+          case '8':
+            return PhysicalKeyboardKey.digit8;
+          case '9':
+            return PhysicalKeyboardKey.digit9;
         }
       }
     }

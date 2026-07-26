@@ -13,11 +13,7 @@ class Playlist {
   final String name;
   final List<int> songIds;
 
-  Playlist({
-    this.id,
-    required this.name,
-    this.songIds = const [],
-  });
+  Playlist({this.id, required this.name, this.songIds = const []});
 
   factory Playlist.fromJson(Map<String, dynamic> json) =>
       _$PlaylistFromJson(json);

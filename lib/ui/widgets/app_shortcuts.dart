@@ -41,14 +41,23 @@ class AppShortcuts extends StatelessWidget {
     return Shortcuts(
       shortcuts: {
         LogicalKeySet(LogicalKeyboardKey.space): const _PlayPauseIntent(),
-        LogicalKeySet(LogicalKeyboardKey.mediaPlayPause): const _PlayPauseIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.control): const _NextIntent(),
+        LogicalKeySet(LogicalKeyboardKey.mediaPlayPause):
+            const _PlayPauseIntent(),
+        LogicalKeySet(
+          LogicalKeyboardKey.arrowRight,
+          LogicalKeyboardKey.control,
+        ): const _NextIntent(),
         LogicalKeySet(LogicalKeyboardKey.mediaTrackNext): const _NextIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.control): const _PreviousIntent(),
-        LogicalKeySet(LogicalKeyboardKey.mediaTrackPrevious): const _PreviousIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.control): const _VolumeUpIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.control): const _VolumeDownIntent(),
-        LogicalKeySet(LogicalKeyboardKey.keyM, LogicalKeyboardKey.control): const _MuteIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.control):
+            const _PreviousIntent(),
+        LogicalKeySet(LogicalKeyboardKey.mediaTrackPrevious):
+            const _PreviousIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.control):
+            const _VolumeUpIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.control):
+            const _VolumeDownIntent(),
+        LogicalKeySet(LogicalKeyboardKey.keyM, LogicalKeyboardKey.control):
+            const _MuteIntent(),
       },
       child: Actions(
         actions: {
@@ -71,10 +80,7 @@ class AppShortcuts extends StatelessWidget {
             onInvoke: (_) => onMute?.call(),
           ),
         },
-        child: Focus(
-          autofocus: true,
-          child: child,
-        ),
+        child: Focus(autofocus: true, child: child),
       ),
     );
   }

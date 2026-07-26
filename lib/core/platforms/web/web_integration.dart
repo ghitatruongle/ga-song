@@ -38,7 +38,11 @@ class WebIntegration {
       // Service worker registration would go here
       // This is handled by the Flutter web framework
     } catch (e) {
-      AppLogger.w('web.integration', 'service worker registration failed', error: e);
+      AppLogger.w(
+        'web.integration',
+        'service worker registration failed',
+        error: e,
+      );
     }
   }
 

@@ -148,9 +148,12 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
                       controller: _searchController,
                       onChanged: (value) {
                         _debounceTimer?.cancel();
-                        _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-                          widget.onSearchChanged(value);
-                        });
+                        _debounceTimer = Timer(
+                          const Duration(milliseconds: 300),
+                          () {
+                            widget.onSearchChanged(value);
+                          },
+                        );
                       },
                       style: TextStyle(color: context.adaptive, fontSize: 14),
                       decoration: InputDecoration(
@@ -217,7 +220,9 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
                   shape: BoxShape.circle,
                 ),
                 child: ValueListenableBuilder<bool>(
-                  valueListenable: ref.read(settingsManagerProvider).isGridViewNotifier,
+                  valueListenable: ref
+                      .read(settingsManagerProvider)
+                      .isGridViewNotifier,
                   builder: (context, isGrid, _) {
                     return IconButton(
                       icon: Icon(
@@ -225,7 +230,9 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
                         color: context.adaptive,
                         size: 20,
                       ),
-                      onPressed: () => ref.read(settingsManagerProvider).setIsGridView(!isGrid),
+                      onPressed: () => ref
+                          .read(settingsManagerProvider)
+                          .setIsGridView(!isGrid),
                       tooltip: isGrid ? 'Chế độ danh sách' : 'Chế độ lưới',
                       splashRadius: 24,
                     );
@@ -272,7 +279,8 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
                 padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
                 scrollCacheExtent: const ScrollCacheExtent.pixels(500),
                 addAutomaticKeepAlives: false,
-                addRepaintBoundaries: false, // items have manual RepaintBoundary
+                addRepaintBoundaries:
+                    false, // items have manual RepaintBoundary
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 200,
                   childAspectRatio: 0.8,
@@ -311,4 +319,3 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
     );
   }
 }
-

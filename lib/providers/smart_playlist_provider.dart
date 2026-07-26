@@ -9,11 +9,12 @@ final smartPlaylistServiceProvider = Provider<SmartPlaylistService>((ref) {
   return SmartPlaylistService(db);
 });
 
-final smartPlaylistProvider = FutureProvider.family<List<Song>, SmartPlaylistType>((ref, type) async {
-  final service = ref.watch(smartPlaylistServiceProvider);
-  
-  // Depend on the song list stream so this refetches when database changes
-  ref.watch(songListProvider);
-  
-  return service.getSmartPlaylist(type);
-});
+final smartPlaylistProvider =
+    FutureProvider.family<List<Song>, SmartPlaylistType>((ref, type) async {
+      final service = ref.watch(smartPlaylistServiceProvider);
+
+      // Depend on the song list stream so this refetches when database changes
+      ref.watch(songListProvider);
+
+      return service.getSmartPlaylist(type);
+    });

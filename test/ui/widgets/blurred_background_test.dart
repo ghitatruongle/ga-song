@@ -8,10 +8,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: BlurredBackground(
-              blurLevel: 10,
-              child: Text('test child'),
-            ),
+            body: BlurredBackground(blurLevel: 10, child: Text('test child')),
           ),
         ),
       );

@@ -44,9 +44,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
     final isDark = context.isDark;
     final textColor = context.adaptive;
     return Dialog(
-      backgroundColor: isDark
-          ? AppColors.darkSurface
-          : AppColors.lightSurface,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -144,10 +142,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
                   color: textColor.withValues(alpha: 0.7),
                   size: 18,
                 ),
-                label: Text(
-                  'Đặt lại',
-                  style: TextStyle(color: textColor),
-                ),
+                label: Text('Đặt lại', style: TextStyle(color: textColor)),
               ),
             ),
           ],
@@ -355,9 +350,11 @@ class _BandSliderWidgetState extends State<_BandSliderWidget> {
                 data: SliderThemeData(
                   trackHeight: 4,
                   thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 7),
+                    enabledThumbRadius: 7,
+                  ),
                   overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 14),
+                    overlayRadius: 14,
+                  ),
                   activeTrackColor: widget.isActive
                       ? Theme.of(context).primaryColor
                       : widget.textColor.withValues(alpha: 0.3),

@@ -75,10 +75,15 @@ class AppMotion {
 
   /// Slide-up + fade entrance for bottom sheets and modals.
   static Widget slideUpFade(Widget child, Animation<double> animation) {
-    final curved = CurvedAnimation(parent: animation, curve: AppCurves.decelerate);
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: AppCurves.decelerate,
+    );
     return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-          .animate(curved),
+      position: Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ).animate(curved),
       child: FadeTransition(opacity: animation, child: child),
     );
   }

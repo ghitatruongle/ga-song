@@ -30,7 +30,8 @@ class EngineStateNotifier extends Notifier<AudioEngineState> {
 
 final engineStateProvider =
     NotifierProvider<EngineStateNotifier, AudioEngineState>(
-        EngineStateNotifier.new);
+      EngineStateNotifier.new,
+    );
 
 /// Notifier exposing the current playback position as Riverpod state.
 ///
@@ -52,8 +53,9 @@ class PositionNotifier extends Notifier<Duration> {
   void _onChange() => state = _engine.positionNotifier.value;
 }
 
-final positionProvider =
-    NotifierProvider<PositionNotifier, Duration>(PositionNotifier.new);
+final positionProvider = NotifierProvider<PositionNotifier, Duration>(
+  PositionNotifier.new,
+);
 
 /// Notifier exposing the current track duration as Riverpod state.
 class DurationNotifier extends Notifier<Duration> {
@@ -71,8 +73,9 @@ class DurationNotifier extends Notifier<Duration> {
   void _onChange() => state = _engine.durationNotifier.value;
 }
 
-final trackDurationProvider =
-    NotifierProvider<DurationNotifier, Duration>(DurationNotifier.new);
+final trackDurationProvider = NotifierProvider<DurationNotifier, Duration>(
+  DurationNotifier.new,
+);
 
 /// Notifier exposing the current volume as Riverpod state.
 class VolumeNotifier extends Notifier<double> {
@@ -90,8 +93,9 @@ class VolumeNotifier extends Notifier<double> {
   void _onChange() => state = _engine.volumeNotifier.value;
 }
 
-final volumeProvider =
-    NotifierProvider<VolumeNotifier, double>(VolumeNotifier.new);
+final volumeProvider = NotifierProvider<VolumeNotifier, double>(
+  VolumeNotifier.new,
+);
 
 /// Notifier exposing the current playing index in the playlist.
 class CurrentPlayingIndexNotifier extends Notifier<int> {
@@ -111,7 +115,8 @@ class CurrentPlayingIndexNotifier extends Notifier<int> {
 
 final currentPlayingIndexProvider =
     NotifierProvider<CurrentPlayingIndexNotifier, int>(
-        CurrentPlayingIndexNotifier.new);
+      CurrentPlayingIndexNotifier.new,
+    );
 
 /// Notifier exposing the current play mode.
 class PlayModeNotifier extends Notifier<PlayMode> {
@@ -129,8 +134,9 @@ class PlayModeNotifier extends Notifier<PlayMode> {
   void _onChange() => state = _playlist.playModeNotifier.value;
 }
 
-final playModeProvider =
-    NotifierProvider<PlayModeNotifier, PlayMode>(PlayModeNotifier.new);
+final playModeProvider = NotifierProvider<PlayModeNotifier, PlayMode>(
+  PlayModeNotifier.new,
+);
 
 /// Notifier exposing the sleep-timer remaining duration (null if no timer).
 class SleepTimerNotifier extends Notifier<Duration?> {
@@ -148,5 +154,6 @@ class SleepTimerNotifier extends Notifier<Duration?> {
   void _onChange() => state = _playlist.sleepTimerRemainingNotifier.value;
 }
 
-final sleepTimerProvider =
-    NotifierProvider<SleepTimerNotifier, Duration?>(SleepTimerNotifier.new);
+final sleepTimerProvider = NotifierProvider<SleepTimerNotifier, Duration?>(
+  SleepTimerNotifier.new,
+);

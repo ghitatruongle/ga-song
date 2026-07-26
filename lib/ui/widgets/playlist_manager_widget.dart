@@ -26,10 +26,12 @@ class _PlaylistManagerDialog extends ConsumerStatefulWidget {
   const _PlaylistManagerDialog();
 
   @override
-  ConsumerState<_PlaylistManagerDialog> createState() => _PlaylistManagerDialogState();
+  ConsumerState<_PlaylistManagerDialog> createState() =>
+      _PlaylistManagerDialogState();
 }
 
-class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> {
+class _PlaylistManagerDialogState
+    extends ConsumerState<_PlaylistManagerDialog> {
   final TextEditingController _nameController = TextEditingController();
 
   Future<void> _createPlaylist() async {
@@ -58,7 +60,9 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
     final textColor = context.adaptive;
 
     return AlertDialog(
-      backgroundColor: context.isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: context.isDark
+          ? AppColors.darkSurface
+          : AppColors.lightSurface,
       title: Text('Quản lý Playlist', style: TextStyle(color: textColor)),
       content: SizedBox(
         width: 400,
@@ -73,7 +77,9 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       hintText: 'Tên playlist mới...',
-                      hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                      hintStyle: TextStyle(
+                        color: textColor.withValues(alpha: 0.5),
+                      ),
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -92,17 +98,35 @@ class _PlaylistManagerDialogState extends ConsumerState<_PlaylistManagerDialog> 
                 builder: (context, snapshot) {
                   final playlists = snapshot.data ?? [];
                   if (playlists.isEmpty) {
-                    return Center(child: Text('Chưa có playlist', style: TextStyle(color: textColor.withValues(alpha: 0.5))));
+                    return Center(
+                      child: Text(
+                        'Chưa có playlist',
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    );
                   }
                   return ListView.builder(
                     itemCount: playlists.length,
                     itemBuilder: (context, index) {
                       final pl = playlists[index];
                       return ListTile(
-                        title: Text(pl.name, style: TextStyle(color: textColor)),
-                        subtitle: Text('${pl.songIds.length} bài hát', style: TextStyle(color: textColor.withValues(alpha: 0.5))),
+                        title: Text(
+                          pl.name,
+                          style: TextStyle(color: textColor),
+                        ),
+                        subtitle: Text(
+                          '${pl.songIds.length} bài hát',
+                          style: TextStyle(
+                            color: textColor.withValues(alpha: 0.5),
+                          ),
+                        ),
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.redAccent),
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.redAccent,
+                          ),
                           onPressed: () => _deletePlaylist(pl.id!),
                         ),
                       );
@@ -129,7 +153,8 @@ class _AddToPlaylistDialog extends ConsumerStatefulWidget {
   const _AddToPlaylistDialog({required this.song});
 
   @override
-  ConsumerState<_AddToPlaylistDialog> createState() => _AddToPlaylistDialogState();
+  ConsumerState<_AddToPlaylistDialog> createState() =>
+      _AddToPlaylistDialogState();
 }
 
 class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
@@ -189,7 +214,9 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
     final textColor = context.adaptive;
 
     return AlertDialog(
-      backgroundColor: context.isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: context.isDark
+          ? AppColors.darkSurface
+          : AppColors.lightSurface,
       title: Text(
         'Thêm "${widget.song.name}" vào...',
         style: TextStyle(color: textColor, fontSize: 18),
@@ -202,27 +229,30 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
         child: _isLoading
             ? Center(child: CircularProgressIndicator(color: textColor))
             : _playlists.isEmpty
-                ? Center(
-                    child: Text(
-                      'Chưa có playlist nào',
-                      style: TextStyle(color: textColor.withValues(alpha: 0.5)),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _playlists.length,
-                    itemBuilder: (context, index) {
-                      final pl = _playlists[index];
-                      final isAdded = _addedPlaylistIds.contains(pl.id);
+            ? Center(
+                child: Text(
+                  'Chưa có playlist nào',
+                  style: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                ),
+              )
+            : ListView.builder(
+                itemCount: _playlists.length,
+                itemBuilder: (context, index) {
+                  final pl = _playlists[index];
+                  final isAdded = _addedPlaylistIds.contains(pl.id);
 
-                      return ListTile(
-                        title: Text(pl.name, style: TextStyle(color: textColor)),
-                        trailing: isAdded
-                            ? const Icon(Icons.check_circle, color: Colors.green)
-                            : Icon(Icons.circle_outlined, color: textColor.withValues(alpha: 0.3)),
-                        onTap: () => _toggleSongInPlaylist(pl),
-                      );
-                    },
-                  ),
+                  return ListTile(
+                    title: Text(pl.name, style: TextStyle(color: textColor)),
+                    trailing: isAdded
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : Icon(
+                            Icons.circle_outlined,
+                            color: textColor.withValues(alpha: 0.3),
+                          ),
+                    onTap: () => _toggleSongInPlaylist(pl),
+                  );
+                },
+              ),
       ),
       actions: [
         TextButton(

@@ -105,10 +105,7 @@ class PlatformService {
         );
         break;
       case PlatformType.web:
-        await WebIntegration.showNotification(
-          title: title,
-          body: body,
-        );
+        await WebIntegration.showNotification(title: title, body: body);
         break;
       default:
         // Not supported on this platform

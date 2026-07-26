@@ -102,7 +102,8 @@ class _SidebarWidgetState extends ConsumerState<SidebarWidget> {
                         onTabChanged: widget.onTabChanged,
                         isCollapsed: isCollapsed,
                       ),
-                      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                      if (!kIsWeb &&
+                          defaultTargetPlatform == TargetPlatform.android)
                         _SidebarMenuItem(
                           icon: Icons.language_rounded,
                           title: 'Online',
@@ -188,7 +189,10 @@ class _SidebarWidgetState extends ConsumerState<SidebarWidget> {
               // ─── Footer ──────────────────────────────────────────────────
               Padding(
                 padding: EdgeInsets.fromLTRB(
-                  isCollapsed ? 8 : 12, 0, isCollapsed ? 8 : 12, 8,
+                  isCollapsed ? 8 : 12,
+                  0,
+                  isCollapsed ? 8 : 12,
+                  8,
                 ),
                 child: Column(
                   children: [
@@ -278,11 +282,7 @@ class _SidebarHeader extends StatelessWidget {
             )
           : Row(
               children: [
-                Icon(
-                  Icons.music_note_rounded,
-                  color: textColor,
-                  size: 22,
-                ),
+                Icon(Icons.music_note_rounded, color: textColor, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _AutoGreetingText(
@@ -325,10 +325,7 @@ class _SidebarSeparator extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Divider(
-            color: textColor.withValues(alpha: 0.08),
-            height: 1,
-          ),
+          Divider(color: textColor.withValues(alpha: 0.08), height: 1),
           if (label != null && !isCollapsed) ...[
             const SizedBox(height: 8),
             Text(
@@ -428,7 +425,9 @@ class _SidebarMenuItemState extends State<_SidebarMenuItem> {
                     widget.title,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                       color: isSelected
                           ? textColor
                           : textColor.withValues(alpha: 0.65),
@@ -438,8 +437,7 @@ class _SidebarMenuItemState extends State<_SidebarMenuItem> {
                   ),
                 ),
                 // Now playing indicator
-                if (widget.showNowPlaying)
-                  _NowPlayingIndicator(),
+                if (widget.showNowPlaying) _NowPlayingIndicator(),
               ],
             ],
           ),
@@ -673,7 +671,11 @@ class _AutoGreetingTextState extends State<_AutoGreetingText> {
     } else if (now.hour < 18) {
       return DateTime(now.year, now.month, now.day, 18, 0, 0);
     } else {
-      return DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+      return DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).add(const Duration(days: 1));
     }
   }
 
@@ -713,7 +715,8 @@ class _SidebarSmartPlaylistItem extends StatefulWidget {
   });
 
   @override
-  State<_SidebarSmartPlaylistItem> createState() => _SidebarSmartPlaylistItemState();
+  State<_SidebarSmartPlaylistItem> createState() =>
+      _SidebarSmartPlaylistItemState();
 }
 
 class _SidebarSmartPlaylistItemState extends State<_SidebarSmartPlaylistItem> {

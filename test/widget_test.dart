@@ -24,7 +24,11 @@ void main() {
       ProviderScope(
         overrides: [
           settingsManagerProvider.overrideWithValue(settings),
-          databaseServiceProvider.overrideWithValue(DatabaseServiceWrapper(AppDatabase(executor: NativeDatabase.memory()))),
+          databaseServiceProvider.overrideWithValue(
+            DatabaseServiceWrapper(
+              AppDatabase(executor: NativeDatabase.memory()),
+            ),
+          ),
         ],
         child: const GASongApp(
           home: Scaffold(body: Center(child: Text('Smoke Home'))),

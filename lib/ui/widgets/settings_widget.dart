@@ -95,7 +95,10 @@ class SettingsWidget extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS))
+                if (!kIsWeb &&
+                    (defaultTargetPlatform == TargetPlatform.windows ||
+                        defaultTargetPlatform == TargetPlatform.linux ||
+                        defaultTargetPlatform == TargetPlatform.macOS))
                   _buildSettingCard(
                     isDark: isDark,
                     child: ValueListenableBuilder<bool>(
@@ -121,17 +124,24 @@ class SettingsWidget extends ConsumerWidget {
                             ),
                             if (useNative)
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 child: ValueListenableBuilder<double>(
-                                  valueListenable: settings.windowOpacityNotifier,
+                                  valueListenable:
+                                      settings.windowOpacityNotifier,
                                   builder: (context, opacity, _) {
                                     return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Độ trong suốt: ${(opacity * 100).toInt()}%',
                                           style: TextStyle(
-                                            color: textColor.withValues(alpha: 0.7),
+                                            color: textColor.withValues(
+                                              alpha: 0.7,
+                                            ),
                                             fontSize: 12,
                                           ),
                                         ),
@@ -140,7 +150,9 @@ class SettingsWidget extends ConsumerWidget {
                                           min: 0.1,
                                           max: 1.0,
                                           divisions: 90,
-                                          activeColor: Theme.of(context).primaryColor,
+                                          activeColor: Theme.of(
+                                            context,
+                                          ).primaryColor,
                                           onChanged: settings.setWindowOpacity,
                                         ),
                                       ],
@@ -154,63 +166,67 @@ class SettingsWidget extends ConsumerWidget {
                     ),
                   ),
                 // Phím tắt: chỉ hiện trên Desktop (không có phím tắt trên Android)
-                if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) ...[
-                const SizedBox(height: 20),
-                _buildSectionHeader(
-                  'Phím tắt toàn cục (Global Hotkeys)',
-                  textColor,
-                ),
-                _buildSettingCard(
-                  isDark: isDark,
-                  child: ListTile(
-                    title: Text(
-                      'Điều khiển nhạc mọi lúc mọi nơi',
-                      style: TextStyle(color: textColor),
-                    ),
-                    subtitle: Text(
-                      'Phím tắt toàn cục (hoạt động cả khi app ẩn):\n'
-                      '• Alt + Space: Phát / Tạm dừng\n'
-                      '• Alt + Mũi tên Phải: Bài tiếp theo\n'
-                      '• Alt + Mũi tên Trái: Bài trước đó\n\n'
-                      'Phím tắt trong app:\n'
-                      '• Space: Phát / Tạm dừng (khi không nhập liệu)',
-                      style: TextStyle(
-                        color: textColor.withValues(alpha: 0.6),
-                        height: 1.5,
-                        fontSize: 13,
+                if (!kIsWeb &&
+                    defaultTargetPlatform != TargetPlatform.android &&
+                    defaultTargetPlatform != TargetPlatform.iOS) ...[
+                  const SizedBox(height: 20),
+                  _buildSectionHeader(
+                    'Phím tắt toàn cục (Global Hotkeys)',
+                    textColor,
+                  ),
+                  _buildSettingCard(
+                    isDark: isDark,
+                    child: ListTile(
+                      title: Text(
+                        'Điều khiển nhạc mọi lúc mọi nơi',
+                        style: TextStyle(color: textColor),
+                      ),
+                      subtitle: Text(
+                        'Phím tắt toàn cục (hoạt động cả khi app ẩn):\n'
+                        '• Alt + Space: Phát / Tạm dừng\n'
+                        '• Alt + Mũi tên Phải: Bài tiếp theo\n'
+                        '• Alt + Mũi tên Trái: Bài trước đó\n\n'
+                        'Phím tắt trong app:\n'
+                        '• Space: Phát / Tạm dừng (khi không nhập liệu)',
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.6),
+                          height: 1.5,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
-                ),
                 ],
                 const SizedBox(height: 20),
                 _buildSectionHeader('Hệ thống', textColor),
                 // Minimize to tray: chỉ desktop
-                if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) ...[
-                _buildSettingCard(
-                  isDark: isDark,
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: settings.minimizeToTrayNotifier,
-                    builder: (context, minimizeToTray, _) {
-                      return SwitchListTile(
-                        title: Text(
-                          'Thu nhỏ xuống khay hệ thống khi đóng (Minimize to Tray)',
-                          style: TextStyle(color: textColor),
-                        ),
-                        subtitle: Text(
-                          'Ngăn ứng dụng bị tắt hoàn toàn khi ấn nút X',
-                          style: TextStyle(
-                            color: textColor.withValues(alpha: 0.6),
-                            fontSize: 13,
+                if (!kIsWeb &&
+                    defaultTargetPlatform != TargetPlatform.android &&
+                    defaultTargetPlatform != TargetPlatform.iOS) ...[
+                  _buildSettingCard(
+                    isDark: isDark,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: settings.minimizeToTrayNotifier,
+                      builder: (context, minimizeToTray, _) {
+                        return SwitchListTile(
+                          title: Text(
+                            'Thu nhỏ xuống khay hệ thống khi đóng (Minimize to Tray)',
+                            style: TextStyle(color: textColor),
                           ),
-                        ),
-                        value: minimizeToTray,
-                        activeThumbColor: Theme.of(context).primaryColor,
-                        onChanged: settings.setMinimizeToTray,
-                      );
-                    },
+                          subtitle: Text(
+                            'Ngăn ứng dụng bị tắt hoàn toàn khi ấn nút X',
+                            style: TextStyle(
+                              color: textColor.withValues(alpha: 0.6),
+                              fontSize: 13,
+                            ),
+                          ),
+                          value: minimizeToTray,
+                          activeThumbColor: Theme.of(context).primaryColor,
+                          onChanged: settings.setMinimizeToTray,
+                        );
+                      },
+                    ),
                   ),
-                ),
                 ],
                 const SizedBox(height: 10),
                 _buildSettingCard(
@@ -400,85 +416,90 @@ class SettingsWidget extends ConsumerWidget {
                   ),
                 ),
                 // Phím tắt & Media Keys: chỉ desktop
-                if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) ...[
-                const SizedBox(height: 20),
-                _buildSectionHeader('Phím tắt & Media Keys', textColor),
-                _buildSettingCard(
-                  isDark: isDark,
-                  child: Column(
-                    children: [
-                      ValueListenableBuilder<bool>(
-                        valueListenable: settings.mediaKeyEnabledNotifier,
-                        builder: (context, mediaKeyEnabled, _) {
-                          return SwitchListTile(
-                            secondary: Icon(Icons.keyboard, color: textColor),
-                            title: Text(
-                              'Hỗ trợ Phím Media (Media Keys)',
-                              style: TextStyle(color: textColor),
-                            ),
-                            subtitle: Text(
-                              'Play/Pause, Next, Previous trên bàn phím',
-                              style: TextStyle(
-                                color: textColor.withValues(alpha: 0.6),
-                                fontSize: 13,
+                if (!kIsWeb &&
+                    defaultTargetPlatform != TargetPlatform.android &&
+                    defaultTargetPlatform != TargetPlatform.iOS) ...[
+                  const SizedBox(height: 20),
+                  _buildSectionHeader('Phím tắt & Media Keys', textColor),
+                  _buildSettingCard(
+                    isDark: isDark,
+                    child: Column(
+                      children: [
+                        ValueListenableBuilder<bool>(
+                          valueListenable: settings.mediaKeyEnabledNotifier,
+                          builder: (context, mediaKeyEnabled, _) {
+                            return SwitchListTile(
+                              secondary: Icon(Icons.keyboard, color: textColor),
+                              title: Text(
+                                'Hỗ trợ Phím Media (Media Keys)',
+                                style: TextStyle(color: textColor),
                               ),
-                            ),
-                            value: mediaKeyEnabled,
-                            activeThumbColor: Theme.of(context).primaryColor,
-                            onChanged: settings.setMediaKeyEnabled,
-                          );
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ValueListenableBuilder<bool>(
-                        valueListenable: settings.soundFeedbackEnabledNotifier,
-                        builder: (context, soundEnabled, _) {
-                          return SwitchListTile(
-                            secondary: Icon(Icons.volume_up_rounded,
-                                color: textColor),
-                            title: Text(
-                              'Phát âm thanh khi chuyển bài',
-                              style: TextStyle(color: textColor),
-                            ),
-                            subtitle: Text(
-                              'Chỉ áp dụng trên điện thoại (Android)',
-                              style: TextStyle(
-                                color: textColor.withValues(alpha: 0.6),
-                                fontSize: 13,
+                              subtitle: Text(
+                                'Play/Pause, Next, Previous trên bàn phím',
+                                style: TextStyle(
+                                  color: textColor.withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                            value: soundEnabled,
-                            activeThumbColor: Theme.of(context).primaryColor,
-                            onChanged: settings.setSoundFeedbackEnabled,
-                          );
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: Icon(
-                          Icons.settings_input_component,
-                          color: textColor,
+                              value: mediaKeyEnabled,
+                              activeThumbColor: Theme.of(context).primaryColor,
+                              onChanged: settings.setMediaKeyEnabled,
+                            );
+                          },
                         ),
-                        title: Text(
-                          'Tùy chỉnh Phím tắt (Custom Hotkeys)',
-                          style: TextStyle(color: textColor),
+                        const Divider(height: 1),
+                        ValueListenableBuilder<bool>(
+                          valueListenable:
+                              settings.soundFeedbackEnabledNotifier,
+                          builder: (context, soundEnabled, _) {
+                            return SwitchListTile(
+                              secondary: Icon(
+                                Icons.volume_up_rounded,
+                                color: textColor,
+                              ),
+                              title: Text(
+                                'Phát âm thanh khi chuyển bài',
+                                style: TextStyle(color: textColor),
+                              ),
+                              subtitle: Text(
+                                'Chỉ áp dụng trên điện thoại (Android)',
+                                style: TextStyle(
+                                  color: textColor.withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              value: soundEnabled,
+                              activeThumbColor: Theme.of(context).primaryColor,
+                              onChanged: settings.setSoundFeedbackEnabled,
+                            );
+                          },
                         ),
-                        subtitle: Text(
-                          'Đặt lại phím tắt theo ý bạn',
-                          style: TextStyle(
-                            color: textColor.withValues(alpha: 0.6),
-                            fontSize: 13,
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: Icon(
+                            Icons.settings_input_component,
+                            color: textColor,
                           ),
+                          title: Text(
+                            'Tùy chỉnh Phím tắt (Custom Hotkeys)',
+                            style: TextStyle(color: textColor),
+                          ),
+                          subtitle: Text(
+                            'Đặt lại phím tắt theo ý bạn',
+                            style: TextStyle(
+                              color: textColor.withValues(alpha: 0.6),
+                              fontSize: 13,
+                            ),
+                          ),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: textColor.withValues(alpha: 0.5),
+                          ),
+                          onTap: () => CustomHotkeysDialog.show(context),
                         ),
-                        trailing: Icon(
-                          Icons.chevron_right,
-                          color: textColor.withValues(alpha: 0.5),
-                        ),
-                        onTap: () => CustomHotkeysDialog.show(context),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 ],
                 const SizedBox(height: 20),
                 _buildSectionHeader('Hiệu ứng mờ', textColor),
@@ -507,22 +528,30 @@ class SettingsWidget extends ConsumerWidget {
                                 trailing: Switch(
                                   value: enableBlur,
                                   onChanged: settings.setEnableBlur,
-                                  activeThumbColor: Theme.of(context).primaryColor,
+                                  activeThumbColor: Theme.of(
+                                    context,
+                                  ).primaryColor,
                                 ),
                               ),
                               if (enableBlur)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
                                   child: ValueListenableBuilder<double>(
                                     valueListenable: settings.blurLevelNotifier,
                                     builder: (context, blurLevel, _) {
                                       return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Mức độ mờ: ${blurLevel.toInt()}',
                                             style: TextStyle(
-                                              color: textColor.withValues(alpha: 0.7),
+                                              color: textColor.withValues(
+                                                alpha: 0.7,
+                                              ),
                                               fontSize: 12,
                                             ),
                                           ),
@@ -531,7 +560,9 @@ class SettingsWidget extends ConsumerWidget {
                                             min: 0,
                                             max: 100,
                                             divisions: 100,
-                                            activeColor: Theme.of(context).primaryColor,
+                                            activeColor: Theme.of(
+                                              context,
+                                            ).primaryColor,
                                             onChanged: settings.setBlurLevel,
                                           ),
                                         ],
@@ -568,18 +599,13 @@ class SettingsWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingCard({
-    required bool isDark,
-    required Widget child,
-  }) {
+  Widget _buildSettingCard({required bool isDark, required Widget child}) {
     return RepaintBoundary(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkSurface2
-              : AppColors.lightSurface,
+          color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -589,10 +615,7 @@ class SettingsWidget extends ConsumerWidget {
             ),
           ],
         ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: child,
-        ),
+        child: Material(type: MaterialType.transparency, child: child),
       ),
     );
   }

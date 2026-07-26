@@ -7,9 +7,8 @@ import '../audio/lyric_parser.dart';
 /// Shows a floating, semi-transparent lyrics display that syncs
 /// with the current playback position. Only available on desktop platforms.
 class DesktopLyricsService {
-  DesktopLyricsService({
-    required SettingsManager settingsManager,
-  }) : _settingsManager = settingsManager;
+  DesktopLyricsService({required SettingsManager settingsManager})
+    : _settingsManager = settingsManager;
 
   final SettingsManager _settingsManager;
 
@@ -31,22 +30,41 @@ class DesktopLyricsService {
   void init() {
     // Sync with settings
     opacityNotifier.value = _settingsManager.desktopLyricsOpacityNotifier.value;
-    fontSizeNotifier.value = _settingsManager.desktopLyricsFontSizeNotifier.value;
-    clickThroughNotifier.value = _settingsManager.desktopLyricsClickThroughNotifier.value;
-    isVisibleNotifier.value = _settingsManager.desktopLyricsEnabledNotifier.value;
+    fontSizeNotifier.value =
+        _settingsManager.desktopLyricsFontSizeNotifier.value;
+    clickThroughNotifier.value =
+        _settingsManager.desktopLyricsClickThroughNotifier.value;
+    isVisibleNotifier.value =
+        _settingsManager.desktopLyricsEnabledNotifier.value;
 
     // Listen to settings changes
-    _settingsManager.desktopLyricsOpacityNotifier.addListener(_onOpacityChanged);
-    _settingsManager.desktopLyricsFontSizeNotifier.addListener(_onFontSizeChanged);
-    _settingsManager.desktopLyricsClickThroughNotifier.addListener(_onClickThroughChanged);
-    _settingsManager.desktopLyricsEnabledNotifier.addListener(_onEnabledChanged);
+    _settingsManager.desktopLyricsOpacityNotifier.addListener(
+      _onOpacityChanged,
+    );
+    _settingsManager.desktopLyricsFontSizeNotifier.addListener(
+      _onFontSizeChanged,
+    );
+    _settingsManager.desktopLyricsClickThroughNotifier.addListener(
+      _onClickThroughChanged,
+    );
+    _settingsManager.desktopLyricsEnabledNotifier.addListener(
+      _onEnabledChanged,
+    );
   }
 
   void dispose() {
-    _settingsManager.desktopLyricsOpacityNotifier.removeListener(_onOpacityChanged);
-    _settingsManager.desktopLyricsFontSizeNotifier.removeListener(_onFontSizeChanged);
-    _settingsManager.desktopLyricsClickThroughNotifier.removeListener(_onClickThroughChanged);
-    _settingsManager.desktopLyricsEnabledNotifier.removeListener(_onEnabledChanged);
+    _settingsManager.desktopLyricsOpacityNotifier.removeListener(
+      _onOpacityChanged,
+    );
+    _settingsManager.desktopLyricsFontSizeNotifier.removeListener(
+      _onFontSizeChanged,
+    );
+    _settingsManager.desktopLyricsClickThroughNotifier.removeListener(
+      _onClickThroughChanged,
+    );
+    _settingsManager.desktopLyricsEnabledNotifier.removeListener(
+      _onEnabledChanged,
+    );
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
@@ -58,15 +76,18 @@ class DesktopLyricsService {
   }
 
   void _onFontSizeChanged() {
-    fontSizeNotifier.value = _settingsManager.desktopLyricsFontSizeNotifier.value;
+    fontSizeNotifier.value =
+        _settingsManager.desktopLyricsFontSizeNotifier.value;
   }
 
   void _onClickThroughChanged() {
-    clickThroughNotifier.value = _settingsManager.desktopLyricsClickThroughNotifier.value;
+    clickThroughNotifier.value =
+        _settingsManager.desktopLyricsClickThroughNotifier.value;
   }
 
   void _onEnabledChanged() {
-    isVisibleNotifier.value = _settingsManager.desktopLyricsEnabledNotifier.value;
+    isVisibleNotifier.value =
+        _settingsManager.desktopLyricsEnabledNotifier.value;
     if (!isVisibleNotifier.value) {
       hide();
     }
@@ -216,31 +237,34 @@ class _DesktopLyricsOverlayState extends State<_DesktopLyricsOverlay> {
                     return Opacity(
                       opacity: widget.service.opacityNotifier.value,
                       child: Container(
-                    width: 400,
-                    constraints: const BoxConstraints(minHeight: 100, maxHeight: 300),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Controls bar (shown on hover)
-                        if (_showControls)
-                          _ControlsBar(service: widget.service),
-
-                        // Lyrics content
-                        Flexible(
-                          child: _LyricsContent(service: widget.service),
+                        width: 400,
+                        constraints: const BoxConstraints(
+                          minHeight: 100,
+                          maxHeight: 300,
                         ),
-                      ],
-                    ),
-                  ),
-                );
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Controls bar (shown on hover)
+                            if (_showControls)
+                              _ControlsBar(service: widget.service),
+
+                            // Lyrics content
+                            Flexible(
+                              child: _LyricsContent(service: widget.service),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                 ),
               );
@@ -373,7 +397,10 @@ class _LyricsContent extends StatelessWidget {
               valueListenable: service.fontSizeNotifier,
               builder: (context, fontSize, _) {
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 20,
+                  ),
                   itemCount: lyrics.length,
                   itemBuilder: (context, index) {
                     final line = lyrics[index];
@@ -384,22 +411,21 @@ class _LyricsContent extends StatelessWidget {
                       duration: const Duration(milliseconds: 200),
                       style: TextStyle(
                         fontSize: isCurrent ? fontSize : fontSize * 0.65,
-                        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
+                        fontWeight: isCurrent
+                            ? FontWeight.w700
+                            : FontWeight.w400,
                         color: isCurrent
                             ? Colors.white
                             : isPast
-                                ? Colors.white.withValues(alpha: 0.25)
-                                : Colors.white.withValues(alpha: 0.4),
+                            ? Colors.white.withValues(alpha: 0.25)
+                            : Colors.white.withValues(alpha: 0.4),
                         height: 1.5,
                       ),
                       child: Padding(
                         padding: EdgeInsets.symmetric(
                           vertical: isCurrent ? 8 : 4,
                         ),
-                        child: Text(
-                          line.text,
-                          textAlign: TextAlign.center,
-                        ),
+                        child: Text(line.text, textAlign: TextAlign.center),
                       ),
                     );
                   },

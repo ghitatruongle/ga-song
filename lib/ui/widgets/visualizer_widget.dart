@@ -20,7 +20,8 @@ class PersonalVisualizerWidget extends ConsumerStatefulWidget {
       _PersonalVisualizerWidgetState();
 }
 
-class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWidget>
+class _PersonalVisualizerWidgetState
+    extends ConsumerState<PersonalVisualizerWidget>
     with TickerProviderStateMixin {
   late final _playlistService = ref.read(playlistServiceProvider);
   late final _engineService = ref.read(audioEngineServiceProvider);
@@ -117,9 +118,7 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: ParticlePainter(
-                      controller: _visualizerController,
-                    ),
+                    painter: ParticlePainter(controller: _visualizerController),
                     isComplex: true,
                     willChange: true,
                   ),
@@ -133,7 +132,9 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
                       final isBeat = _visualizerController.snapshot.isBeat;
                       return AnimatedContainer(
                         duration: Duration(milliseconds: isBeat ? 50 : 200),
-                        color: Colors.white.withValues(alpha: isBeat ? 0.15 : 0.0),
+                        color: Colors.white.withValues(
+                          alpha: isBeat ? 0.15 : 0.0,
+                        ),
                       );
                     },
                   ),
@@ -238,7 +239,8 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
   }
 
   // Q-3 fix: Use shared DesktopTitleBar widget
-  Widget _buildTitleBar(Color textColor) => DesktopTitleBar(iconColor: textColor);
+  Widget _buildTitleBar(Color textColor) =>
+      DesktopTitleBar(iconColor: textColor);
 
   Widget _buildAlbumArtOverlay(BuildContext context) {
     return ValueListenableBuilder<int>(
@@ -451,10 +453,7 @@ class _PersonalVisualizerWidgetState extends ConsumerState<PersonalVisualizerWid
                 color: textColor.withValues(alpha: 0.6),
                 borderColor: Colors.transparent,
                 selectedBorderColor: Colors.transparent,
-                constraints: const BoxConstraints(
-                  minHeight: 36,
-                  minWidth: 40,
-                ),
+                constraints: const BoxConstraints(minHeight: 36, minWidth: 40),
                 isSelected: <bool>[
                   shape == 0,
                   shape == 1,

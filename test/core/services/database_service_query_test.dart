@@ -22,7 +22,9 @@ void main() {
     late DatabaseServiceWrapper service;
 
     setUp(() async {
-      service = DatabaseServiceWrapper(AppDatabase(executor: NativeDatabase.memory()));
+      service = DatabaseServiceWrapper(
+        AppDatabase(executor: NativeDatabase.memory()),
+      );
       await service.init();
     });
 

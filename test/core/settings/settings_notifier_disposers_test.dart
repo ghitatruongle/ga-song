@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 import 'package:ga_song/core/settings_manager.dart';
 import 'package:ga_song/providers/service_providers.dart';
 
@@ -42,8 +41,11 @@ void main() {
 
       // After the fix, exactly one refresh per change. Before the fix
       // (without clear+fire), 2 refreshes would fire (old + new listener).
-      expect(refreshCount, 0,
-          reason: 'refresh() is private; we verify indirectly via state');
+      expect(
+        refreshCount,
+        0,
+        reason: 'refresh() is private; we verify indirectly via state',
+      );
       // More direct: the state should update exactly once.
       final state = container.read(settingsNotifierProvider);
       expect(state.blurLevel, 2.0);
@@ -63,13 +65,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [settingsManagerProvider.overrideWithValue(manager)],
       );
-      container.listen(
-        settingsNotifierProvider,
-        (prev, next) {
-          if (prev != next) stateRebuildCount++;
-        },
-        fireImmediately: false,
-      );
+      container.listen(settingsNotifierProvider, (prev, next) {
+        if (prev != next) stateRebuildCount++;
+      }, fireImmediately: false);
 
       // Trigger initial build + first change
       container.read(settingsNotifierProvider);
@@ -90,11 +88,18 @@ void main() {
 
       // If the bug were present, we'd see 2 rebuilds per single change.
       // After the fix, exactly 1.
-      expect(after - before, lessThanOrEqualTo(1),
-          reason: 'Single notifier change must trigger ≤ 1 state rebuild '
-              'after dispose+rebuild (was: $after - $before)');
-      expect(rebuildsAfterOne, lessThanOrEqualTo(1),
-          reason: 'Initial change triggered $rebuildsAfterOne rebuilds');
+      expect(
+        after - before,
+        lessThanOrEqualTo(1),
+        reason:
+            'Single notifier change must trigger ≤ 1 state rebuild '
+            'after dispose+rebuild (was: $after - $before)',
+      );
+      expect(
+        rebuildsAfterOne,
+        lessThanOrEqualTo(1),
+        reason: 'Initial change triggered $rebuildsAfterOne rebuilds',
+      );
 
       container.dispose();
       manager.dispose();

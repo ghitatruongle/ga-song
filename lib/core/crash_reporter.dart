@@ -43,7 +43,12 @@ class DebugCrashReporter implements CrashReporter {
   @override
   void reportError(Object error, StackTrace stackTrace, {String? context}) {
     final ctx = context != null ? '[$context] ' : '';
-    AppLogger.w(_tag, '${ctx}Non-fatal error reported', error: error, stack: stackTrace);
+    AppLogger.w(
+      _tag,
+      '${ctx}Non-fatal error reported',
+      error: error,
+      stack: stackTrace,
+    );
   }
 
   @override
@@ -65,7 +70,10 @@ class DebugCrashReporter implements CrashReporter {
   @override
   Future<void> flush() async {
     final pending = AppLogger.drainPendingCrashReports();
-    AppLogger.d(_tag, 'Flush requested (${pending.length} buffered reports drained)');
+    AppLogger.d(
+      _tag,
+      'Flush requested (${pending.length} buffered reports drained)',
+    );
   }
 
   @override

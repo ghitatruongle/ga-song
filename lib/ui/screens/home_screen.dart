@@ -466,14 +466,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           'YouTube',
           AppLocalizations.of(context).androidOnlyFeature,
         );
-      
-        case TabItem.smart:
-          if (!_tabCache.containsKey(TabItem.smart)) {
-            _tabCache[TabItem.smart] = const SmartPlaylistsScreen();
-          }
-          return _tabCache[TabItem.smart]!;
 
-        case TabItem.ktv:
+      case TabItem.smart:
+        if (!_tabCache.containsKey(TabItem.smart)) {
+          _tabCache[TabItem.smart] = const SmartPlaylistsScreen();
+        }
+        return _tabCache[TabItem.smart]!;
+
+      case TabItem.ktv:
         PerformanceProbe.instance.markSurface('KTV Screen');
         return _tabCache.putIfAbsent(TabItem.ktv, () => const KTVScreen());
       case TabItem.personal:
@@ -508,7 +508,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
         loading: () {},
         error: (error, stackTrace) {
-          AppLogger.e('home_screen', 'Error loading songs from provider', error: error, stack: stackTrace);
+          AppLogger.e(
+            'home_screen',
+            'Error loading songs from provider',
+            error: error,
+            stack: stackTrace,
+          );
           setState(() {
             _isLoading = false;
             _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
@@ -552,11 +557,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
         loading: () {},
         error: (error, stackTrace) {
-           AppLogger.e('home_screen', 'Error seeding songs from provider', error: error, stack: stackTrace);
-           setState(() {
-             _isLoading = false;
-             _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
-           });
+          AppLogger.e(
+            'home_screen',
+            'Error seeding songs from provider',
+            error: error,
+            stack: stackTrace,
+          );
+          setState(() {
+            _isLoading = false;
+            _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
+          });
         },
       );
     }

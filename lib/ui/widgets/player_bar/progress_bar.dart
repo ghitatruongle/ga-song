@@ -42,12 +42,8 @@ class ProgressBar extends ConsumerWidget {
             child: SliderTheme(
               data: SliderThemeData(
                 trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(
-                  enabledThumbRadius: 0,
-                ),
-                overlayShape: const RoundSliderOverlayShape(
-                  overlayRadius: 10,
-                ),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 0),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
                 activeTrackColor: context.adaptive,
                 inactiveTrackColor: context.adaptive.withValues(alpha: 0.2),
                 thumbColor: context.adaptive,

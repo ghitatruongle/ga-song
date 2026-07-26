@@ -13,9 +13,9 @@ final currentSongProvider = Provider<Song?>((ref) {
 /// Exposes the dominant color of the currently playing song
 final currentSongDominantColorProvider = FutureProvider<Color?>((ref) async {
   final currentSong = ref.watch(currentSongProvider);
-  
+
   if (currentSong == null) return null;
-  
+
   final coverArtRepo = ref.watch(coverArtRepositoryProvider);
   return await coverArtRepo.resolveDominantColor(currentSong);
 });

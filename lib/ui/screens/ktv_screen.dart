@@ -55,19 +55,25 @@ class KTVScreen extends ConsumerWidget {
               ),
             ),
             // Lyrics overlay
-            const Positioned.fill(
-              child: LyricView(isFullScreen: true),
-            ),
+            const Positioned.fill(child: LyricView(isFullScreen: true)),
             // Back button
             Positioned(
               top: MediaQuery.of(context).padding.top + 8,
               left: 12,
               child: SafeArea(
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                   tooltip: 'Thoát phòng nhạc',
                   onPressed: () {
-                    ref.read(settingsManagerProvider).currentTabIndexNotifier.value = 0;
+                    ref
+                            .read(settingsManagerProvider)
+                            .currentTabIndexNotifier
+                            .value =
+                        0;
                   },
                 ),
               ),

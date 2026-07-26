@@ -14,9 +14,7 @@ class AudioDeviceSelector extends StatefulWidget {
   static Future<void> show(BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => const Dialog(
-        child: AudioDeviceSelector(),
-      ),
+      builder: (context) => const Dialog(child: AudioDeviceSelector()),
     );
   }
 
@@ -67,7 +65,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
       setState(() {
         _currentDevice = device;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -81,9 +79,9 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi chuyển thiết bị: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi chuyển thiết bị: $e')));
       }
     }
   }
@@ -137,7 +135,11 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.orange,
+                      ),
                       SizedBox(height: spacing.md),
                       Text(
                         _error!,
@@ -241,31 +243,29 @@ class _DeviceTile extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: ListTile(
-        leading: Icon(
-          isSelected ? Icons.check_circle : Icons.speaker_outlined,
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : context.adaptive.withValues(alpha: 0.5),
-        ),
-        title: Text(
-          device.name,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            color: context.adaptive,
+          leading: Icon(
+            isSelected ? Icons.check_circle : Icons.speaker_outlined,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : context.adaptive.withValues(alpha: 0.5),
           ),
-        ),
-        subtitle: Text(
-          'ID: ${device.id}',
-          style: TextStyle(
-            fontSize: 12,
-            color: context.adaptive.withValues(alpha: 0.4),
+          title: Text(
+            device.name,
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: context.adaptive,
+            ),
           ),
+          subtitle: Text(
+            'ID: ${device.id}',
+            style: TextStyle(
+              fontSize: 12,
+              color: context.adaptive.withValues(alpha: 0.4),
+            ),
+          ),
+          onTap: onTap,
+          shape: RoundedRectangleBorder(borderRadius: radius.circular()),
         ),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius.circular(),
-        ),
-      ),
       ),
     );
   }

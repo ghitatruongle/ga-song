@@ -73,10 +73,13 @@ class MockSmtcPlatform implements SmtcPlatform {
 // ---------------------------------------------------------------------------
 // Mock engine — follows same pattern as playlist_service_test.dart
 // ---------------------------------------------------------------------------
-class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
+class MockAudioEngineService
+    with WidgetsBindingObserver
+    implements AudioEngineService {
   @override
-  ValueNotifier<AudioEngineState> engineState =
-      ValueNotifier(AudioEngineState.idle);
+  ValueNotifier<AudioEngineState> engineState = ValueNotifier(
+    AudioEngineState.idle,
+  );
 
   @override
   ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
@@ -171,12 +174,14 @@ class MockPlaylistService implements PlaylistService {
   final ValueNotifier<int> currentIndexNotifier = ValueNotifier(-1);
 
   @override
-  final ValueNotifier<PlayMode> playModeNotifier =
-      ValueNotifier(PlayMode.sequential);
+  final ValueNotifier<PlayMode> playModeNotifier = ValueNotifier(
+    PlayMode.sequential,
+  );
 
   @override
-  final ValueNotifier<Duration?> sleepTimerRemainingNotifier =
-      ValueNotifier(null);
+  final ValueNotifier<Duration?> sleepTimerRemainingNotifier = ValueNotifier(
+    null,
+  );
 
   @override
   SortMode sortMode = SortMode.name;
@@ -210,7 +215,10 @@ class MockPlaylistService implements PlaylistService {
   void reorderPlaylist(List<Song> songs) {}
 
   @override
-  Future<void> playSongAt(int index, {bool isHistoryNavigation = false}) async {}
+  Future<void> playSongAt(
+    int index, {
+    bool isHistoryNavigation = false,
+  }) async {}
 
   @override
   Future<void> playSongByFileName(String fileName) async {}
@@ -379,8 +387,11 @@ void main() {
     mockEngine.positionNotifier.value = const Duration(milliseconds: 5300);
     await Future<void>.delayed(Duration.zero);
 
-    expect(mockSmtc.lastPosition, isNull,
-        reason: '300ms change should be throttled');
+    expect(
+      mockSmtc.lastPosition,
+      isNull,
+      reason: '300ms change should be throttled',
+    );
   });
 
   test('position updates again after crossing 900ms threshold', () async {

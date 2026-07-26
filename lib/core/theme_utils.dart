@@ -9,7 +9,7 @@ extension AdaptiveColors on BuildContext {
 
   /// Primary adaptive text/icon color: white (dark) / black87 (light)
   Color get adaptive => isDark ? Colors.white : Colors.black87;
-  
+
   /// Get contrasting color for adaptive backgrounds (black on dark mode, white on light mode)
   Color get onAdaptive => isDark ? Colors.black : Colors.white;
 

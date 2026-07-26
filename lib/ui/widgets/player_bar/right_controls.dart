@@ -16,9 +16,11 @@ class RightControls extends ConsumerWidget {
     final settingsManager = ref.read(settingsManagerProvider);
     final pipService = ref.read(pipServiceProvider);
     final desktopLyrics = ref.read(desktopLyricsServiceProvider);
-    final isDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS);
+    final isDesktop =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -45,7 +47,9 @@ class RightControls extends ConsumerWidget {
               return;
             }
             settingsManager.setIsMiniPlayer(true);
-            if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) {
+            if (!kIsWeb &&
+                defaultTargetPlatform != TargetPlatform.android &&
+                defaultTargetPlatform != TargetPlatform.iOS) {
               final isMaximized = await windowManager.isMaximized();
               final isFullScreen = await windowManager.isFullScreen();
               if (isFullScreen) {
@@ -56,7 +60,11 @@ class RightControls extends ConsumerWidget {
                 await Future<void>.delayed(const Duration(milliseconds: 100));
               }
               final currentSize = await windowManager.getSize();
-              await settingsManager.setSavedWindowState(currentSize, isMaximized, isFullScreen);
+              await settingsManager.setSavedWindowState(
+                currentSize,
+                isMaximized,
+                isFullScreen,
+              );
               await windowManager.setMinimumSize(const Size(500, 120));
               await windowManager.setMaximumSize(const Size(500, 120));
               await windowManager.setSize(const Size(500, 120));
@@ -70,7 +78,9 @@ class RightControls extends ConsumerWidget {
             return IconButton(
               icon: Icon(
                 Icons.mic_rounded,
-                color: showLyrics ? context.adaptive : context.adaptiveSecondary,
+                color: showLyrics
+                    ? context.adaptive
+                    : context.adaptiveSecondary,
                 size: 22,
               ),
               padding: EdgeInsets.zero,
@@ -96,7 +106,10 @@ class RightControls extends ConsumerWidget {
                   size: 22,
                 ),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+                constraints: const BoxConstraints.tightFor(
+                  width: 36,
+                  height: 36,
+                ),
                 tooltip: 'Lời bài hát nổi (Desktop)',
                 onPressed: () => desktopLyrics.toggle(context),
               );

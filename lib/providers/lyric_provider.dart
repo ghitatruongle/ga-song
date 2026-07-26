@@ -11,7 +11,11 @@ import 'service_providers.dart';
 final lyricVisibilityProvider = StateProvider<bool>((ref) => false);
 
 class LyricNotifier extends StateNotifier<List<LyricLine>> {
-  LyricNotifier(this._playlistService, this._databaseService, this._onlineLyricsService) : super([]) {
+  LyricNotifier(
+    this._playlistService,
+    this._databaseService,
+    this._onlineLyricsService,
+  ) : super([]) {
     _playlistService.currentIndexNotifier.addListener(_onIndexChanged);
     _loadLyrics();
   }
@@ -38,7 +42,10 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
     }
 
     // 1. Try local lyrics first
-    final localLines = await LyricParser.loadLyricForSong(song.sourcePath, song.isBuiltIn);
+    final localLines = await LyricParser.loadLyricForSong(
+      song.sourcePath,
+      song.isBuiltIn,
+    );
     if (localLines.isNotEmpty) {
       state = localLines;
       return;
@@ -57,9 +64,10 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
           final plainLyrics = cached['plainLyrics'];
           if (plainLyrics != null && plainLyrics.isNotEmpty) {
             // Convert plain lyrics to LyricLine format (no timestamps)
-            state = plainLyrics.split('\n').map((line) => 
-              LyricLine(startTime: Duration.zero, text: line)
-            ).toList();
+            state = plainLyrics
+                .split('\n')
+                .map((line) => LyricLine(startTime: Duration.zero, text: line))
+                .toList();
             return;
           }
         }
@@ -79,7 +87,8 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
       if (result != null) {
         // Cache the result
         if (song.id != null) {
-          await _databaseService.cacheLyrics(songId: song.id!,
+          await _databaseService.cacheLyrics(
+            songId: song.id!,
             syncedLyrics: result.syncedLyrics,
             plainLyrics: result.plainLyrics,
             source: 'lrclib',
@@ -90,9 +99,10 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
         if (result.hasSyncedLyrics) {
           state = result.parsedSyncedLyrics;
         } else if (result.hasPlainLyrics) {
-          state = result.plainLyrics!.split('\n').map((line) => 
-            LyricLine(startTime: Duration.zero, text: line)
-          ).toList();
+          state = result.plainLyrics!
+              .split('\n')
+              .map((line) => LyricLine(startTime: Duration.zero, text: line))
+              .toList();
         } else {
           state = [];
         }
@@ -117,10 +127,11 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
 
       if (results.isNotEmpty) {
         final best = results.first;
-        
+
         // Cache the result
         if (song.id != null) {
-          await _databaseService.cacheLyrics(source: 'lrclib', 
+          await _databaseService.cacheLyrics(
+            source: 'lrclib',
             songId: song.id!,
             syncedLyrics: best.syncedLyrics,
             plainLyrics: best.plainLyrics,
@@ -130,9 +141,10 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
         if (best.hasSyncedLyrics) {
           state = best.parsedSyncedLyrics;
         } else if (best.hasPlainLyrics) {
-          state = best.plainLyrics!.split('\n').map((line) => 
-            LyricLine(startTime: Duration.zero, text: line)
-          ).toList();
+          state = best.plainLyrics!
+              .split('\n')
+              .map((line) => LyricLine(startTime: Duration.zero, text: line))
+              .toList();
         }
       }
     } catch (e) {
@@ -141,7 +153,9 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
   }
 }
 
-final lyricProvider = StateNotifierProvider<LyricNotifier, List<LyricLine>>((ref) {
+final lyricProvider = StateNotifierProvider<LyricNotifier, List<LyricLine>>((
+  ref,
+) {
   final playlist = ref.watch(playlistServiceProvider);
   final db = ref.watch(databaseServiceProvider);
   final onlineLyrics = ref.read(onlineLyricsServiceProvider);
@@ -205,5 +219,5 @@ class CurrentLyricLineNotifier extends StateNotifier<String> {
 
 final currentLyricLineProvider =
     StateNotifierProvider<CurrentLyricLineNotifier, String>((ref) {
-  return CurrentLyricLineNotifier(ref);
-});
+      return CurrentLyricLineNotifier(ref);
+    });

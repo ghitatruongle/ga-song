@@ -41,7 +41,11 @@ class PlatformCapabilities {
       }
       return false;
     } catch (e) {
-      AppLogger.w('platform.capabilities', 'version detection failed', error: e);
+      AppLogger.w(
+        'platform.capabilities',
+        'version detection failed',
+        error: e,
+      );
       return false;
     }
   }
@@ -59,7 +63,7 @@ class PlatformCapabilities {
     if (isLinux) return WindowEffectType.transparent;
     return WindowEffectType.disabled;
   }
-  
+
   /// Whether native window effects (acrylic/mica) should be used by default.
   bool get supportsNativeWindowEffect => isWindows || isMacOS || isLinux;
 
@@ -77,7 +81,12 @@ class PlatformCapabilities {
           osRelease.contains('mint') ||
           osRelease.contains('Chrome OS');
     } catch (e, stack) {
-      AppLogger.e('platform.capabilities', 'operation failed', error: e, stack: stack);
+      AppLogger.e(
+        'platform.capabilities',
+        'operation failed',
+        error: e,
+        stack: stack,
+      );
       return false;
     }
   }
@@ -89,7 +98,12 @@ class PlatformCapabilities {
       return File('/etc/os-release').readAsStringSync().contains('Chrome OS') ||
           File('/run/chromeos-config').existsSync();
     } catch (e, stack) {
-      AppLogger.e('platform.capabilities', 'operation failed', error: e, stack: stack);
+      AppLogger.e(
+        'platform.capabilities',
+        'operation failed',
+        error: e,
+        stack: stack,
+      );
       return false;
     }
   }
@@ -125,7 +139,11 @@ class PlatformCapabilities {
       }
       return 60;
     } catch (e) {
-      AppLogger.w('platform.capabilities', 'frame rate detection failed', error: e);
+      AppLogger.w(
+        'platform.capabilities',
+        'frame rate detection failed',
+        error: e,
+      );
       return 60;
     }
   }

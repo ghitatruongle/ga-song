@@ -13,9 +13,7 @@ void main() {
       late double observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppSpacingExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
             builder: (context) {
               observed = ThemeSpacing.of(context).md;
@@ -31,9 +29,7 @@ void main() {
       late Map<String, double> observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppSpacingExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
             builder: (context) {
               final s = ThemeSpacing.of(context);
@@ -64,9 +60,7 @@ void main() {
       late EdgeInsets observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppSpacingExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
             builder: (context) {
               observed = ThemeSpacing.of(context).all();
@@ -82,9 +76,7 @@ void main() {
       late EdgeInsets observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppSpacingExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
             builder: (context) {
               observed = ThemeSpacing.of(context).all(AppSpacing.sm);
@@ -104,9 +96,7 @@ void main() {
       late double observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppRadiusExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppRadiusExtension.defaults()]),
           home: Builder(
             builder: (context) {
               observed = ThemeRadius.of(context).md;
@@ -122,9 +112,7 @@ void main() {
       late Map<String, double> observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppRadiusExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppRadiusExtension.defaults()]),
           home: Builder(
             builder: (context) {
               final r = ThemeRadius.of(context);
@@ -144,9 +132,7 @@ void main() {
       late BorderRadius observed;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(
-            extensions: const [AppRadiusExtension.defaults()],
-          ),
+          theme: ThemeData(extensions: const [AppRadiusExtension.defaults()]),
           home: Builder(
             builder: (context) {
               observed = ThemeRadius.of(context).circular();

@@ -16,7 +16,8 @@ void main() {
 
   group('LyricParser.parse', () {
     test('parses LRC format correctly', () {
-      const lrc = '[00:10.00]First line\n[00:20.50]Second line\n[00:30.00]Third line';
+      const lrc =
+          '[00:10.00]First line\n[00:20.50]Second line\n[00:30.00]Third line';
       final lines = LyricParser.parse(lrc);
 
       expect(lines.length, 3);
@@ -29,7 +30,8 @@ void main() {
     });
 
     test('parses SRT format correctly', () {
-      const srt = '1\n00:00:10,000 --> 00:00:20,000\nFirst line\n\n2\n00:00:20,000 --> 00:00:30,000\nSecond line';
+      const srt =
+          '1\n00:00:10,000 --> 00:00:20,000\nFirst line\n\n2\n00:00:20,000 --> 00:00:30,000\nSecond line';
       final lines = LyricParser.parse(srt);
 
       expect(lines.length, 2);
@@ -50,7 +52,10 @@ void main() {
 
       expect(lines.length, 1);
       expect(lines[0].text, 'Test line');
-      expect(lines[0].startTime, const Duration(minutes: 1, seconds: 23, milliseconds: 456));
+      expect(
+        lines[0].startTime,
+        const Duration(minutes: 1, seconds: 23, milliseconds: 456),
+      );
     });
   });
 

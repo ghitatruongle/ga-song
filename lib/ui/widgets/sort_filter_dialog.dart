@@ -33,7 +33,9 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
+    final textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black87;
     final bgColor = Theme.of(context).brightness == Brightness.dark
         ? AppColors.darkSurface
         : AppColors.lightSurface;
@@ -77,7 +79,10 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
               const SizedBox(height: 24),
               Text(
                 'Sắp xếp theo',
-                style: TextStyle(color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
               ValueListenableBuilder<int>(
@@ -98,15 +103,21 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
                           children: [
                             Icon(
                               option['icon'] as IconData,
-                              color: isSelected ? Theme.of(context).primaryColor : textColor.withValues(alpha: 0.7),
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : textColor.withValues(alpha: 0.7),
                               size: 20,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               option['label'] as String,
                               style: TextStyle(
-                                color: isSelected ? Theme.of(context).primaryColor : textColor,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                color: isSelected
+                                    ? Theme.of(context).primaryColor
+                                    : textColor,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -156,7 +167,10 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
                   minimumSize: const Size(double.infinity, 44),
                   elevation: 0,
                 ),
-                child: const Text('Xong', style: TextStyle(fontWeight: FontWeight.w600)),
+                child: const Text(
+                  'Xong',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),

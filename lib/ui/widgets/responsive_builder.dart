@@ -10,10 +10,7 @@ class ResponsiveBuilder extends StatelessWidget {
   final Widget Function(BuildContext context, ScreenSize size) builder;
 
   /// Creates a responsive builder.
-  const ResponsiveBuilder({
-    super.key,
-    required this.builder,
-  });
+  const ResponsiveBuilder({super.key, required this.builder});
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +32,7 @@ class ScreenSize {
   final ScreenType type;
 
   /// Creates screen size information.
-  const ScreenSize({
-    required this.width,
-    required this.type,
-  });
+  const ScreenSize({required this.width, required this.type});
 
   /// Creates ScreenSize from a width value.
   factory ScreenSize.fromWidth(double width) {

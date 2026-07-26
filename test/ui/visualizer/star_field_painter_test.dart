@@ -75,10 +75,14 @@ void main() {
     (tester) async {
       final typed = StarFieldSnapshot(
         positions: Float32List.fromList(const [
-          100, 100,
-          200, 200,
-          400, 300,
-          600, 500,
+          100,
+          100,
+          200,
+          200,
+          400,
+          300,
+          600,
+          500,
         ]),
         colors: Int32List.fromList(const [
           0xFFFFFFFF,

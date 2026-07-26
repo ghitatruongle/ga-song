@@ -11,8 +11,10 @@ void main() {
       final enPath = '${Directory.current.path}/lib/l10n/app_en.arb';
       final viPath = '${Directory.current.path}/lib/l10n/app_vi.arb';
 
-      enArb = json.decode(File(enPath).readAsStringSync()) as Map<String, dynamic>;
-      viArb = json.decode(File(viPath).readAsStringSync()) as Map<String, dynamic>;
+      enArb =
+          json.decode(File(enPath).readAsStringSync()) as Map<String, dynamic>;
+      viArb =
+          json.decode(File(viPath).readAsStringSync()) as Map<String, dynamic>;
     });
 
     test('should be valid JSON', () {
@@ -22,20 +24,22 @@ void main() {
     });
 
     test('should have matching keys between English and Vietnamese', () {
-      final enKeys = enArb.keys
-          .where((k) => !k.startsWith('@@'))
-          .toSet();
-      final viKeys = viArb.keys
-          .where((k) => !k.startsWith('@@'))
-          .toSet();
+      final enKeys = enArb.keys.where((k) => !k.startsWith('@@')).toSet();
+      final viKeys = viArb.keys.where((k) => !k.startsWith('@@')).toSet();
 
       final missingInVi = enKeys.difference(viKeys);
       final missingInEn = viKeys.difference(enKeys);
 
-      expect(missingInVi, isEmpty,
-          reason: 'English keys missing in Vietnamese ARB: $missingInVi');
-      expect(missingInEn, isEmpty,
-          reason: 'Vietnamese keys missing in English ARB: $missingInEn');
+      expect(
+        missingInVi,
+        isEmpty,
+        reason: 'English keys missing in Vietnamese ARB: $missingInVi',
+      );
+      expect(
+        missingInEn,
+        isEmpty,
+        reason: 'Vietnamese keys missing in English ARB: $missingInEn',
+      );
     });
 
     test('should have songCount key in both files', () {
@@ -51,10 +55,16 @@ void main() {
         'cannotLoadLibraryDb',
       ];
       for (final key in newKeys) {
-        expect(enArb.containsKey(key), isTrue,
-            reason: 'Missing English ARB key: $key');
-        expect(viArb.containsKey(key), isTrue,
-            reason: 'Missing Vietnamese ARB key: $key');
+        expect(
+          enArb.containsKey(key),
+          isTrue,
+          reason: 'Missing English ARB key: $key',
+        );
+        expect(
+          viArb.containsKey(key),
+          isTrue,
+          reason: 'Missing Vietnamese ARB key: $key',
+        );
       }
     });
 
@@ -62,10 +72,12 @@ void main() {
       enArb.forEach((key, value) {
         if (key.startsWith('@@')) return;
         expect(value, isA<String>(), reason: 'Key $key is not a string');
-        expect((value as String).contains('TODO'), isFalse,
-            reason: 'Key $key contains placeholder TODO');
-        expect(value.trim(), isNotEmpty,
-            reason: 'Key $key has empty value');
+        expect(
+          (value as String).contains('TODO'),
+          isFalse,
+          reason: 'Key $key contains placeholder TODO',
+        );
+        expect(value.trim(), isNotEmpty, reason: 'Key $key has empty value');
       });
     });
   });

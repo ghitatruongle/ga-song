@@ -67,9 +67,7 @@ class OnlineLyricsService {
     String? album,
   }) async {
     try {
-      final queryParams = <String, String>{
-        'track_name': title,
-      };
+      final queryParams = <String, String>{'track_name': title};
       if (artist != null && artist.isNotEmpty) {
         queryParams['artist_name'] = artist;
       }
@@ -77,21 +75,29 @@ class OnlineLyricsService {
         queryParams['album_name'] = album;
       }
 
-      final uri = Uri.parse('$_baseUrl/search').replace(queryParameters: queryParams);
-      
+      final uri = Uri.parse(
+        '$_baseUrl/search',
+      ).replace(queryParameters: queryParams);
+
       final response = await http.get(uri).timeout(_timeout);
 
       if (response.statusCode == 200) {
         final List<dynamic> json = jsonDecode(response.body);
         return json
-            .map((item) => LyricsSearchResult.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) =>
+                  LyricsSearchResult.fromJson(item as Map<String, dynamic>),
+            )
             .where((r) => r.hasSyncedLyrics || r.hasPlainLyrics)
             .toList();
       } else if (response.statusCode == 404) {
         // No results found
         return [];
       } else {
-        AppLogger.w('online_lyrics.service', 'API error: ${response.statusCode}');
+        AppLogger.w(
+          'online_lyrics.service',
+          'API error: ${response.statusCode}',
+        );
         return [];
       }
     } catch (e) {
@@ -128,7 +134,11 @@ class OnlineLyricsService {
     String? artist,
     String? album,
   }) async {
-    final result = await getBestMatch(title: title, artist: artist, album: album);
+    final result = await getBestMatch(
+      title: title,
+      artist: artist,
+      album: album,
+    );
     if (result == null || !result.hasSyncedLyrics) return [];
     return result.parsedSyncedLyrics;
   }

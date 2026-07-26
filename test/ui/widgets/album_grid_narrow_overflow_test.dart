@@ -7,9 +7,7 @@ import 'package:ga_song/ui/widgets/album_grid_widget.dart';
 /// Helper to create a test-ready MaterialApp with AppLocalizations.
 Widget createTestApp(Widget child) {
   return MaterialApp(
-    localizationsDelegates: const [
-      AppLocalizationsDelegate(),
-    ],
+    localizationsDelegates: const [AppLocalizationsDelegate()],
     home: Builder(builder: (context) => child),
   );
 }
@@ -35,36 +33,42 @@ void main() {
         await tester.binding.setSurfaceSize(const Size(191, 700));
         addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        await tester.pumpWidget(createTestApp(
-          SizedBox(
-            width: 191, // 411 device width − 220 sidebar
-            height: 700,
-            child: AlbumGridWidget(
-              albums: const ['Mắt Nhắm Mắt Mở', 'Chưa phân loại'],
-              albumSongCount: const {
-                'Mắt Nhắm Mắt Mở': 13,
-                'Chưa phân loại': 20,
-              },
-              songs: const [],
-              onAlbumTap: (_, _) {},
+        await tester.pumpWidget(
+          createTestApp(
+            SizedBox(
+              width: 191, // 411 device width − 220 sidebar
+              height: 700,
+              child: AlbumGridWidget(
+                albums: const ['Mắt Nhắm Mắt Mở', 'Chưa phân loại'],
+                albumSongCount: const {
+                  'Mắt Nhắm Mắt Mở': 13,
+                  'Chưa phân loại': 20,
+                },
+                songs: const [],
+                onAlbumTap: (_, _) {},
+              ),
             ),
           ),
-        ));
+        );
         await tester.pump();
 
         // Contract 1: no RenderFlex overflow during this build.
-        expect(tester.takeException(), isNull,
-            reason: 'Album grid must not overflow at narrow viewport');
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Album grid must not overflow at narrow viewport',
+        );
       },
     );
 
-    testWidgets(
-      'long album name renders on 2 lines (full title visible)',
-      (tester) async {
-        await tester.binding.setSurfaceSize(const Size(191, 700));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
+    testWidgets('long album name renders on 2 lines (full title visible)', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(191, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        await tester.pumpWidget(createTestApp(
+      await tester.pumpWidget(
+        createTestApp(
           SizedBox(
             width: 191,
             height: 700,
@@ -75,31 +79,33 @@ void main() {
               onAlbumTap: (_, _) {},
             ),
           ),
-        ));
-        await tester.pump();
+        ),
+      );
+      await tester.pump();
 
-        // Contract 2: the rendered title must be 2 lines tall.
-        // fontSize 18 → line-height ~22 logical px → 2 lines ~44 px.
-        // We assert >= 36 px to leave a small slack for font metrics.
-        final titleFinder = find.byWidgetPredicate((w) {
-          if (w is! Text) return false;
-          return w.data == 'Mắt Nhắm Mắt Mở';
-        });
-        expect(titleFinder, findsOneWidget,
-            reason: 'Full album name Text widget must exist');
+      // Contract 2: the rendered title must be 2 lines tall.
+      // fontSize 18 → line-height ~22 logical px → 2 lines ~44 px.
+      // We assert >= 36 px to leave a small slack for font metrics.
+      final titleFinder = find.byWidgetPredicate((w) {
+        if (w is! Text) return false;
+        return w.data == 'Mắt Nhắm Mắt Mở';
+      });
+      expect(
+        titleFinder,
+        findsOneWidget,
+        reason: 'Full album name Text widget must exist',
+      );
 
-        final renderParagraph =
-            tester.renderObject<RenderParagraph>(titleFinder);
-        final titleHeight = renderParagraph.size.height;
-        expect(
-          titleHeight,
-          greaterThanOrEqualTo(36.0),
-          reason:
-              'Album title must render 2 lines (>= 36 px) at narrow viewport; '
-              'got ${titleHeight.toStringAsFixed(2)} px — title silently '
-              'collapsed to 1 line.',
-        );
-      },
-    );
+      final renderParagraph = tester.renderObject<RenderParagraph>(titleFinder);
+      final titleHeight = renderParagraph.size.height;
+      expect(
+        titleHeight,
+        greaterThanOrEqualTo(36.0),
+        reason:
+            'Album title must render 2 lines (>= 36 px) at narrow viewport; '
+            'got ${titleHeight.toStringAsFixed(2)} px — title silently '
+            'collapsed to 1 line.',
+      );
+    });
   });
 }

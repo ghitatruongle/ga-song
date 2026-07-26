@@ -33,10 +33,7 @@ class ThemeSpacing {
   /// out of the default — note that `0` is the only way to express
   /// "intentional zero" without going through the token (use `xxs`
   /// if you actually want the smallest spacing).
-  EdgeInsets symmetric({
-    double horizontal = 0,
-    double vertical = 0,
-  }) =>
+  EdgeInsets symmetric({double horizontal = 0, double vertical = 0}) =>
       EdgeInsets.symmetric(
         horizontal: horizontal == 0 ? md : horizontal,
         vertical: vertical == 0 ? md : vertical,
@@ -67,6 +64,5 @@ class ThemeRadius {
   double get xl => _e.xl;
 
   /// Returns [BorderRadius.circular] with the supplied token (or `md`).
-  BorderRadius circular([double? value]) =>
-      BorderRadius.circular(value ?? md);
+  BorderRadius circular([double? value]) => BorderRadius.circular(value ?? md);
 }

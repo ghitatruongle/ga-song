@@ -5,10 +5,22 @@ import 'package:ga_song/core/motion/app_motion.dart';
 void main() {
   group('AppDurations', () {
     test('durational scale is monotonic', () {
-      expect(AppDurations.micro.inMilliseconds, lessThan(AppDurations.short.inMilliseconds));
-      expect(AppDurations.short.inMilliseconds, lessThan(AppDurations.medium.inMilliseconds));
-      expect(AppDurations.medium.inMilliseconds, lessThan(AppDurations.long.inMilliseconds));
-      expect(AppDurations.long.inMilliseconds, lessThan(AppDurations.extended.inMilliseconds));
+      expect(
+        AppDurations.micro.inMilliseconds,
+        lessThan(AppDurations.short.inMilliseconds),
+      );
+      expect(
+        AppDurations.short.inMilliseconds,
+        lessThan(AppDurations.medium.inMilliseconds),
+      );
+      expect(
+        AppDurations.medium.inMilliseconds,
+        lessThan(AppDurations.long.inMilliseconds),
+      );
+      expect(
+        AppDurations.long.inMilliseconds,
+        lessThan(AppDurations.extended.inMilliseconds),
+      );
     });
 
     test('all durations are non-negative', () {

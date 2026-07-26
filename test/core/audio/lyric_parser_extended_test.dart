@@ -21,14 +21,20 @@ void main() {
         final lines = LyricParser.parse(lrc);
         expect(lines.length, 1);
         expect(lines[0].text, 'Test line');
-        expect(lines[0].startTime, const Duration(minutes: 1, seconds: 23, milliseconds: 456));
+        expect(
+          lines[0].startTime,
+          const Duration(minutes: 1, seconds: 23, milliseconds: 456),
+        );
       });
 
       test('parses LRC with 2-digit milliseconds', () {
         const lrc = '[00:05.50]Half second';
         final lines = LyricParser.parse(lrc);
         expect(lines.length, 1);
-        expect(lines[0].startTime, const Duration(seconds: 5, milliseconds: 500));
+        expect(
+          lines[0].startTime,
+          const Duration(seconds: 5, milliseconds: 500),
+        );
       });
 
       test('parses multiple timestamps on same line', () {
@@ -64,7 +70,8 @@ void main() {
 
     group('SRT parsing', () {
       test('parses basic SRT format', () {
-        const srt = '1\n00:00:10,000 --> 00:00:20,000\nFirst line\n\n2\n00:00:20,000 --> 00:00:30,000\nSecond line';
+        const srt =
+            '1\n00:00:10,000 --> 00:00:20,000\nFirst line\n\n2\n00:00:20,000 --> 00:00:30,000\nSecond line';
         final lines = LyricParser.parse(srt);
         expect(lines.length, 2);
         expect(lines[0].text, 'First line');
@@ -95,7 +102,8 @@ void main() {
       });
 
       test('ignores empty SRT blocks', () {
-        const srt = '1\n00:00:10,000 --> 00:00:20,000\nValid\n\n\n\n2\n00:00:20,000 --> 00:00:30,000\nAlso valid';
+        const srt =
+            '1\n00:00:10,000 --> 00:00:20,000\nValid\n\n\n\n2\n00:00:20,000 --> 00:00:30,000\nAlso valid';
         final lines = LyricParser.parse(srt);
         expect(lines.length, 2);
       });
