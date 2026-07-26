@@ -16,7 +16,7 @@ void main() {
     setUp(() {
       mockEngine = MockAudioEngineService();
       mockEffect = MockAudioEffectService();
-      service = PlaylistService(mockEngine, mockEffect, MockDatabaseService());
+      service = PlaylistService(mockEngine, mockEffect, MockDatabaseServiceWrapper());
     });
 
     tearDown(() {
@@ -377,7 +377,7 @@ void main() {
         final s = PlaylistService(
           MockAudioEngineService(),
           MockAudioEffectService(),
-          MockDatabaseService(),
+          MockDatabaseServiceWrapper(),
         );
         expect(() => s.dispose(), returnsNormally);
       });

@@ -5,7 +5,7 @@ import '../../models/song.dart';
 import '../audio_source_cache_policy.dart';
 import '../logging/app_logger.dart';
 import '../platform_capabilities.dart';
-import '../services/database_service.dart';
+import '../services/db_service_wrapper.dart';
 import '../utils/sort_utils.dart';
 import 'audio_engine_service.dart';
 import 'audio_effect_service.dart';
@@ -27,7 +27,7 @@ enum SortMode { name, artist, dateAdded, duration, playCount, lastPlayed }
 class PlaylistService {
   final AudioEngineService _engineService;
   final AudioEffectService _effectService;
-  final DatabaseService _databaseService;
+  final DatabaseServiceWrapper _databaseService;
   final AudioSourceCachePolicy _cachePolicy = const AudioSourceCachePolicy();
 
   List<Song> _playlist = [];

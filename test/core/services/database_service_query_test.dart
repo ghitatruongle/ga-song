@@ -1,9 +1,11 @@
+import 'package:ga_song/core/database/app_database.dart';
+import 'package:drift/native.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io' show Platform;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:ga_song/core/services/database_service.dart';
+import 'package:ga_song/core/services/db_service_wrapper.dart';
 import 'package:ga_song/core/utils/result.dart';
 import 'package:ga_song/core/exceptions/app_exception.dart' as app_exc;
 
@@ -16,11 +18,11 @@ void main() {
     }
   });
 
-  group('DatabaseService.querySongs', () {
-    late DatabaseService service;
+  group('DatabaseServiceWrapper.querySongs', () {
+    late DatabaseServiceWrapper service;
 
     setUp(() async {
-      service = DatabaseService();
+      service = DatabaseServiceWrapper(AppDatabase(executor: NativeDatabase.memory()));
       await service.init();
     });
 

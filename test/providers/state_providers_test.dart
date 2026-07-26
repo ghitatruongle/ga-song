@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
 import 'package:ga_song/providers/service_providers.dart';
-import 'package:ga_song/providers/state_providers.dart';
+
 
 import '../mocks/mock_audio_effect_service.dart';
 import '../mocks/mock_audio_engine_service.dart';
@@ -19,7 +19,7 @@ void main() {
     setUp(() {
       engine = MockAudioEngineService();
       final effect = MockAudioEffectService();
-      final db = MockDatabaseService();
+      final db = MockDatabaseServiceWrapper();
       playlist = PlaylistService(engine, effect, db);
       container = ProviderContainer(
         overrides: [

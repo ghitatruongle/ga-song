@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
 import 'package:ga_song/providers/service_providers.dart';
-import 'package:ga_song/providers/state_providers.dart';
+
 
 import '../mocks/mock_audio_effect_service.dart';
 import '../mocks/mock_audio_engine_service.dart';
@@ -22,7 +22,7 @@ void main() {
           playlistServiceProvider.overrideWithValue(PlaylistService(
             engine1,
             MockAudioEffectService(),
-            MockDatabaseService(),
+            MockDatabaseServiceWrapper(),
           )),
         ],
       );
@@ -41,7 +41,7 @@ void main() {
         playlistServiceProvider.overrideWithValue(PlaylistService(
           engine2,
           MockAudioEffectService(),
-          MockDatabaseService(),
+          MockDatabaseServiceWrapper(),
         )),
       ]);
       container.invalidate(audioEngineServiceProvider);
@@ -64,7 +64,7 @@ void main() {
           playlistServiceProvider.overrideWithValue(PlaylistService(
             engine,
             MockAudioEffectService(),
-            MockDatabaseService(),
+            MockDatabaseServiceWrapper(),
           )),
         ],
       );

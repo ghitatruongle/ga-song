@@ -132,6 +132,8 @@ class SettingsManager {
   /// users opt-in via the Settings UI.
   final ValueNotifier<bool> soundFeedbackEnabledNotifier =
       ValueNotifier(false);
+  final ValueNotifier<bool> hapticFeedbackEnabledNotifier =
+      ValueNotifier(true);
 
   // ─── Debounced Persistence ────────────────────────────────────────────────
   // Slider onChanged fires on every pixel; writing to SharedPreferences each
@@ -730,6 +732,7 @@ class SettingsManager {
     mediaKeyEnabledNotifier.dispose();
     sleepTimerDurationNotifier.dispose();
     soundFeedbackEnabledNotifier.dispose();
+    hapticFeedbackEnabledNotifier.dispose();
   }
 }
 

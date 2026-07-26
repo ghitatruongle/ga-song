@@ -1,25 +1,34 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+
 import '../core/audio/playlist_service.dart';
 import '../core/audio/lyric_parser.dart';
 import '../core/services/online_lyrics_service.dart';
-import '../core/services/database_service.dart';
+import '../core/services/db_service_wrapper.dart';
 import 'service_providers.dart';
 
 final lyricVisibilityProvider = StateProvider<bool>((ref) => false);
 
 class LyricNotifier extends StateNotifier<List<LyricLine>> {
   LyricNotifier(this._playlistService, this._databaseService, this._onlineLyricsService) : super([]) {
-    _playlistService.currentIndexNotifier.addListener(() {
-      _loadLyrics();
-    });
+    _playlistService.currentIndexNotifier.addListener(_onIndexChanged);
     _loadLyrics();
   }
 
   final PlaylistService _playlistService;
-  final DatabaseService _databaseService;
+  final DatabaseServiceWrapper _databaseService;
   final OnlineLyricsService _onlineLyricsService;
+
+  void _onIndexChanged() {
+    _loadLyrics();
+  }
+
+  @override
+  void dispose() {
+    _playlistService.currentIndexNotifier.removeListener(_onIndexChanged);
+    super.dispose();
+  }
 
   Future<void> _loadLyrics() async {
     final song = _playlistService.currentSong;
@@ -70,10 +79,10 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
       if (result != null) {
         // Cache the result
         if (song.id != null) {
-          await _databaseService.cacheLyrics(
-            songId: song.id!,
+          await _databaseService.cacheLyrics(songId: song.id!,
             syncedLyrics: result.syncedLyrics,
             plainLyrics: result.plainLyrics,
+            source: 'lrclib',
           );
         }
 
@@ -111,7 +120,7 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
         
         // Cache the result
         if (song.id != null) {
-          await _databaseService.cacheLyrics(
+          await _databaseService.cacheLyrics(source: 'lrclib', 
             songId: song.id!,
             syncedLyrics: best.syncedLyrics,
             plainLyrics: best.plainLyrics,
@@ -133,8 +142,8 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
 }
 
 final lyricProvider = StateNotifierProvider<LyricNotifier, List<LyricLine>>((ref) {
-  final playlist = ref.read(playlistServiceProvider);
-  final db = ref.read(databaseServiceProvider);
+  final playlist = ref.watch(playlistServiceProvider);
+  final db = ref.watch(databaseServiceProvider);
   final onlineLyrics = ref.read(onlineLyricsServiceProvider);
   return LyricNotifier(playlist, db, onlineLyrics);
 });

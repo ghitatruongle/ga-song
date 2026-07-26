@@ -5,11 +5,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:audiotags/audiotags.dart';
 import 'package:path/path.dart' as p;
 import '../../models/song.dart';
-import 'database_service.dart';
+import 'db_service_wrapper.dart';
 
 /// Quan ly import/xoa bai hat local
 class MusicManager {
-  final DatabaseService _db;
+  final DatabaseServiceWrapper _db;
 
   MusicManager(this._db);
 

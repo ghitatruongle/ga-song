@@ -20,11 +20,14 @@ import 'core/cover_art_repository.dart';
 import 'core/pip_service.dart';
 import 'core/services/smtc_service.dart';
 import 'core/services/audio_handler_service.dart';
-import 'core/services/database_service.dart';
+import 'core/services/db_service_wrapper.dart';
 import 'core/services/desktop_lyrics_service.dart';
 import 'core/crash_reporter.dart';
 import 'core/theme/tokens.dart';
+import 'core/database/app_database.dart';
+import 'core/database/migration/migration_service.dart';
 import 'providers/service_providers.dart';
+import 'providers/theme_provider.dart';
 import 'ui/screens/home_screen.dart';
 
 Widget _buildErrorScreen(Object error, StackTrace stackTrace) {
@@ -118,7 +121,14 @@ Future<void> main() async {
   await settings.init();
   PerformanceProbe.instance.install();
 
-  final dbService = DatabaseService();
+  // Run migration first
+  final appDb = AppDatabase();
+  final migrationService = MigrationService(appDb);
+  await migrationService.migrateFromSqflite();
+  // We don't close appDb here because it's meant to stay open for the whole app lifespan
+
+  // Use the wrapper to interact with Drift
+  final dbService = DatabaseServiceWrapper(appDb);
   await dbService.init();
 
   final engineService = AudioEngineService();
@@ -285,10 +295,20 @@ class _GASongAppState extends ConsumerState<GASongApp> {
     ]);
   }
 
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.read(settingsManagerProvider);
+    
+    // Automatically update dynamic color when song changes
+    ref.listen(currentSongDominantColorProvider, (previous, next) {
+      if (next.hasValue && next.value != null) {
+        settings.dynamicPrimaryColorNotifier.value = next.value;
+      }
+    });
+
     return AnimatedBuilder(
+
       animation: _themeListenable,
       builder: (context, _) {
         final themeMode = settings.themeModeNotifier.value;

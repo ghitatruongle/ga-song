@@ -18,6 +18,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 import '../utils/theme_helpers.dart';
 import 'mini_player_screen.dart';
+import 'smart_playlists_screen.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/lyric_provider.dart';
@@ -465,7 +466,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           'YouTube',
           AppLocalizations.of(context).androidOnlyFeature,
         );
-      case TabItem.ktv:
+      
+        case TabItem.smart:
+          if (!_tabCache.containsKey(TabItem.smart)) {
+            _tabCache[TabItem.smart] = const SmartPlaylistsScreen();
+          }
+          return _tabCache[TabItem.smart]!;
+
+        case TabItem.ktv:
         PerformanceProbe.instance.markSurface('KTV Screen');
         return _tabCache.putIfAbsent(TabItem.ktv, () => const KTVScreen());
       case TabItem.personal:
@@ -491,12 +499,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
     // Listen to Isar songListProvider
     ref.listen<AsyncValue<List<Song>>>(songListProvider, (previous, next) {
-      next.whenData((songs) {
-        // If lengths are different, or it's first load, update
-        if (previous?.value?.length != songs.length || _songs.isEmpty) {
-          _handleSongsUpdate(songs);
-        }
-      });
+      next.when(
+        data: (songs) {
+          // If lengths are different, or it's first load, update
+          if (previous?.value?.length != songs.length || _songs.isEmpty) {
+            _handleSongsUpdate(songs);
+          }
+        },
+        loading: () {},
+        error: (error, stackTrace) {
+          AppLogger.e('home_screen', 'Error loading songs from provider', error: error, stack: stackTrace);
+          setState(() {
+            _isLoading = false;
+            _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
+          });
+        },
+      );
     });
 
     // P2.1: ref.listen replaces local addListener for sort + tab changes.
@@ -526,11 +544,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // state once to seed _songs on first build.
     if (_songs.isEmpty && _isLoading) {
       final current = ref.read(songListProvider);
-      current.whenData((songs) {
-        if (songs.isNotEmpty) {
-          _handleSongsUpdate(songs);
-        }
-      });
+      current.when(
+        data: (songs) {
+          if (songs.isNotEmpty) {
+            _handleSongsUpdate(songs);
+          }
+        },
+        loading: () {},
+        error: (error, stackTrace) {
+           AppLogger.e('home_screen', 'Error seeding songs from provider', error: error, stack: stackTrace);
+           setState(() {
+             _isLoading = false;
+             _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
+           });
+        },
+      );
     }
 
     // On Android, also listen for native PiP mode changes
@@ -728,7 +756,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                         // U-4 fix: Subtract sidebar width from available space.
                         // C1/C2 fix: use real sidebar width including collapse.
-                        final screenWidth = MediaQuery.of(context).size.width;
+                        final screenWidth = MediaQuery.sizeOf(context).width;
                         final isSidebarVisible = _isSidebarVisible(context);
                         final availableWidth = isSidebarVisible
                             ? screenWidth - _currentSidebarWidth()

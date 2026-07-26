@@ -1,7 +1,7 @@
-import 'package:ga_song/core/services/database_service.dart';
+import 'package:ga_song/core/services/db_service_wrapper.dart';
 
-/// Mock implementation of [DatabaseService] for testing.
-class MockDatabaseService implements DatabaseService {
+/// Mock implementation of [DatabaseServiceWrapper] for testing.
+class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   @override
   Future<void> incrementPlayCount(int songId) async {}
   

@@ -8,7 +8,7 @@ import '../models/song.dart';
 import '../models/cover_art_cache.dart';
 import 'settings_manager.dart';
 import 'platform_capabilities.dart';
-import 'services/database_service.dart';
+import 'services/db_service_wrapper.dart';
 import 'performance_probe.dart';
 
 /// P3.3: cache entries older than this are evicted even if LRU hasn't
@@ -54,14 +54,14 @@ int get _maxDominantColorCacheSize =>
 /// Dependencies are injected via constructor for testability.
 class CoverArtRepository with WidgetsBindingObserver {
   CoverArtRepository({
-    DatabaseService? databaseService,
+    DatabaseServiceWrapper? databaseService,
     SettingsManager? settingsManager,
   }) : _databaseService = databaseService,
        _settingsManager = settingsManager {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  final DatabaseService? _databaseService;
+  final DatabaseServiceWrapper? _databaseService;
   final SettingsManager? _settingsManager;
 
   final Map<String, Future<CoverArtEntry>> _entryFutures =

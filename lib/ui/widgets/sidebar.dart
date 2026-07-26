@@ -7,7 +7,7 @@ import '../../core/audio/audio_engine_service.dart';
 import '../../core/settings_manager.dart';
 import '../../core/theme_utils.dart';
 
-enum TabItem { home, library, online, ktv, personal, settings }
+enum TabItem { home, library, smart, online, ktv, personal, settings }
 
 // ─── Layout Constants ────────────────────────────────────────────────────────
 // Public so other widgets (e.g. home_screen.dart overlay layers) can

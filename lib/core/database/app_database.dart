@@ -16,42 +16,38 @@ part 'app_database.g.dart';
 ///
 /// Provides type-safe database access with automatic migrations.
 /// This coexists with the existing sqflite DatabaseService during migration.
-@DriftDatabase(tables: [
-  Songs,
-  Playlists,
-  PlaylistSongs,
-  CoverArtCache,
-  LyricsCache,
-])
+@DriftDatabase(
+  tables: [Songs, Playlists, PlaylistSongs, CoverArtCache, LyricsCache],
+)
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
   int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-          await _createIndexes(m);
-        },
-        onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
-            // v1 → v2: Add smart playlist & tag editor columns
-            await m.addColumn(songs, songs.playCount);
-            await m.addColumn(songs, songs.lastPlayed);
-            await m.addColumn(songs, songs.genre);
-            await m.addColumn(songs, songs.year);
-          }
-          if (from < 3) {
-            // v2 → v3: Add playlist timestamps and cover art size
-            await m.addColumn(playlists, playlists.createdAt);
-            await m.addColumn(playlists, playlists.updatedAt);
-            await m.addColumn(coverArtCache, coverArtCache.sizeBytes);
-            await _createIndexes(m);
-          }
-        },
-      );
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      await _createIndexes(m);
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        // v1 → v2: Add smart playlist & tag editor columns
+        await m.addColumn(songs, songs.playCount);
+        await m.addColumn(songs, songs.lastPlayed);
+        await m.addColumn(songs, songs.genre);
+        await m.addColumn(songs, songs.year);
+      }
+      if (from < 3) {
+        // v2 → v3: Add playlist timestamps and cover art size
+        await m.addColumn(playlists, playlists.createdAt);
+        await m.addColumn(playlists, playlists.updatedAt);
+        await m.addColumn(coverArtCache, coverArtCache.sizeBytes);
+        await _createIndexes(m);
+      }
+    },
+  );
 
   Future<void> _createIndexes(Migrator m) async {
     await m.database.customStatement(
@@ -100,17 +96,15 @@ class AppDatabase extends _$AppDatabase {
       (select(songs)..where((t) => t.album.equals(album))).get();
 
   /// Search songs by name or artist.
-  Future<List<SongEntry>> searchSongs(String query) => (select(songs)
-        ..where((t) =>
-            t.name.like('%$query%') | t.artist.like('%$query%')))
-      .get();
+  Future<List<SongEntry>> searchSongs(String query) => (select(
+    songs,
+  )..where((t) => t.name.like('%$query%') | t.artist.like('%$query%'))).get();
 
   /// Insert a new song.
   Future<int> insertSong(SongsCompanion song) => into(songs).insert(song);
 
   /// Update an existing song.
-  Future<bool> updateSong(SongsCompanion song) =>
-      update(songs).replace(song);
+  Future<bool> updateSong(SongsCompanion song) => update(songs).replace(song);
 
   /// Delete a song by ID.
   Future<int> deleteSong(int id) =>
@@ -177,13 +171,14 @@ class AppDatabase extends _$AppDatabase {
           .get();
 
   /// Get discovery songs (least played).
-  Future<List<SongEntry>> getDiscovery({int limit = 50}) => (select(songs)
-        ..orderBy([
-          (t) => OrderingTerm.asc(t.playCount),
-          (t) => OrderingTerm.desc(t.dateAdded),
-        ])
-        ..limit(limit))
-      .get();
+  Future<List<SongEntry>> getDiscovery({int limit = 50}) =>
+      (select(songs)
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.playCount),
+              (t) => OrderingTerm.desc(t.dateAdded),
+            ])
+            ..limit(limit))
+          .get();
 
   // ─── Statistics ──────────────────────────────────────────────────
 
@@ -239,27 +234,22 @@ class AppDatabase extends _$AppDatabase {
 
   /// Create a new playlist.
   Future<int> createPlaylist(String name) => into(playlists).insert(
-        PlaylistsCompanion(
-          name: Value(name),
-          createdAt: Value(DateTime.now()),
-          updatedAt: Value(DateTime.now()),
-        ),
-      );
+    PlaylistsCompanion(
+      name: Value(name),
+      createdAt: Value(DateTime.now()),
+      updatedAt: Value(DateTime.now()),
+    ),
+  );
 
   /// Update a playlist name.
   Future<int> updatePlaylist(int id, String name) =>
       (update(playlists)..where((t) => t.id.equals(id))).write(
-        PlaylistsCompanion(
-          name: Value(name),
-          updatedAt: Value(DateTime.now()),
-        ),
+        PlaylistsCompanion(name: Value(name), updatedAt: Value(DateTime.now())),
       );
 
   /// Delete a playlist and its songs.
   Future<void> deletePlaylist(int id) async {
-    await (delete(playlistSongs)
-          ..where((t) => t.playlistId.equals(id)))
-        .go();
+    await (delete(playlistSongs)..where((t) => t.playlistId.equals(id))).go();
     await (delete(playlists)..where((t) => t.id.equals(id))).go();
   }
 
@@ -283,19 +273,19 @@ class AppDatabase extends _$AppDatabase {
 
   /// Remove a song from a playlist.
   Future<void> removeSongFromPlaylist(int playlistId, int songId) =>
-      (delete(playlistSongs)
-            ..where((t) =>
-                t.playlistId.equals(playlistId) &
-                t.songId.equals(songId)))
+      (delete(playlistSongs)..where(
+            (t) => t.playlistId.equals(playlistId) & t.songId.equals(songId),
+          ))
           .go();
 
   /// Get songs in a playlist ordered by position.
   Future<List<SongEntry>> getPlaylistSongs(int playlistId) async {
-    final query = select(playlistSongs).join([
-      innerJoin(songs, songs.id.equalsExp(playlistSongs.songId)),
-    ])
-      ..where(playlistSongs.playlistId.equals(playlistId))
-      ..orderBy([OrderingTerm.asc(playlistSongs.position)]);
+    final query =
+        select(
+            playlistSongs,
+          ).join([innerJoin(songs, songs.id.equalsExp(playlistSongs.songId))])
+          ..where(playlistSongs.playlistId.equals(playlistId))
+          ..orderBy([OrderingTerm.asc(playlistSongs.position)]);
 
     final results = await query.get();
     return results.map((row) => row.readTable(songs)).toList();
@@ -303,11 +293,11 @@ class AppDatabase extends _$AppDatabase {
 
   /// Check if a song is in a playlist.
   Future<bool> isSongInPlaylist(int playlistId, int songId) async {
-    final result = await (select(playlistSongs)
-          ..where((t) =>
-              t.playlistId.equals(playlistId) &
-              t.songId.equals(songId)))
-        .get();
+    final result =
+        await (select(playlistSongs)..where(
+              (t) => t.playlistId.equals(playlistId) & t.songId.equals(songId),
+            ))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -315,14 +305,13 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get cover art bytes by file name.
   Future<Uint8List?> getCoverArt(String fileName) async {
-    final entry = await (select(coverArtCache)
-          ..where((t) => t.fileName.equals(fileName)))
-        .getSingleOrNull();
+    final entry = await (select(
+      coverArtCache,
+    )..where((t) => t.fileName.equals(fileName))).getSingleOrNull();
 
     if (entry != null) {
       // Update last accessed
-      await (update(coverArtCache)..where((t) => t.id.equals(entry.id)))
-          .write(
+      await (update(coverArtCache)..where((t) => t.id.equals(entry.id))).write(
         CoverArtCacheCompanion(lastAccessed: Value(DateTime.now())),
       );
       return entry.bytes;
@@ -386,9 +375,9 @@ class AppDatabase extends _$AppDatabase {
   // ─── Lyrics Cache Operations ─────────────────────────────────────
 
   /// Get cached lyrics for a song.
-  Future<LyricsCacheEntry?> getLyrics(int songId) =>
-      (select(lyricsCache)..where((t) => t.songId.equals(songId)))
-          .getSingleOrNull();
+  Future<LyricsCacheEntry?> getLyrics(int songId) => (select(
+    lyricsCache,
+  )..where((t) => t.songId.equals(songId))).getSingleOrNull();
 
   /// Save lyrics for a song.
   Future<void> saveLyrics(

@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/audio_effect_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
-import 'package:ga_song/core/services/database_service.dart';
+import 'package:ga_song/core/services/db_service_wrapper.dart';
 import 'package:ga_song/models/song.dart';
 
 class MockAudioEngineService with WidgetsBindingObserver implements AudioEngineService {
@@ -72,7 +72,7 @@ class MockAudioEffectService implements AudioEffectService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockDatabaseService implements DatabaseService {
+class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   @override
   Future<void> incrementPlayCount(int songId) async {}
   
@@ -94,7 +94,7 @@ void main() {
   setUp(() {
     mockEngine = MockAudioEngineService();
     mockEffect = MockAudioEffectService();
-    playlistService = PlaylistService(mockEngine, mockEffect, MockDatabaseService());
+    playlistService = PlaylistService(mockEngine, mockEffect, MockDatabaseServiceWrapper());
   });
 
   tearDown(() {
