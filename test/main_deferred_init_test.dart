@@ -24,7 +24,7 @@ void main() {
   testWidgets('addPostFrameCallback runs after first frame, not before', (
     tester,
   ) async {
-    var order = <String>[];
+    final order = <String>[];
     order.add('before-pump');
     await tester.pumpWidget(
       MaterialApp(

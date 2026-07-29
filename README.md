@@ -53,24 +53,28 @@ flutter build linux --release
 
 ```
 lib/
-├── main.dart                    # App entry point
+├── main.dart                    # App entry point (creates services, Riverpod overrides)
 ├── core/
 │   ├── audio/                   # Audio engine, effects, playlist, lyrics
 │   │   ├── audio_engine_service.dart    # SoLoud playback + LRU cache
 │   │   ├── audio_effect_service.dart    # EQ, bass, reverb, compressor
 │   │   ├── playlist_service.dart        # Playlist management, shuffle
 │   │   └── lyric_parser.dart            # LRC/SRT parser
+│   ├── database/                # Drift ORM (type-safe SQLite)
+│   │   ├── app_database.dart            # Tables, DAOs, migrations
+│   │   └── migration/                   # Legacy sqflite → Drift auto-migration
 │   ├── services/                # Platform services
-│   │   ├── database_service.dart        # SQLite persistence
+│   │   ├── db_service_wrapper.dart      # Drift-backed persistence API
 │   │   ├── window_manager_service.dart  # Desktop window management
 │   │   ├── system_tray_service.dart     # System tray
 │   │   ├── hotkey_service.dart          # Global hotkeys
 │   │   └── smtc_service.dart            # Windows media controls
-│   ├── view_models/             # View models (ChangeNotifier)
+│   ├── settings/                # SettingsState (Freezed) + SettingsNotifier
+│   ├── theme/                   # Design tokens, typography, motion
+│   ├── logging/                 # Structured AppLogger
 │   ├── cover_art_repository.dart        # Cover art 3-tier cache
 │   ├── settings_manager.dart            # App settings persistence
-│   ├── platform_capabilities.dart       # Platform detection
-│   └── service_locator.dart             # Dependency injection (get_it)
+│   └── platform_capabilities.dart       # Platform detection
 ├── models/                      # Data models
 │   ├── song.dart
 │   ├── playlist.dart
@@ -78,6 +82,7 @@ lib/
 ├── providers/                   # Riverpod providers
 │   ├── song_provider.dart
 │   ├── lyric_provider.dart
+│   ├── state_providers.dart
 │   └── service_providers.dart
 ├── ui/                          # User interface
 │   ├── screens/                 # App screens
@@ -87,7 +92,7 @@ lib/
 │   ├── widgets/                 # Reusable widgets
 │   │   ├── sidebar.dart
 │   │   ├── main_content.dart
-│   │   ├── bottom_player_bar/
+│   │   ├── player_bar/
 │   │   └── ...
 │   ├── visualizer/              # Audio visualizer
 │   └── painters/                # Custom painters
@@ -104,17 +109,15 @@ The app follows a layered architecture:
 ├─────────────────────────────────┤
 │        Provider Layer           │  Riverpod Providers
 ├─────────────────────────────────┤
-│      View Model Layer           │  ChangeNotifier
-├─────────────────────────────────┤
 │       Service Layer             │  Business Logic
 ├─────────────────────────────────┤
 │        Model Layer              │  Data Classes
 └─────────────────────────────────┘
 ```
 
-- **Dependency Injection**: `get_it` (service locator) + `flutter_riverpod` (widget tree)
-- **State Management**: `ValueNotifier` / `ChangeNotifier` with `ValueListenableBuilder`
-- **Persistence**: `SharedPreferences` (settings) + `sqflite` (songs, playlists, cover art)
+- **Dependency Injection**: services created directly in `main()`, injected via Riverpod `ProviderScope.overrides` (no service locator)
+- **State Management**: `flutter_riverpod` providers + `ValueNotifier`/`ChangeNotifier` within services
+- **Persistence**: `SharedPreferences` (settings) + Drift ORM / SQLite (songs, playlists, cover art, lyrics)
 
 ## 🧪 Testing
 
@@ -131,16 +134,15 @@ flutter test test/core/audio/playlist_service_test.dart
 
 ## 🌍 Localization
 
-The app supports Vietnamese (vi) and English (en). Localization is handled via `lib/l10n/app_localizations.dart`.
+The app supports Vietnamese (vi) and English (en). Localization is handled via `lib/l10n/app_localizations.dart`; the language can be switched at runtime in **Settings → Language** (persisted across sessions).
 
 ## 📦 Dependencies
 
 | Package | Purpose |
 |---------|---------|
 | `flutter_soloud` | Native audio engine |
-| `flutter_riverpod` | State management |
-| `get_it` | Service locator |
-| `sqflite` | SQLite database |
+| `flutter_riverpod` | State management & DI |
+| `drift` | Type-safe SQLite ORM |
 | `audio_service` | Android/Linux media notifications |
 | `smtc_windows` | Windows System Media Transport Controls |
 | `window_manager` | Desktop window management |

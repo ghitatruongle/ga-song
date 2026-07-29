@@ -69,7 +69,7 @@ void main() {
           ),
         ),
       );
-      expect(observed, EdgeInsets.all(AppSpacing.md));
+      expect(observed, const EdgeInsets.all(AppSpacing.md));
     });
 
     testWidgets('ThemeSpacing.all(8) returns all-8', (tester) async {

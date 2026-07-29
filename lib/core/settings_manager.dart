@@ -49,6 +49,11 @@ class SettingsManager {
   final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
     ThemeMode.system,
   );
+
+  /// App display language. Supported: 'vi' (default), 'en'.
+  final ValueNotifier<Locale> localeNotifier = ValueNotifier(
+    const Locale('vi'),
+  );
   final ValueNotifier<bool> enableBlurNotifier = ValueNotifier(true);
   final ValueNotifier<double> blurLevelNotifier = ValueNotifier(
     _kDefaultBlurLevel,
@@ -197,6 +202,12 @@ class SettingsManager {
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+
+    // Load Locale ('vi' default; only supported codes are accepted)
+    final localeCode = _prefs.getString('localeCode');
+    if (localeCode == 'vi' || localeCode == 'en') {
+      localeNotifier.value = Locale(localeCode!);
+    }
 
     // Load Theme Mode
     final themeString = _prefs.getString('themeMode');
@@ -688,6 +699,11 @@ class SettingsManager {
     await _prefs.setBool('soundFeedbackEnabled', enabled);
   }
 
+  Future<void> setLocale(Locale locale) async {
+    localeNotifier.value = locale;
+    await _prefs.setString('localeCode', locale.languageCode);
+  }
+
   // #7: Dispose all ValueNotifiers to avoid listener leaks in tests / hot-reload
   // ── Dominant Color Cache ──────────────────────────────────────────
 
@@ -768,6 +784,7 @@ class SettingsManager {
 
   void dispose() {
     flushPendingWrites();
+    localeNotifier.dispose();
     useNativeWindowEffectNotifier.dispose();
     windowOpacityNotifier.dispose();
     themeModeNotifier.dispose();

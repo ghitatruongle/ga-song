@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Simple localization support for GA Song.
@@ -10,6 +11,10 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         AppLocalizations(const Locale('vi'));
   }
+
+  /// Locale-independent fallback for error paths that run outside the
+  /// `Localizations` widget tree (e.g. `ErrorWidget.builder`).
+  static AppLocalizations get fallback => AppLocalizations(const Locale('vi'));
 
   static const _vi = {
     'appTitle': 'G.A - Song',
@@ -99,6 +104,10 @@ class AppLocalizations {
     'androidOnlyFeature': 'Tính năng này chỉ khả dụng trên thiết bị Android.',
     'songCount': '{count} bài hát',
     'cannotLoadLibraryDb': 'Không thể nạp danh sách bài hát từ Database.',
+    'renderError': 'Đã xảy ra lỗi hiển thị',
+    'language': 'Ngôn ngữ',
+    'languageVietnamese': 'Tiếng Việt',
+    'languageEnglish': 'English',
   };
 
   static const _en = {
@@ -188,6 +197,10 @@ class AppLocalizations {
     'androidOnlyFeature': 'This feature is only available on Android devices.',
     'songCount': '{count} songs',
     'cannotLoadLibraryDb': 'Cannot load song list from Database.',
+    'renderError': 'A display error occurred',
+    'language': 'Language',
+    'languageVietnamese': 'Tiếng Việt',
+    'languageEnglish': 'English',
   };
 
   static final Map<String, Map<String, String>> _translations = {
@@ -285,6 +298,10 @@ class AppLocalizations {
   String get androidOnlyFeature => translate('androidOnlyFeature');
   String get songCount => translate('songCount');
   String get cannotLoadLibraryDb => translate('cannotLoadLibraryDb');
+  String get renderError => translate('renderError');
+  String get language => translate('language');
+  String get languageVietnamese => translate('languageVietnamese');
+  String get languageEnglish => translate('languageEnglish');
 
   /// Hỗ trợ translate với tham số - thay thế {key} bằng giá trị.
   String translateWith(String key, Map<String, String> params) {
@@ -302,9 +319,11 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   @override
   bool isSupported(Locale locale) => ['vi', 'en'].contains(locale.languageCode);
 
+  // SynchronousFuture so the very first frame (and locale switches) render
+  // without a blank flash while the localization "loads".
   @override
-  Future<AppLocalizations> load(Locale locale) async =>
-      AppLocalizations(locale);
+  Future<AppLocalizations> load(Locale locale) =>
+      SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
 
   @override
   bool shouldReload(AppLocalizationsDelegate old) => false;

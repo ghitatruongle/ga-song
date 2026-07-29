@@ -33,7 +33,7 @@ void main() {
         // Read to force build
         container.listen(
           engineStateProvider,
-          (_, __) {},
+          (_, _) {},
           fireImmediately: true,
         );
 
