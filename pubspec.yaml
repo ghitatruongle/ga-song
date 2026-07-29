@@ -2,13 +2,15 @@ name: ga_song
 description: "A full-featured music player with KTV mode, lyrics sync, and audio effects."
 publish_to: 'none'
 
-version: 0.5.0+1
+version: 0.6.0+2
 
 environment:
   sdk: ^3.11.4
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
@@ -36,6 +38,8 @@ dependencies:
   json_annotation: ^4.9.0
   audiotags: ^1.4.5
   palette_generator: ^0.3.3+7
+  # Used in main.dart to init sqflite FFI on desktop platforms (not test-only).
+  sqflite_common_ffi: ^2.3.4+4
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -43,7 +47,6 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^6.0.0
-  sqflite_common_ffi: ^2.3.4+4
   flutter_launcher_icons: ^0.14.4
   msix: ^3.16.13
   debian: ^1.0.0

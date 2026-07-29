@@ -12,19 +12,20 @@ G.A - Song follows a **layered architecture** with clear separation of concerns.
 │  Screens, Widgets, Visualizer, Painters      │
 ├─────────────────────────────────────────────┤
 │              Provider Layer                  │
-│  Riverpod Providers (service bridges)        │
-├─────────────────────────────────────────────┤
-│            View Model Layer                  │
-│  PlayerViewModel (ChangeNotifier)            │
+│  Riverpod Providers (service bridges +       │
+│  state providers)                            │
 ├─────────────────────────────────────────────┤
 │             Service Layer                    │
-│  AudioEngine, Playlist, Effects, Database,   │
-│  Settings, CoverArt, Hotkey, SMTC, etc.      │
+│  AudioEngine, Playlist, Effects, Database    │
+│  (Drift), Settings, CoverArt, Hotkey, SMTC   │
 ├─────────────────────────────────────────────┤
 │              Model Layer                     │
 │  Song, Playlist, CoverArtCache               │
 └─────────────────────────────────────────────┘
 ```
+
+> Note: the former View Model layer (`PlayerViewModel`) was removed in Phase 2
+> (state consolidation). Widgets now consume state providers directly.
 
 ## Data Flow
 
@@ -55,24 +56,28 @@ User changes setting
 
 ## Dependency Injection
 
-The app uses a **dual DI system**:
-
-1. **`get_it`** — Service locator for service-to-service wiring at startup
-2. **`flutter_riverpod`** — Widget tree injection via `ProviderScope` overrides
+Services are constructed **directly in `main()`** (no service locator) and
+injected into the widget tree via **Riverpod `ProviderScope.overrides`**:
 
 ```dart
-// service_locator.dart — registers all services
-setupServiceLocator();
+// main.dart — services created directly, then bridged to Riverpod
+final engineService = AudioEngineService();
+final playlistService = PlaylistService(engineService, effectService, dbService);
 
-// main.dart — bridges get_it to Riverpod
-ProviderScope(
-  overrides: [
-    audioEngineServiceProvider.overrideWithValue(sl<AudioEngineService>()),
-    // ...
-  ],
-  child: App(),
+runApp(
+  ProviderScope(
+    overrides: [
+      audioEngineServiceProvider.overrideWithValue(engineService),
+      playlistServiceProvider.overrideWithValue(playlistService),
+      // ...
+    ],
+    child: GASongApp(home: initialScreen),
+  ),
 );
 ```
+
+> Note: the earlier `get_it` service locator was removed in v1.1.0 —
+> Riverpod overrides are the single DI mechanism.
 
 ## Caching Strategy
 
@@ -84,7 +89,7 @@ ProviderScope(
 ### Cover Art (CoverArtRepository)
 - **3-tier cache**:
   1. In-memory LRU `ImageProvider` cache
-  2. SQLite disk cache (persists across sessions)
+  2. Drift/SQLite disk cache (persists across sessions)
   3. Source files (assets or local files)
 - Memory pressure handler clears in-memory cache
 
@@ -92,6 +97,15 @@ ProviderScope(
 - `SharedPreferences` for persistence
 - `ValueNotifier` for reactive UI updates
 - 40+ individual notifiers grouped by category
+
+## Persistence
+
+- **Drift ORM** (`lib/core/database/app_database.dart`) — type-safe SQLite
+  access for songs, playlists, cover art cache, and lyrics cache.
+  `DatabaseServiceWrapper` exposes the service-facing API.
+- **`MigrationService`** — one-time auto-migration of legacy raw-sqflite data
+  (v0.1.x) into Drift; the old DB file is renamed, not deleted.
+- **`SharedPreferences`** — app settings via `SettingsManager`.
 
 ## Platform Abstraction
 

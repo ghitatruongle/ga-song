@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme/tokens.dart';
+import '../../l10n/app_localizations.dart';
 import 'desktop_title_bar.dart';
 import 'sleep_timer_dialog.dart';
 import 'audio_effects_dialog.dart';
@@ -90,6 +91,45 @@ class SettingsWidget extends ConsumerWidget {
                             ),
                           ),
                         ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _buildSettingCard(
+                  isDark: isDark,
+                  child: ValueListenableBuilder<Locale>(
+                    valueListenable: settings.localeNotifier,
+                    builder: (context, currentLocale, _) {
+                      final l10n = AppLocalizations.of(context);
+                      return ListTile(
+                        leading: Icon(Icons.language, color: textColor),
+                        title: Text(
+                          l10n.language,
+                          style: TextStyle(color: textColor),
+                        ),
+                        trailing: DropdownButton<String>(
+                          value: currentLocale.languageCode,
+                          dropdownColor: isDark
+                              ? AppColors.darkSurface2
+                              : AppColors.lightSurface,
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            DropdownMenuItem(
+                              value: 'vi',
+                              child: Text(l10n.languageVietnamese),
+                            ),
+                            DropdownMenuItem(
+                              value: 'en',
+                              child: Text(l10n.languageEnglish),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              settings.setLocale(Locale(value));
+                            }
+                          },
+                        ),
                       );
                     },
                   ),

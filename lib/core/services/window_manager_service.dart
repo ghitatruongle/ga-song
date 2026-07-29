@@ -276,7 +276,13 @@ class WindowManagerService with WindowListener {
           color: bgColor,
           dark: isDark,
         );
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.w(
+          'window.manager_service',
+          'transparent fallback effect failed',
+          error: e,
+        );
+      }
     }
   }
 
@@ -316,7 +322,13 @@ class WindowManagerService with WindowListener {
     // that causes visible flicker during resize.
     try {
       await Window.setEffect(effect: WindowEffect.solid, color: solidColor);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.w(
+        'window.manager_service',
+        'solid resize effect failed',
+        error: e,
+      );
+    }
   }
 
   /// Restores the native window effect after a resize completes.

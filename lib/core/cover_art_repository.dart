@@ -322,7 +322,13 @@ class CoverArtRepository with WidgetsBindingObserver {
               try {
                 cached.lastAccessed = DateTime.now();
                 await db.putCoverArtCache(cached);
-              } catch (_) {}
+              } catch (retryError) {
+                AppLogger.w(
+                  'cover_art.repository',
+                  'LRU timestamp retry write failed after eviction',
+                  error: retryError,
+                );
+              }
             }
           }
         }

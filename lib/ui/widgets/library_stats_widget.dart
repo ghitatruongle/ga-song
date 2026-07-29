@@ -119,8 +119,9 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
                     ),
                     SizedBox(height: spacing.sm + spacing.xxs),
                     ...(_stats!['genreCounts'] as List).take(5).map((g) {
-                      final genre = g['genre'] as String;
-                      final count = g['count'] as int;
+                      final row = g as Map<String, dynamic>;
+                      final genre = row['genre'] as String;
+                      final count = row['count'] as int;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Row(

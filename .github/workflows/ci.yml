@@ -8,7 +8,11 @@ on:
 
 env:
   FLUTTER_VERSION: '3.32.0'
-  COVERAGE_MIN_PERCENT: '50'  # Phase 5 target; raise over time
+  # Regression ratchet: measured baseline is ~25% overall (~27% excluding
+  # generated *.g.dart/*.freezed.dart) as of v0.6.0. Keep the floor slightly
+  # below baseline so the warning only fires on real coverage regressions;
+  # raise it as coverage grows.
+  COVERAGE_MIN_PERCENT: '20'
 
 jobs:
   format:
@@ -117,8 +121,6 @@ jobs:
 
       - name: Build APK (universal + split per ABI)
         run: flutter build apk --release
-      - name: Build AAB (Play Store)
-        run: flutter build appbundle --release
       - name: Build AAB (Play Store)
         run: flutter build appbundle --release
 

@@ -4,6 +4,54 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+> **Versioning note**: on 2026-07-21 the version numbering was reset from the
+> earlier `1.x`/`2.0.0` line back to `0.1.0` to reflect pre-1.0 maturity more
+> honestly. Entries below the reset keep their original numbers for historical
+> accuracy. From `0.5.0` onward the project follows semantic versioning strictly
+> (monotonically increasing).
+
+## [0.6.0] — 2026-07-28
+
+### Fixed
+- **Empty library on fresh installs (regression from v0.5.0)** — the sqflite →
+  Drift rewrite dropped the `assets/song/songs.json` seeding logic, so a brand
+  new database contained no built-in songs. `DatabaseServiceWrapper.init()` now
+  re-seeds (and self-heals partial/corrupt libraries) exactly like the pre-0.5.0
+  `_ensureBuiltInSeeded()` did. Covered by 3 new regression tests.
+
+### Added
+- **Runtime language switching (vi/en)** — `AppLocalizationsDelegate` is now
+  registered in `MaterialApp` (`localizationsDelegates` + `supportedLocales`),
+  making English reachable for the first time. New **Settings → Language**
+  dropdown persists the choice via `SettingsManager.localeNotifier`
+  (SharedPreferences key `localeCode`).
+- New l10n keys: `renderError`, `language`, `languageVietnamese`,
+  `languageEnglish`; `AppLocalizations.fallback` accessor for error paths that
+  run outside the `Localizations` tree.
+
+### Changed
+- `main.dart` error screens now read strings from `AppLocalizations` instead of
+  hardcoded Vietnamese literals.
+- `sqflite_common_ffi` moved from `dev_dependencies` to `dependencies` (it is
+  used by `main.dart` on desktop) — clears the `depend_on_referenced_packages`
+  lint.
+- `library_stats_widget.dart` genre rows now cast to `Map<String, dynamic>`
+  before access — clears 2 `avoid_dynamic_calls` lints.
+- Empty `catch (_) {}` blocks in `window_manager_service.dart` and
+  `cover_art_repository.dart` now log via `AppLogger.w`.
+- CI: removed duplicated "Build AAB" step; coverage floor re-based to an
+  honest regression ratchet (20%, measured baseline ~25% — the previous 50%
+  "target" was never met and only produced a permanent warning).
+
+### Docs
+- `docs/architecture.md` and `README.md` re-synced with the actual codebase:
+  removed stale `get_it`/`PlayerViewModel`/`service_locator.dart` references,
+  documented Drift ORM persistence and Riverpod-only DI.
+
+### Tests
+- All remaining `info`-level analyzer findings in `test/` fixed; `flutter
+  analyze` reports 0 issues.
+
 ## [0.5.0] — 2026-07-26
 
 ### 🚀 Major Update (The "Next-Gen" Architecture)

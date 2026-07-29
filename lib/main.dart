@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,11 +27,15 @@ import 'core/crash_reporter.dart';
 import 'core/theme/tokens.dart';
 import 'core/database/app_database.dart';
 import 'core/database/migration/migration_service.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/service_providers.dart';
 import 'providers/theme_provider.dart';
 import 'ui/screens/home_screen.dart';
 
-Widget _buildErrorScreen(Object error, StackTrace stackTrace) {
+Widget _buildErrorScreen(Object error, StackTrace stackTrace, Locale locale) {
+  // Built before the Localizations tree exists, but after settings.init(),
+  // so honor the user's persisted locale instead of the vi-only fallback.
+  final l10n = AppLocalizations(locale);
   return Scaffold(
     body: Center(
       child: Padding(
@@ -40,9 +45,9 @@ Widget _buildErrorScreen(Object error, StackTrace stackTrace) {
           children: <Widget>[
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            const Text(
-              'Lỗi khởi tạo Audio Engine',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              l10n.errorInit,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -57,9 +62,9 @@ Widget _buildErrorScreen(Object error, StackTrace stackTrace) {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Vui lòng khởi động lại ứng dụng',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              l10n.errorRestart,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -106,9 +111,9 @@ Future<void> main() async {
                 size: 64,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Đã xảy ra lỗi hiển thị',
-                style: TextStyle(
+              Text(
+                AppLocalizations.fallback.renderError,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -211,7 +216,7 @@ Future<void> main() async {
     initialScreen = const HomeScreen();
   } catch (e, st) {
     AppLogger.e('main', 'SoLoud init error', error: e, stack: st);
-    initialScreen = _buildErrorScreen(e, st);
+    initialScreen = _buildErrorScreen(e, st, settings.localeNotifier.value);
   }
 
   // Desktop services
@@ -318,6 +323,7 @@ class _GASongAppState extends ConsumerState<GASongApp> {
     final settings = ref.read(settingsManagerProvider);
     _themeListenable = Listenable.merge([
       settings.themeModeNotifier,
+      settings.localeNotifier,
       settings.useDynamicColorNotifier,
       settings.customPrimaryColorNotifier,
       settings.dynamicPrimaryColorNotifier,
@@ -351,6 +357,14 @@ class _GASongAppState extends ConsumerState<GASongApp> {
         return MaterialApp(
           title: 'G.A - Song',
           debugShowCheckedModeBanner: false,
+          locale: settings.localeNotifier.value,
+          supportedLocales: const [Locale('vi'), Locale('en')],
+          localizationsDelegates: const [
+            AppLocalizationsDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           themeMode: themeMode,
           // Phase 4: Material 3 — derive ColorScheme.fromSeed for a richer,
           // consistent palette instead of the legacy copyWith approach.
