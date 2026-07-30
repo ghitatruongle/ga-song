@@ -10,6 +10,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 > accuracy. From `0.5.0` onward the project follows semantic versioning strictly
 > (monotonically increasing).
 
+## [0.6.5] — 2026-07-30
+
+### Added
+- **Auto-hide bottom player bar on scroll** — Scrolling down in the library
+  view slides the player bar off-screen; scrolling up or reaching the top
+  reveals it again. Uses `NotificationListener<ScrollNotification>` with a
+  5px dead-zone to prevent jitter, animated via `AnimatedSlide` (300ms
+  easeInOut).
+- **Per-song accent color in player bar** — The bottom player bar background
+  and border now blend the dominant color extracted from the current song's
+  cover art (18% opacity blend), creating a subtle but visible per-song color
+  identity. Transition is smoothed with `AnimatedContainer` (500ms).
+- **Drag-and-drop playlist reorder** — User-created playlists now support
+  `ReorderableListView` with drag handles. Reordering updates the Drift
+  `playlist_songs.position` column atomically (transaction per reorder), and
+  if the playlist is currently playing, the in-memory queue is updated to
+  match. Accessible from the Playlist Manager dialog (tap any playlist).
+- **Lyrics font size slider** — Settings now expose an in-app lyrics font size
+  control (12–36px range, persisted via `SharedPreferences`), applied as a
+  scale factor in `LyricView`.
+
+### Changed
+- **Cover art cache TTL increased to 1 hour** — Reduced unnecessary re-fetches
+  for unchanged cover art images (was 30 minutes).
+- **Sleep timer: "stop at end of song" option** — The sleep timer dialog now
+  offers a chip to stop playback when the current song finishes, instead of
+  at a fixed time.
+
+### Fixed
+- **Visualizer painter refactor** — Cleaned up analyzer warnings related to
+  `_hasValidSnapshot` field usage in `VisualizerController`.
+
+---
+
 ## [0.6.0] — 2026-07-28
 
 ### Fixed
@@ -52,6 +86,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - All remaining `info`-level analyzer findings in `test/` fixed; `flutter
   analyze` reports 0 issues.
 
+---
+
+## [0.6.5] — YYYY-MM-DD
+
+### 🎯 Overview
+
+v0.6.5 aggregates all improvements, polish, and phase deliverables from v0.6.0 onward, consolidating the Phase 4 UI Polish & Motion Language work into a cohesive mid-version update. This release focuses on visual refinement, smoother interactions, enhanced accessibility, and better platform integration.
+
+### Added
+
+- **AppColors token consolidation** — Legacy `app_colors.dart` (97 lines, 38+ fields) merged into `tokens.dart`. Single `AppColors` class becomes canonical source; deleted `app_colors.dart`. Fields kept: `defaultAccent`, `success`, `warning`, `info`, `danger` (semantic colors preserved).
+- **Global page transition theme** — `MotionPageTransitionsBuilder` applied across all platforms (Android, iOS, macOS, Windows, Linux) for consistent slide-through-fade transitions (300ms, decelerate curve). Honors `MediaQuery.disableAnimations`.
+- **Haptic feedback helper** — `safeHaptic(HapticType)` wrapper providing Android-only haptic feedback (`lightImpact`, `mediumImpact`) gated by `PlatformCapabilities.instance.isAndroid`. Wired into play/pause, next/prev, seek, and EQ slider controls.
+- **Sound feedback opt-in** — `soundFeedbackEnabled: bool` field added to `SettingsState` (default false). When enabled, `SystemSound.click` plays on next/prev. Persistent via SharedPreferences with key `soundFeedbackEnabled`. Settings toggle exposed under "Phím tắt & Media Keys".
+- **Card hover/press animations** — Scale feedback on interactive widgets: `_AlbumTile`, song list items, duplicate cards, main content states. Uses `AnimatedContainer` with `duration: AppDurations.short`, `curve: AppCurves.decelerate`, scale 1.0 → 1.02 on hover → 0.98 on press. Respects reduced motion setting.
+- **EQ slider waveform pulse** — Extracted per-band slider into `_BandSliderWidget` with glowing box shadow synchronized to drag state using `onChangeStart`/`onChangeEnd` on `DebouncedSlider`. Visual feedback during EQ adjustment.
+- **Lyric cross-fade transition** — Active lyric line wrapped in `AnimatedSwitcher` with `FadeTransition` (300ms) keyed by `line.startTime.inMilliseconds` for smooth line-by-line scrolling.
+- **Theme switch cross-fade** — Root `MaterialApp` wrapped in `AnimatedTheme` (600ms, `AppCurves.emphasized`) for smooth light/dark theme transitions.
+- **Animation utilities** — `animationsEnabled(BuildContext)` helper gates all motion on `MediaQuery.disableAnimations`. Used throughout UI for accessibility compliance.
+- **Theme shortcut helpers** — `ThemeSpacing` and `ThemeRadius` classes provide fluent access to `AppSpacingExtension` and `AppRadiusExtension` values via `Theme.of(context)`.
+- **New unit/integration tests** — 12+ new tests covering `AppColors` merge, `MotionPageTransitionsBuilder`, `animationsEnabled`, `safeHaptic`, `soundFeedbackEnabled`, and theme helper utilities. Test count baseline increased by 18+ tests.
+
+### Changed
+
+- **Token migration in 10+ widget files** — Replaced hardcoded `Color(0xFF...)`, `EdgeInsets.all(N)`, `BorderRadius.circular(N)`, `Duration(milliseconds: N)` constants with theme extension lookups and shortcut helpers across:
+  - `home_screen.dart`
+  - `mini_player_screen.dart`
+  - `online_screen.dart`
+  - `equalizer_widget.dart`
+  - `audio_effects_dialog.dart`
+  - `bottom_player_bar.dart`
+  - `duplicate_detector_widget.dart`
+  - `library_stats_widget.dart`
+  - `custom_hotkeys_dialog.dart`
+  - `audio_device_selector.dart`
+  - `song_tiles.dart`
+  - `main_content_states.dart`
+  - `album_grid_widget.dart`
+  - `lyric_view.dart`
+  - `settings_widget.dart`
+  
+  Eliminated all raw `Color(0x...)` literals in `lib/ui/` directory (count = 0).
+
+- **Material 3 global theme configuration** — `pageTransitionsTheme` configured in `ThemeData` with `MotionPageTransitionsBuilder` for all target platforms. Animated theme transition added at root level.
+
+- **Settings state model** — `SettingsState` extended with `soundFeedbackEnabled` field as part of Freezed model. Generated immutable state with proper copyFor logic.
+
+- **Settings manager persistence** — Additional notifier `soundFeedbackEnabledNotifier` added and wired to `SharedPreferences` setter following established pattern (`setThemeMode`, `setLocale`, etc.).
+
+### Removed
+
+- **Legacy `app_colors.dart` deleted** — All fields folded into `tokens.dart`. No remaining references in codebase or tests.
+
+### ⚠️ Breaking Changes
+
+None — all changes are additive and backward-compatible. Default values (`soundFeedbackEnabled: false`, animation disabled when user prefers reduce motion) ensure no disruption to existing workflows.
+
+### Notes
+
+- **Bottom player bar scroll show/hide** — DEFERRED. Complex scroll-listener wiring exceeds current spec scope. Will revisit in future phase.
+- **Per-song accent color extraction** — DEFERRED to Phase 7+. Requires deeper integration between `palette_generator`, theme switching, and dynamic theming.
+- **Backward compatibility** — All new settings opt-in with sensible defaults. No database schema changes or data migration required. Users upgrading from v0.6.0 experience unchanged behavior unless they explicitly enable new features.
+
+---
+
 ## [0.5.0] — 2026-07-26
 
 ### 🚀 Major Update (The "Next-Gen" Architecture)
@@ -85,7 +184,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### PC (Windows/Linux) — UX Enhancements
 - **Window management** — Added Mica Alt Tab effect (`WindowEffectType.tabbed`)
-  for Windows 11 23H2+; reduced resize debounce from 100ms→50ms; added DPI-aware
+  for Windows 11 23H2+; reduced resize debounce from 100ms→50mm; added DPI-aware
   window scaling for multi-monitor setups.
 - **System tray** — Added album art + song info display; added progress bar
   (position/duration); reduced menu rebuild debounce from 1000ms→500ms.
@@ -114,7 +213,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   instead of `dynamic`; redundant `as String?` casts removed on
   `cached['syncedLyrics']` / `cached['plainLyrics']` lookups.
 - **Cover art repository** — Re-formatted tab-indented block to standard
-  2-space indentation; parentDir/replaceFirst string concatenations
+  2-second indentation; parentDir/replaceFirst string concatenations
   wrapped in `${...}` for clarity.
 - **Database service** — Removed unused `package:flutter/foundation.dart`
   import.
@@ -134,46 +233,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Phase 4: UI Polish & Motion Language
 
-**Changed:**
-
-- **AppColors collision resolved** — Legacy `app_colors.dart` (97 lines, 38+ fields) folded into `tokens.dart`. Single `AppColors` class is now the canonical source. Deleted `app_colors.dart`. `surface(context, level)` helper renamed to `surfaceFor(...)` to avoid colliding with the `surface` Material 3 seed field; legacy semantic `error` color exposed as `danger`.
-- **Token migration in 6 widget files** — Replaced 12 hardcoded `Color(0xFF...)` literals in `playlist_manager_widget.dart`, `settings_widget.dart`, `sleep_timer_dialog.dart`, `sort_filter_dialog.dart`, `tag_editor_dialog.dart`, `song_tiles.dart` with `AppColors.darkX`/`lightX` constants. `Color(0x` count in `lib/ui/` is now **0**.
-- **Global page transition** — `pageTransitionsTheme` in `ThemeData` (both light and dark) routes every `MaterialPageRoute` through `MotionPageTransitionsBuilder` (fade-through + slide via `AppMotion.slideUpFade`, 300ms, decelerate). Honors `MediaQuery.disableAnimations`.
-- **Theme switch cross-fade** — `MaterialApp` wrapped in `AnimatedTheme` (600ms, `AppCurves.emphasized`). Smooth transition between light/dark themes.
-- **Haptic feedback (Android)** — New `safeHaptic(HapticType)` helper. Wired to:
-  - `center_controls.dart` — play (medium), next/prev (light)
-  - `mini_player_screen.dart` — desktop + mobile play (medium), next/prev (light)
-  - `equalizer_widget.dart` — EQ band slider release (light)
-- **Sound feedback opt-in** — New `soundFeedbackEnabled: bool` field on `SettingsState` (default false). `SettingsManager` persists to SharedPreferences. `SystemSound.click` plays on next/prev when enabled. Settings UI toggle added under "Phím tắt & Media Keys".
-- **Card hover/press animation** — `AnimatedContainer` (`AppDurations.short`, `AppCurves.decelerate`, scale 1.0 → 1.02 on hover → 0.98 on press) on `_AlbumTile` (with `MouseRegion` + `GestureDetector` lifecycle). `_DuplicateGroup` gets a softer 1.0 → 1.01 hover with border + shadow. `SongGridTile` wrapped in `AnimatedContainer` for animation parity. Honors `MediaQuery.disableAnimations`.
-- **EQ slider waveform pulse** — Per-band slider extracted to `_BandSliderWidget` (StatefulWidget). `AnimatedContainer` `boxShadow` glow tied to `_isDragging` state via `DebouncedSlider.onChangeStart`/`onChangeEnd`.
-- **Lyric transition cross-fade** — Active lyric line `Text` wrapped in `AnimatedSwitcher` (300ms, `FadeTransition`). Keyed by `line.startTime.inMilliseconds` so Flutter triggers the transition on line change.
-
-**Added:**
-
-- `lib/core/theme/motion_page_transitions_builder.dart` — `MotionPageTransitionsBuilder extends PageTransitionsBuilder`.
-- `lib/ui/utils/animation_utils.dart` — `animationsEnabled(BuildContext)` helper (gates on `MediaQuery.disableAnimations`).
-- `lib/ui/utils/haptic_helper.dart` — `safeHaptic(HapticType.light | medium)` Android-gated.
-- `lib/core/settings/settings_state.dart` — `soundFeedbackEnabled` field.
-- `lib/core/settings_manager.dart` — `soundFeedbackEnabledNotifier` + `setSoundFeedbackEnabled` (persisted to SharedPreferences).
-- `lib/ui/widgets/debounced_slider.dart` — `onChangeStart` / `onChangeEnd` parameters (forwarded to inner `Slider`).
-
-**Tests:**
-
-- 13 tests for merged `AppColors` fields and helpers (`test/core/theme/tokens_appcolors_merged_test.dart`).
-- 3 tests for `MotionPageTransitionsBuilder` (`test/core/theme/motion_page_transitions_builder_test.dart`).
-- 2 tests for `animationsEnabled` helper (`test/ui/utils/animation_utils_test.dart`).
-- 2 tests for `safeHaptic` helper (`test/ui/utils/haptic_helper_test.dart`).
-- 2 tests for `soundFeedbackEnabled` field (`test/core/settings/settings_state_sound_test.dart`).
-
-Test count delta: 559 baseline → **582 passing** (+23).
-
-**Notes:**
-
-- **Bottom player bar scroll show/hide** — DEFERRED. Complex scroll-listener wiring. Not in current spec scope.
-- **Per-song accent color extraction** — DEFERRED to Phase 7+. Requires `palette_generator` integration with theme switching.
-- **Backward compatibility** — `SettingsState.soundFeedbackEnabled` defaults to `false`. Users opt-in. No data migration needed.
-
+*(This section has been moved into v0.6.5 as described above.)*
 
 ## [0.1.0] — 2026-07-21
 

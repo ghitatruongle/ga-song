@@ -96,6 +96,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   TabItem? _lastFilterTab;
   String? _lastFilterPlaylist;
 
+  // ─── Auto-hide Bottom Player Bar ─────────────────────────────────────────
+  /// Controls whether the bottom player bar is visible.
+  /// Scrolling down hides it; scrolling up or reaching the top shows it.
+  final ValueNotifier<bool> _isPlayerBarVisibleNotifier = ValueNotifier(true);
+  double _lastScrollPosition = 0.0;
+
   /// Cached album list — only rebuilt when _songs changes.
   List<String> _cachedAlbums = <String>[];
 
@@ -123,6 +129,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _tabCache.clear();
+    _isPlayerBarVisibleNotifier.dispose();
     super.dispose();
   }
 
@@ -539,6 +546,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (next >= 0 && next < tabs.length) {
         final newTab = tabs[next];
         if (newTab != _currentTab) {
+          // v0.6.5: Reset scroll tracking when switching tabs so the
+          // player bar visibility doesn't jump based on the previous
+          // tab's scroll position.
+          _lastScrollPosition = 0.0;
+          _isPlayerBarVisibleNotifier.value = true;
           setState(() => _currentTab = newTab);
         }
       }
@@ -601,7 +613,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Android back: nếu đang xem playlist -> về playlist grid
                 // Nếu đang ở tab khác -> về Home
                 if (_selectedPlaylistName != null) {
-                  setState(() => _selectedPlaylistName = null);
+                  setState(() {
+                    _selectedPlaylistName = null;
+                  });
                 } else if (_currentTab != TabItem.home) {
                   setState(() => _currentTab = TabItem.home);
                 }
@@ -728,9 +742,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           opacity: animation,
                                           child: child,
                                         ),
-                                    child: KeyedSubtree(
-                                      key: ValueKey(_currentTab),
-                                      child: _buildCurrentTab(),
+                                    child: NotificationListener<ScrollNotification>(
+                                      onNotification: (notification) {
+                                        final currentPosition =
+                                            notification.metrics.pixels;
+                                        final delta =
+                                            currentPosition - _lastScrollPosition;
+
+                                        if (currentPosition <= 0) {
+                                          // At the top — always show the bar.
+                                          _isPlayerBarVisibleNotifier.value =
+                                              true;
+                                        } else if (delta > 5 &&
+                                            _isPlayerBarVisibleNotifier.value) {
+                                          // Scrolling down — hide the bar.
+                                          _isPlayerBarVisibleNotifier.value =
+                                              false;
+                                        } else if (delta < -5 &&
+                                            !_isPlayerBarVisibleNotifier.value) {
+                                          // Scrolling up — show the bar.
+                                          _isPlayerBarVisibleNotifier.value =
+                                              true;
+                                        }
+
+                                        _lastScrollPosition = currentPosition;
+                                        return false;
+                                      },
+                                      child: KeyedSubtree(
+                                        key: ValueKey(_currentTab),
+                                        child: _buildCurrentTab(),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -742,16 +783,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
 
                     // 3. Floating Player Overlay (hidden on Settings tab)
-                    // C1/C2 fix: use real sidebar width (220 expanded / 64
-                    // collapsed) instead of the hardcoded 240 which both
-                    // mismatched the actual sidebar AND ignored collapse state.
+                    // v0.6.5: AnimatedSlide auto-hides the bar on scroll down.
                     if (_currentTab != TabItem.settings)
                       Positioned(
                         left: _currentSidebarWidth(),
                         right: 0,
                         bottom: 0,
-                        child: const RepaintBoundary(
-                          child: BottomPlayerBarWidget(),
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _isPlayerBarVisibleNotifier,
+                          builder: (context, isVisible, _) {
+                            return AnimatedSlide(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              offset: isVisible
+                                  ? Offset.zero
+                                  : const Offset(0, 1),
+                              child: const RepaintBoundary(
+                                child: BottomPlayerBarWidget(),
+                              ),
+                            );
+                          },
                         ),
                       ),
 

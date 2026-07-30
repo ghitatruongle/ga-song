@@ -23,6 +23,7 @@ class _SleepTimerDialog extends ConsumerStatefulWidget {
 class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
   late final _playlistService = ref.read(playlistServiceProvider);
   int _selectedMinutes = 30;
+  bool _selectedEndOfSong = false;
 
   static const _presetMinutes = [5, 10, 15, 30, 45, 60, 90, 120];
 
@@ -166,29 +167,53 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                     spacing: 8,
                     runSpacing: 8,
                     alignment: WrapAlignment.center,
-                    children: _presetMinutes.map((minutes) {
-                      final isSelected = _selectedMinutes == minutes;
-                      return ChoiceChip(
-                        label: Text(
-                          minutes < 60
-                              ? '$minutes phút'
-                              : '${minutes ~/ 60} giờ ${minutes % 60 > 0 ? '${minutes % 60} phút' : ''}',
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : textColor,
-                            fontSize: 13,
+                    children: [
+                      ..._presetMinutes.map((minutes) {
+                        final isSelected = _selectedMinutes == minutes && !_selectedEndOfSong;
+                        return ChoiceChip(
+                          label: Text(
+                            minutes < 60
+                                ? '$minutes phút'
+                                : '${minutes ~/ 60} giờ ${minutes % 60 > 0 ? '${minutes % 60} phút' : ''}',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : textColor,
+                              fontSize: 13,
+                            ),
                           ),
-                        ),
-                        selected: isSelected,
+                          selected: isSelected,
+                          selectedColor: Theme.of(context).primaryColor,
+                          backgroundColor: textColor.withValues(alpha: 0.08),
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedMinutes = minutes;
+                              _selectedEndOfSong = false;
+                            });
+                          },
+                        );
+                      }),
+                      ChoiceChip(
+                        label: const Text('Khi bài kết thúc'),
+                        selected: _selectedEndOfSong,
                         selectedColor: Theme.of(context).primaryColor,
                         backgroundColor: textColor.withValues(alpha: 0.08),
                         side: BorderSide.none,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        onSelected: (_) =>
-                            setState(() => _selectedMinutes = minutes),
-                      );
-                    }).toList(),
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedEndOfSong = !_selectedEndOfSong;
+                            if (_selectedEndOfSong) {
+                              _selectedMinutes = 30;
+                            }
+                          });
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Slider(
@@ -231,9 +256,13 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            _playlistService.startSleepTimer(
-                              Duration(minutes: _selectedMinutes),
-                            );
+                            if (_selectedEndOfSong) {
+                              _playlistService.startSleepTimerEndOfSong();
+                            } else {
+                              _playlistService.startSleepTimer(
+                                Duration(minutes: _selectedMinutes),
+                              );
+                            }
                             Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(

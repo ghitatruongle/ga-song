@@ -59,6 +59,8 @@ mixin _$SettingsState {
   double get desktopLyricsFontSize => throw _privateConstructorUsedError;
   double get desktopLyricsOpacity => throw _privateConstructorUsedError;
   bool get desktopLyricsClickThrough =>
+      throw _privateConstructorUsedError; // ─── In-app Lyric ──────────────────────────────────────────────
+  double get lyricFontSize =>
       throw _privateConstructorUsedError; // ─── Visualizer ─────────────────────────────────────────────────
   bool get visualizerEnabled => throw _privateConstructorUsedError;
   int get visualizerShape =>
@@ -122,6 +124,7 @@ abstract class $SettingsStateCopyWith<$Res> {
     double desktopLyricsFontSize,
     double desktopLyricsOpacity,
     bool desktopLyricsClickThrough,
+    double lyricFontSize,
     bool visualizerEnabled,
     int visualizerShape,
     Map<String, String> customHotkeys,
@@ -183,6 +186,7 @@ class _$SettingsStateCopyWithImpl<$Res, $Val extends SettingsState>
     Object? desktopLyricsFontSize = null,
     Object? desktopLyricsOpacity = null,
     Object? desktopLyricsClickThrough = null,
+    Object? lyricFontSize = null,
     Object? visualizerEnabled = null,
     Object? visualizerShape = null,
     Object? customHotkeys = null,
@@ -334,6 +338,10 @@ class _$SettingsStateCopyWithImpl<$Res, $Val extends SettingsState>
                 ? _value.desktopLyricsClickThrough
                 : desktopLyricsClickThrough // ignore: cast_nullable_to_non_nullable
                       as bool,
+            lyricFontSize: null == lyricFontSize
+                ? _value.lyricFontSize
+                : lyricFontSize // ignore: cast_nullable_to_non_nullable
+                      as double,
             visualizerEnabled: null == visualizerEnabled
                 ? _value.visualizerEnabled
                 : visualizerEnabled // ignore: cast_nullable_to_non_nullable
@@ -417,6 +425,7 @@ abstract class _$$SettingsStateImplCopyWith<$Res>
     double desktopLyricsFontSize,
     double desktopLyricsOpacity,
     bool desktopLyricsClickThrough,
+    double lyricFontSize,
     bool visualizerEnabled,
     int visualizerShape,
     Map<String, String> customHotkeys,
@@ -477,6 +486,7 @@ class __$$SettingsStateImplCopyWithImpl<$Res>
     Object? desktopLyricsFontSize = null,
     Object? desktopLyricsOpacity = null,
     Object? desktopLyricsClickThrough = null,
+    Object? lyricFontSize = null,
     Object? visualizerEnabled = null,
     Object? visualizerShape = null,
     Object? customHotkeys = null,
@@ -628,6 +638,10 @@ class __$$SettingsStateImplCopyWithImpl<$Res>
             ? _value.desktopLyricsClickThrough
             : desktopLyricsClickThrough // ignore: cast_nullable_to_non_nullable
                   as bool,
+        lyricFontSize: null == lyricFontSize
+            ? _value.lyricFontSize
+            : lyricFontSize // ignore: cast_nullable_to_non_nullable
+                  as double,
         visualizerEnabled: null == visualizerEnabled
             ? _value.visualizerEnabled
             : visualizerEnabled // ignore: cast_nullable_to_non_nullable
@@ -704,6 +718,7 @@ class _$SettingsStateImpl implements _SettingsState {
     this.desktopLyricsFontSize = 24.0,
     this.desktopLyricsOpacity = 0.9,
     this.desktopLyricsClickThrough = false,
+    this.lyricFontSize = 1.0,
     this.visualizerEnabled = true,
     this.visualizerShape = 0,
     final Map<String, String> customHotkeys = const {},
@@ -833,6 +848,10 @@ class _$SettingsStateImpl implements _SettingsState {
   @override
   @JsonKey()
   final bool desktopLyricsClickThrough;
+  // ─── In-app Lyric ──────────────────────────────────────────────
+  @override
+  @JsonKey()
+  final double lyricFontSize;
   // ─── Visualizer ─────────────────────────────────────────────────
   @override
   @JsonKey()
@@ -870,7 +889,7 @@ class _$SettingsStateImpl implements _SettingsState {
 
   @override
   String toString() {
-    return 'SettingsState(themeMode: $themeMode, enableBlur: $enableBlur, blurLevel: $blurLevel, useNativeWindowEffect: $useNativeWindowEffect, windowOpacity: $windowOpacity, useDynamicColor: $useDynamicColor, customPrimaryColor: $customPrimaryColor, dynamicPrimaryColor: $dynamicPrimaryColor, isMiniPlayer: $isMiniPlayer, isGridView: $isGridView, sidebarCollapsed: $sidebarCollapsed, currentTabIndex: $currentTabIndex, eqBands: $eqBands, eqBassLevel: $eqBassLevel, eqPreset: $eqPreset, crossfadeDuration: $crossfadeDuration, crossfadeCurve: $crossfadeCurve, normalizationLevel: $normalizationLevel, normalizationEnabled: $normalizationEnabled, pitchShift: $pitchShift, reverbMix: $reverbMix, reverbRoomSize: $reverbRoomSize, reverbDamp: $reverbDamp, compressionRatio: $compressionRatio, compThreshold: $compThreshold, compAttack: $compAttack, compRelease: $compRelease, compKneeWidth: $compKneeWidth, compMakeupGain: $compMakeupGain, sortMode: $sortMode, sortAscending: $sortAscending, desktopLyricsEnabled: $desktopLyricsEnabled, desktopLyricsFontSize: $desktopLyricsFontSize, desktopLyricsOpacity: $desktopLyricsOpacity, desktopLyricsClickThrough: $desktopLyricsClickThrough, visualizerEnabled: $visualizerEnabled, visualizerShape: $visualizerShape, customHotkeys: $customHotkeys, mediaKeyEnabled: $mediaKeyEnabled, soundFeedbackEnabled: $soundFeedbackEnabled, minimizeToTray: $minimizeToTray, sensitivity: $sensitivity, customBackgroundImage: $customBackgroundImage)';
+    return 'SettingsState(themeMode: $themeMode, enableBlur: $enableBlur, blurLevel: $blurLevel, useNativeWindowEffect: $useNativeWindowEffect, windowOpacity: $windowOpacity, useDynamicColor: $useDynamicColor, customPrimaryColor: $customPrimaryColor, dynamicPrimaryColor: $dynamicPrimaryColor, isMiniPlayer: $isMiniPlayer, isGridView: $isGridView, sidebarCollapsed: $sidebarCollapsed, currentTabIndex: $currentTabIndex, eqBands: $eqBands, eqBassLevel: $eqBassLevel, eqPreset: $eqPreset, crossfadeDuration: $crossfadeDuration, crossfadeCurve: $crossfadeCurve, normalizationLevel: $normalizationLevel, normalizationEnabled: $normalizationEnabled, pitchShift: $pitchShift, reverbMix: $reverbMix, reverbRoomSize: $reverbRoomSize, reverbDamp: $reverbDamp, compressionRatio: $compressionRatio, compThreshold: $compThreshold, compAttack: $compAttack, compRelease: $compRelease, compKneeWidth: $compKneeWidth, compMakeupGain: $compMakeupGain, sortMode: $sortMode, sortAscending: $sortAscending, desktopLyricsEnabled: $desktopLyricsEnabled, desktopLyricsFontSize: $desktopLyricsFontSize, desktopLyricsOpacity: $desktopLyricsOpacity, desktopLyricsClickThrough: $desktopLyricsClickThrough, lyricFontSize: $lyricFontSize, visualizerEnabled: $visualizerEnabled, visualizerShape: $visualizerShape, customHotkeys: $customHotkeys, mediaKeyEnabled: $mediaKeyEnabled, soundFeedbackEnabled: $soundFeedbackEnabled, minimizeToTray: $minimizeToTray, sensitivity: $sensitivity, customBackgroundImage: $customBackgroundImage)';
   }
 
   @override
@@ -950,6 +969,8 @@ class _$SettingsStateImpl implements _SettingsState {
                   desktopLyricsClickThrough,
                 ) ||
                 other.desktopLyricsClickThrough == desktopLyricsClickThrough) &&
+            (identical(other.lyricFontSize, lyricFontSize) ||
+                other.lyricFontSize == lyricFontSize) &&
             (identical(other.visualizerEnabled, visualizerEnabled) ||
                 other.visualizerEnabled == visualizerEnabled) &&
             (identical(other.visualizerShape, visualizerShape) ||
@@ -1008,6 +1029,7 @@ class _$SettingsStateImpl implements _SettingsState {
     desktopLyricsFontSize,
     desktopLyricsOpacity,
     desktopLyricsClickThrough,
+    lyricFontSize,
     visualizerEnabled,
     visualizerShape,
     const DeepCollectionEquality().hash(_customHotkeys),
@@ -1064,6 +1086,7 @@ abstract class _SettingsState implements SettingsState {
     final double desktopLyricsFontSize,
     final double desktopLyricsOpacity,
     final bool desktopLyricsClickThrough,
+    final double lyricFontSize,
     final bool visualizerEnabled,
     final int visualizerShape,
     final Map<String, String> customHotkeys,
@@ -1144,7 +1167,9 @@ abstract class _SettingsState implements SettingsState {
   @override
   double get desktopLyricsOpacity;
   @override
-  bool get desktopLyricsClickThrough; // ─── Visualizer ─────────────────────────────────────────────────
+  bool get desktopLyricsClickThrough; // ─── In-app Lyric ──────────────────────────────────────────────
+  @override
+  double get lyricFontSize; // ─── Visualizer ─────────────────────────────────────────────────
   @override
   bool get visualizerEnabled;
   @override

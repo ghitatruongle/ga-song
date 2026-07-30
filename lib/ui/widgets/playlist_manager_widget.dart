@@ -5,6 +5,7 @@ import '../../models/song.dart';
 import '../../providers/service_providers.dart';
 import '../../core/theme_utils.dart';
 import '../../core/theme/tokens.dart';
+import '../screens/reorderable_playlist_view.dart';
 
 class PlaylistManagerWidget {
   static void show(BuildContext context) {
@@ -52,6 +53,17 @@ class _PlaylistManagerDialogState
     final db = ref.read(databaseServiceProvider);
     await db.deletePlaylist(id);
     if (mounted) setState(() {});
+  }
+
+  void _openReorderablePlaylist(BuildContext context, int playlistId, String name) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReorderablePlaylistView(
+          playlistId: playlistId,
+          playlistName: name,
+        ),
+      ),
+    );
   }
 
   @override
@@ -129,6 +141,10 @@ class _PlaylistManagerDialogState
                           ),
                           onPressed: () => _deletePlaylist(pl.id!),
                         ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _openReorderablePlaylist(context, pl.id!, pl.name);
+                        },
                       );
                     },
                   );

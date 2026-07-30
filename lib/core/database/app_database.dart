@@ -301,6 +301,22 @@ class AppDatabase extends _$AppDatabase {
     return result.isNotEmpty;
   }
 
+  /// Reorder songs in a playlist by updating their [position] values.
+  /// [songIds] must contain the IDs of all songs currently in the playlist,
+  /// in the desired new order.
+  Future<void> reorderPlaylistSongs(int playlistId, List<int> songIds) async {
+    // Use a transaction so all positions update atomically.
+    await transaction(() async {
+      for (int i = 0; i < songIds.length; i++) {
+        await (update(playlistSongs)
+              ..where(
+                (t) =>
+                    t.playlistId.equals(playlistId) & t.songId.equals(songIds[i]),
+              )).write(PlaylistSongsCompanion(position: Value(i)));
+      }
+    });
+  }
+
   // ─── Cover Art Cache Operations ──────────────────────────────────
 
   /// Get cover art bytes by file name.
