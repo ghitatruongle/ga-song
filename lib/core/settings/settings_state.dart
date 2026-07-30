@@ -57,6 +57,9 @@ class SettingsState with _$SettingsState {
     @Default(0.9) double desktopLyricsOpacity,
     @Default(false) bool desktopLyricsClickThrough,
 
+    // ─── In-app Lyric ──────────────────────────────────────────────
+    @Default(1.0) double lyricFontSize,
+
     // ─── Visualizer ─────────────────────────────────────────────────
     @Default(true) bool visualizerEnabled,
     @Default(0) int visualizerShape,

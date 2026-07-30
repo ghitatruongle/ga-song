@@ -72,6 +72,7 @@ class _LyricViewState extends ConsumerState<LyricView> {
   Widget build(BuildContext context) {
     final lyrics = ref.watch(lyricProvider);
     final accentColor = Theme.of(context).colorScheme.primary;
+    final lyricScale = ref.watch(settingsNotifierProvider).lyricFontSize;
     // Phase 2.3: ref.listen for reactive position updates; auto-cleaned on
     // widget dispose (vs. manual addListener/removeListener).
     ref.listen<Duration>(positionProvider, (_, next) {
@@ -134,13 +135,14 @@ class _LyricViewState extends ConsumerState<LyricView> {
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
-              style: TextStyle(
+                style: TextStyle(
                 color: isActive
                     ? Colors.white
                     : Colors.white.withValues(alpha: opacity),
-                fontSize: widget.isFullScreen
+                fontSize: (widget.isFullScreen
                     ? (isActive ? 40 : 26)
-                    : (isActive ? 24 : 17),
+                    : (isActive ? 24 : 17)) *
+                    lyricScale,
                 fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                 letterSpacing: isActive ? 0.5 : 0,
                 height: 1.4,

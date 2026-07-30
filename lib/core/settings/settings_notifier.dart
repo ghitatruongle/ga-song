@@ -117,6 +117,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       desktopLyricsOpacity: m.desktopLyricsOpacityNotifier.value,
       desktopLyricsClickThrough: m.desktopLyricsClickThroughNotifier.value,
 
+      // In-app Lyric
+      lyricFontSize: m.lyricFontSizeNotifier.value,
+
       // Visualizer
       visualizerEnabled: m.visualizerEnabledNotifier.value,
       visualizerShape: m.visualizerShapeNotifier.value,
@@ -207,6 +210,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> setMinimizeToTray(bool minimize) =>
       _manager.setMinimizeToTray(minimize);
   Future<void> setSensitivity(double value) => _manager.setSensitivity(value);
+  Future<void> setLyricFontSize(double scale) => _manager.setLyricFontSize(scale);
   Future<void> setCustomBackgroundImage(String? path) =>
       _manager.setCustomBackgroundImage(path);
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/service_providers.dart';
+import '../../providers/theme_provider.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 import '../../models/song.dart';
@@ -17,6 +18,11 @@ const double _kNarrowPlayerBarThreshold = 400.0;
 const double _kPlayerBarHeightWide = 72.0;
 const double _kPlayerBarHeightNarrow = 130.0;
 
+/// Opacity of the per-song dominant color blended into the player bar
+/// background.  Low enough to preserve readability, high enough to be
+/// noticeably different per-song.
+const double _kDominantColorBgBlendOpacity = 0.18;
+
 class BottomPlayerBarWidget extends ConsumerWidget {
   const BottomPlayerBarWidget({super.key});
 
@@ -30,6 +36,13 @@ class BottomPlayerBarWidget extends ConsumerWidget {
         : null;
     final isDark = context.isDark;
 
+    // v0.6.5: Per-song dominant color for accent-tinted player bar.
+    final dominantColorAsync = ref.watch(currentSongDominantColorProvider);
+    final dominantColor = switch (dominantColorAsync) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // Phase 4 device-debug fix: at narrow widths (mobile portrait with
@@ -41,18 +54,34 @@ class BottomPlayerBarWidget extends ConsumerWidget {
             ? _kPlayerBarHeightNarrow
             : _kPlayerBarHeightWide;
 
-        return Container(
+        // v0.6.5: Blend per-song dominant color into the bar background
+        // so the player bar subtly reflects the currently playing song's
+        // cover art palette.  AnimatedContainer smooths the transition
+        // between songs.
+        final baseColor = isDark ? AppColors.darkPlayerBar : Colors.white;
+        final blendedBg = dominantColor != null
+            ? Color.alphaBlend(
+                dominantColor.withValues(alpha: _kDominantColorBgBlendOpacity),
+                baseColor,
+              )
+            : baseColor;
+        final borderColor = dominantColor != null
+            ? (isDark
+                ? dominantColor.withValues(alpha: 0.35)
+                : dominantColor.withValues(alpha: 0.25))
+            : (isDark
+                ? AppColors.darkPlayerBarBorder
+                : AppColors.lightPlayerBarBorder);
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           height: barHeight,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkPlayerBar : Colors.white,
+            color: blendedBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark
-                  ? AppColors.darkPlayerBarBorder
-                  : AppColors.lightPlayerBarBorder,
-              width: 1,
-            ),
+            border: Border.all(color: borderColor, width: 1),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),

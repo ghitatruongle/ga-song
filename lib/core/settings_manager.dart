@@ -93,6 +93,9 @@ class SettingsManager {
   );
   final ValueNotifier<Color?> dynamicPrimaryColorNotifier = ValueNotifier(null);
 
+  // In-app lyric font size (12-36px, default 24 for active / 17 for inactive)
+  final ValueNotifier<double> lyricFontSizeNotifier = ValueNotifier(1.0);
+
   // Current tab index (0=home, 1=library, 2=online, 3=ktv, 4=personal, 5=settings)
   final ValueNotifier<int> currentTabIndexNotifier = ValueNotifier(0);
 
@@ -242,6 +245,8 @@ class SettingsManager {
     desktopLyricsClickThroughNotifier.value =
         _prefs.getBool('desktopLyricsClickThrough') ?? false;
     sensitivityNotifier.value = _prefs.getDouble('sensitivity') ?? 1.0;
+    lyricFontSizeNotifier.value =
+        _prefs.getDouble('lyricFontSize') ?? 1.0;
     soundFeedbackEnabledNotifier.value =
         _prefs.getBool('soundFeedbackEnabled') ?? false;
 
@@ -492,6 +497,11 @@ class SettingsManager {
       'sensitivity',
       () => _prefs.setDouble('sensitivity', sensitivityNotifier.value),
     );
+  }
+
+  Future<void> setLyricFontSize(double scale) async {
+    lyricFontSizeNotifier.value = scale.clamp(0.5, 1.5);
+    await _prefs.setDouble('lyricFontSize', lyricFontSizeNotifier.value);
   }
 
   Future<void> setUseDynamicColor(bool useDynamic) async {
@@ -754,6 +764,7 @@ class SettingsManager {
     desktopLyricsOpacityNotifier,
     desktopLyricsClickThroughNotifier,
     sensitivityNotifier,
+    lyricFontSizeNotifier,
     customPrimaryColorNotifier,
     dynamicPrimaryColorNotifier,
     currentTabIndexNotifier,

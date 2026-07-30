@@ -248,6 +248,12 @@ class PlaylistService {
       unawaited(_databaseService.incrementPlayCount(song!.id!));
     }
 
+    if (_sleepAtEndOfSong) {
+      _sleepAtEndOfSong = false;
+      _engineService.pause();
+      return;
+    }
+
     switch (_playMode) {
       case PlayMode.sequential:
         if (_currentIndex < _playlist.length - 1) {
@@ -475,6 +481,8 @@ class PlaylistService {
 
   // ─── Sleep Timer ───────────────────────────────────────────────────────────
 
+  bool _sleepAtEndOfSong = false;
+
   void startSleepTimer(Duration duration) {
     cancelSleepTimer();
     sleepTimerRemainingNotifier.value = duration;
@@ -491,13 +499,19 @@ class PlaylistService {
     });
   }
 
+  /// Stops playback when the current song finishes naturally.
+  void startSleepTimerEndOfSong() {
+    _sleepAtEndOfSong = true;
+  }
+
   void cancelSleepTimer() {
     _sleepTimer?.cancel();
     _sleepTimer = null;
     sleepTimerRemainingNotifier.value = null;
+    _sleepAtEndOfSong = false;
   }
 
-  bool get isSleepTimerActive => _sleepTimer != null;
+  bool get isSleepTimerActive => _sleepTimer != null || _sleepAtEndOfSong;
 
   // ─── Sort Mode ─────────────────────────────────────────────────────────────
 

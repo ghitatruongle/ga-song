@@ -263,6 +263,11 @@ class DatabaseServiceWrapper {
     return entries.map((e) => e.toPlaylist()).toList();
   }
 
+  Future<List<Song>> getPlaylistSongsDirect(int playlistId) async {
+    final entries = await _db.getPlaylistSongs(playlistId);
+    return entries.map((e) => e.toSong()).toList();
+  }
+
   Future<void> putPlaylist(Playlist playlist) async {
     if (playlist.id != null) {
       await _db.updatePlaylist(playlist.id!, playlist.name);
@@ -285,6 +290,11 @@ class DatabaseServiceWrapper {
 
   Future<bool> isSongInPlaylist(int playlistId, int songId) async {
     return await _db.isSongInPlaylist(playlistId, songId);
+  }
+
+  /// Reorder songs in a user-created playlist.
+  Future<void> reorderPlaylistSongs(int playlistId, List<int> songIds) async {
+    await _db.reorderPlaylistSongs(playlistId, songIds);
   }
 
   Future<CoverArtCache?> getCoverArtCacheByFileName(String fileName) async {

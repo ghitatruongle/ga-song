@@ -233,6 +233,9 @@ class MockPlaylistService implements PlaylistService {
   void startSleepTimer(Duration duration) {}
 
   @override
+  void startSleepTimerEndOfSong() {}
+
+  @override
   void cancelSleepTimer() {}
 
   @override

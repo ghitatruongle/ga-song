@@ -13,7 +13,7 @@ import 'performance_probe.dart';
 
 /// P3.3: cache entries older than this are evicted even if LRU hasn't
 /// pushed them out. Conservative default per plan.
-const Duration _coverArtTtl = Duration(minutes: 30);
+const Duration _coverArtTtl = Duration(hours: 1);
 
 class CoverArtEntry {
   CoverArtEntry({
