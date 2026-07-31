@@ -24,11 +24,14 @@ build/
 .flutter-plugins-dependencies
 /coverage/
 
+# ─── Generated code (kept tracked) ───────────────────────────
+# *.g.dart and *.freezed.dart are committed because build_runner
+# output is required for compilation.
+
 # ─── Python / Logs / Temp ─────────────────────────────────────
 *.py
-*.txt
-*.backup
 *.log
+*.backup
 *.sh
 *.bat
 !build_all.bat
@@ -55,7 +58,7 @@ google-services.json
 # ─── Tooling artifacts ────────────────────────────────────────
 /.kilo/
 /.openclaude/
-/.zcode/
+/.zcode/plans/
 /.zcode-screenshots/
 /Plan/
 /nul
@@ -74,7 +77,6 @@ secrets.yaml
 secrets.json
 serviceAccount*.json
 firebase-adminsdk-*.json
-google-services.json
 
 # ─── Scratch / one-off debugging files (root-level) ───────────
 # Root-level logs and ad-hoc dumps. Project docs (CHANGELOG, README,
