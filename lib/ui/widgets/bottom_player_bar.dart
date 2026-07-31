@@ -9,6 +9,8 @@ import '../../models/song.dart';
 import 'player_bar/song_info.dart';
 import 'player_bar/center_controls.dart';
 import 'player_bar/right_controls.dart';
+import '../screens/now_playing_screen.dart';
+import '../../core/motion/app_motion.dart';
 
 /// Width below which the player bar switches to a compact vertical
 /// layout (SongInfo on top, controls below) instead of the wide
@@ -58,6 +60,7 @@ class BottomPlayerBarWidget extends ConsumerWidget {
         // so the player bar subtly reflects the currently playing song's
         // cover art palette.  AnimatedContainer smooths the transition
         // between songs.
+        // v0.8.0: Use gradient overlay for richer visual depth (Spotify-like).
         final baseColor = isDark ? AppColors.darkPlayerBar : Colors.white;
         final blendedBg = dominantColor != null
             ? Color.alphaBlend(
@@ -80,38 +83,77 @@ class BottomPlayerBarWidget extends ConsumerWidget {
           height: barHeight,
           decoration: BoxDecoration(
             color: blendedBg,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor, width: 1),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Column(
-              children: [
-                // Thin progress line on top
-                if (song != null) const _TopProgressBar(),
+            borderRadius: BorderRadius.circular(16),
+            child: GestureDetector(
+              // v0.8.0: Swipe-up gesture to open Now Playing full-screen.
+              // This is the signature Spotify interaction.
+              // Only swipe-up triggers navigation — tap is handled by
+              // individual controls (play/pause, next, prev, cover art).
+              onVerticalDragUpdate: (details) {
+                if (details.delta.dy < -8) {
+                  // Swipe up detected — open NowPlayingScreen
+                  if (song != null && context.mounted) {
+                    _openNowPlaying(context);
+                  }
+                }
+              },
+              child: Column(
+                children: [
+                  // Thin progress line on top
+                  if (song != null) const _TopProgressBar(),
 
-                // Main content — split by available width.
-                Expanded(
-                  child: song == null
-                      ? Center(
-                          child: Text(
-                            'Chưa chọn bài hát',
-                            style: TextStyle(
-                              color: context.adaptive.withValues(alpha: 0.35),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
+                  // Main content — split by available width.
+                  Expanded(
+                    child: song == null
+                        ? Center(
+                            child: Text(
+                              'Chưa chọn bài hát',
+                              style: TextStyle(
+                                color: context.adaptive.withValues(alpha: 0.35),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                        )
-                      : (isNarrow
-                            ? _CompactPlayerContent(song: song)
-                            : _WidePlayerContent(song: song)),
-                ),
-              ],
+                          )
+                        : (isNarrow
+                              ? _CompactPlayerContent(song: song)
+                              : _WidePlayerContent(song: song)),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  void _openNowPlaying(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const NowPlayingScreen(),
+        transitionDuration: AppDurations.medium,
+        reverseTransitionDuration: AppDurations.medium,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Fade + slight slide up, matching the motion language
+          final offsetAnimation = Tween<Offset>(
+            begin: const Offset(0, 0.05),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: AppCurves.decelerate,
+          ));
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(position: offsetAnimation, child: child),
+          );
+        },
+      ),
     );
   }
 }
@@ -129,7 +171,36 @@ class _WidePlayerContent extends StatelessWidget {
           flex: 3,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SongInfo(song: song),
+            child: SongInfo(
+              song: song,
+              onCoverTap: () {
+                // Tap cover art opens Now Playing
+                final nav = Navigator.of(context);
+                if (nav.canPop()) {
+                  nav.push(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          const NowPlayingScreen(),
+                      transitionDuration: AppDurations.medium,
+                      reverseTransitionDuration: AppDurations.medium,
+                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0, 0.05),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: AppCurves.decelerate,
+                        ));
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(position: offsetAnimation, child: child),
+                        );
+                      },
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         ),
         const Expanded(

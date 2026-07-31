@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme_utils.dart';
+import '../../core/theme/tokens.dart';
 import '../../l10n/app_localizations.dart';
 
 class EmptyLibraryState extends StatelessWidget {
@@ -9,22 +10,33 @@ class EmptyLibraryState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(
-            Icons.library_music_rounded,
-            size: 80,
-            color: context.adaptive.withValues(alpha: 0.3),
+          // Soft accent circle behind icon — Spotify-style depth
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accentColor.withValues(alpha: 0.08),
+            ),
+            child: Icon(
+              Icons.library_music_rounded,
+              size: 48,
+              color: accentColor.withValues(alpha: 0.6),
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           Text(
             l10n.noSongsYet,
             style: TextStyle(
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: context.adaptive.withValues(alpha: 0.9),
+              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: 12),
@@ -60,18 +72,27 @@ class ErrorLoadingState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(
-            Icons.error_outline_rounded,
-            size: 80,
-            color: context.adaptive.withValues(alpha: 0.35),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.danger.withValues(alpha: 0.08),
+            ),
+            child: Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: AppColors.danger.withValues(alpha: 0.6),
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           Text(
             l10n.cannotLoadLibrary,
             style: TextStyle(
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: context.adaptive.withValues(alpha: 0.9),
+              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: 12),

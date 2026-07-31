@@ -162,22 +162,33 @@ class _AlbumTileState extends State<_AlbumTile> {
         onTapCancel: () {
           if (animations) setState(() => _isPressed = false);
         },
-        child: MouseRegion(
-          onEnter: (_) {
-            if (animations) setState(() => _isHovered = true);
-          },
-          onExit: (_) {
-            if (animations) setState(() => _isHovered = false);
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: adaptiveColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: adaptiveColor.withValues(alpha: 0.2),
-                width: 2,
+          child: MouseRegion(
+            onEnter: (_) {
+              if (animations) setState(() => _isHovered = true);
+            },
+            onExit: (_) {
+              if (animations) setState(() => _isHovered = false);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: adaptiveColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _isHovered
+                      ? adaptiveColor.withValues(alpha: 0.3)
+                      : adaptiveColor.withValues(alpha: 0.15),
+                  width: _isHovered ? 1.5 : 1,
+                ),
+                boxShadow: _isHovered
+                    ? [
+                        BoxShadow(
+                          color: adaptiveColor.withValues(alpha: 0.15),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ]
+                    : null,
               ),
-            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,

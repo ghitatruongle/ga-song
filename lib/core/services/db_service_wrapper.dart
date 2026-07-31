@@ -206,6 +206,10 @@ class DatabaseServiceWrapper {
     return entries.map((e) => e.toSong()).toList();
   }
 
+  Future<void> toggleFavorite(int songId) async {
+    await _db.toggleFavorite(songId);
+  }
+
   Future<List<Song>> getFavoriteSongs() async {
     final entries = await _db.getFavorites();
     return entries.map((e) => e.toSong()).toList();

@@ -387,9 +387,11 @@ class _SidebarMenuItemState extends State<_SidebarMenuItem> {
           height: _kItemHeight,
           margin: const EdgeInsets.only(bottom: 2),
           decoration: BoxDecoration(
-            color: _isHovered && !isSelected
-                ? textColor.withValues(alpha: 0.06)
-                : Colors.transparent,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                : (_isHovered && !isSelected
+                    ? textColor.withValues(alpha: 0.06)
+                    : Colors.transparent),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(

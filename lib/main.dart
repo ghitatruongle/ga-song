@@ -24,6 +24,7 @@ import 'core/services/audio_handler_service.dart';
 import 'core/services/db_service_wrapper.dart';
 import 'core/services/desktop_lyrics_service.dart';
 import 'core/crash_reporter.dart';
+import 'core/motion/app_motion.dart';
 import 'core/theme/tokens.dart';
 import 'core/database/app_database.dart';
 import 'core/database/migration/migration_service.dart';
@@ -400,7 +401,13 @@ class _GASongAppState extends ConsumerState<GASongApp> {
                 child: child ?? const SizedBox.shrink(),
               );
             }
-            return child ?? const SizedBox.shrink();
+            // v0.8.0: AnimatedTheme cross-fade (600ms) for smooth light↔dark switching.
+            return AnimatedTheme(
+              data: Theme.of(context),
+              duration: AppDurations.extended,
+              curve: AppCurves.emphasized,
+              child: child ?? const SizedBox.shrink(),
+            );
           },
           home: widget.home,
         );

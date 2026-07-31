@@ -5,35 +5,39 @@ import '../../../models/song.dart';
 import '../cover_art_image.dart';
 
 class SongInfo extends StatelessWidget {
-  const SongInfo({super.key, required this.song});
+  const SongInfo({super.key, required this.song, this.onCoverTap});
 
   final Song song;
+  final VoidCallback? onCoverTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: context.adaptive.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: CoverArtImage(
-            song: song,
-            cacheWidth: 104,
-            cacheHeight: 104,
-            fallbackBuilder: (context) =>
-                Icon(Icons.music_note, color: context.adaptiveSubtle, size: 28),
+        GestureDetector(
+          onTap: onCoverTap,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: context.adaptive.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: CoverArtImage(
+              song: song,
+              cacheWidth: 104,
+              cacheHeight: 104,
+              fallbackBuilder: (context) =>
+                  Icon(Icons.music_note, color: context.adaptiveSubtle, size: 28),
+            ),
           ),
         ),
         const SizedBox(width: 14),
