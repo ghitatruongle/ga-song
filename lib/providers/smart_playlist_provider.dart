@@ -4,11 +4,8 @@ import '../models/song.dart';
 import 'service_providers.dart';
 import 'song_provider.dart';
 
-final smartPlaylistServiceProvider = Provider<SmartPlaylistService>((ref) {
-  final db = ref.watch(databaseServiceProvider);
-  return SmartPlaylistService(db);
-});
-
+/// smartPlaylistServiceProvider is declared in service_providers.dart.
+/// This file only contains the family provider.
 final smartPlaylistProvider =
     FutureProvider.family<List<Song>, SmartPlaylistType>((ref, type) async {
       final service = ref.watch(smartPlaylistServiceProvider);

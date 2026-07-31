@@ -33,13 +33,17 @@ class _LyricViewState extends ConsumerState<LyricView> {
     final lyrics = ref.read(lyricProvider);
     if (lyrics.isEmpty) return;
 
-    // Find the current line
+    // Binary search: find the last lyric line whose startTime <= currentPosition
+    int low = 0;
+    int high = lyrics.length - 1;
     int newIndex = -1;
-    for (int i = 0; i < lyrics.length; i++) {
-      if (currentPosition >= lyrics[i].startTime) {
-        newIndex = i;
+    while (low <= high) {
+      final mid = low + (high - low) ~/ 2;
+      if (lyrics[mid].startTime <= currentPosition) {
+        newIndex = mid;
+        low = mid + 1;
       } else {
-        break;
+        high = mid - 1;
       }
     }
 
@@ -135,13 +139,14 @@ class _LyricViewState extends ConsumerState<LyricView> {
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
-                style: TextStyle(
+              style: TextStyle(
                 color: isActive
                     ? Colors.white
                     : Colors.white.withValues(alpha: opacity),
-                fontSize: (widget.isFullScreen
-                    ? (isActive ? 40 : 26)
-                    : (isActive ? 24 : 17)) *
+                fontSize:
+                    (widget.isFullScreen
+                        ? (isActive ? 40 : 26)
+                        : (isActive ? 24 : 17)) *
                     lyricScale,
                 fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                 letterSpacing: isActive ? 0.5 : 0,

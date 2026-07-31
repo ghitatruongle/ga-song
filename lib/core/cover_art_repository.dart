@@ -251,7 +251,27 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   Future<CoverArtEntry> resolveEntry(Song song) {
-    return _entryFutures.putIfAbsent(song.fileName, () async {
+    final existing = _entryFutures[song.fileName];
+    if (existing != null) return existing;
+
+    late final Future<CoverArtEntry> future;
+    future = _resolveEntry(
+      song,
+      () => identical(_entryFutures[song.fileName], future),
+    );
+    _entryFutures[song.fileName] = future;
+    return future;
+  }
+
+  /// Async body of [resolveEntry]. [isCurrent] is true while this future is
+  /// still the registered resolver for the song — protects against:
+  /// 1. Stale async results clobbering a newer entry after invalidate/TTL.
+  /// 2. A failed future being cached forever (poisoned future).
+  Future<CoverArtEntry> _resolveEntry(
+    Song song,
+    bool Function() isCurrent,
+  ) async {
+    try {
       String imagePath;
       bool exists = false;
       bool isAsset = false;
@@ -268,7 +288,7 @@ class CoverArtRepository with WidgetsBindingObserver {
         }
       } else {
         isAsset = false;
-        final resolved = findLocalCoverPath(song);
+        final resolved = await findLocalCoverPath(song);
         if (resolved != null) {
           imagePath = resolved;
           exists = true;
@@ -284,15 +304,26 @@ class CoverArtRepository with WidgetsBindingObserver {
         exists: exists,
         isAsset: isAsset,
       );
-      _entries[song.fileName] = entry;
 
-      // Pre-populate the in-memory provider cache from disk (Isar) or file/asset.
-      if (entry.hasCover) {
-        _prepopulateProviderFromDiskOrSource(entry, song.fileName);
+      // Only publish if this future is still the current resolver, so a
+      // stale in-flight load can't clobber a newer entry.
+      if (isCurrent()) {
+        _entries[song.fileName] = entry;
+
+        // Pre-populate the in-memory provider cache from disk or source.
+        if (entry.hasCover) {
+          _prepopulateProviderFromDiskOrSource(entry, song.fileName);
+        }
       }
 
       return entry;
-    });
+    } finally {
+      // Remove from the futures map so a failure doesn't poison future
+      // resolves — but only if we're still the registered resolver.
+      if (isCurrent()) {
+        _entryFutures.remove(song.fileName);
+      }
+    }
   }
 
   /// Fire-and-forget: loads cover bytes (from Isar disk cache or source file)
@@ -311,26 +342,8 @@ class CoverArtRepository with WidgetsBindingObserver {
         final cached = await db.getCoverArtCacheByFileName(fileName);
         if (cached != null) {
           bytes = Uint8List.fromList(cached.bytes);
-          // Update LRU access timestamp (fire-and-forget, don't fail the read)
-          try {
-            cached.lastAccessed = DateTime.now();
-            await db.putCoverArtCache(cached);
-          } catch (writeError) {
-            if (writeError.toString().contains('database is full')) {
-              // Evict oldest entries to free space, then retry once
-              await _forceEvictDiskCache();
-              try {
-                cached.lastAccessed = DateTime.now();
-                await db.putCoverArtCache(cached);
-              } catch (retryError) {
-                AppLogger.w(
-                  'cover_art.repository',
-                  'LRU timestamp retry write failed after eviction',
-                  error: retryError,
-                );
-              }
-            }
-          }
+          // LRU access timestamp is tracked by CoverArtRepository's in-memory
+          // _entries map — no need to write back to DB on every read.
         }
       } catch (e, stack) {
         AppLogger.w(
@@ -471,13 +484,7 @@ class CoverArtRepository with WidgetsBindingObserver {
       if (count <= maxEntries) return;
 
       final toRemove = count - maxEntries;
-      final allEntries = await db.getAllCoverArtCaches();
-      allEntries.sort((a, b) => a.lastAccessed.compareTo(b.lastAccessed));
-      final oldest = allEntries.take(toRemove).toList();
-
-      await db.deleteCoverArtCachesByFileNames(
-        oldest.map((e) => e.fileName).toList(),
-      );
+      await db.evictOldestCoverArtCaches(toRemove);
     } catch (e, stack) {
       AppLogger.w(
         'cover_art.repository',
@@ -493,18 +500,8 @@ class CoverArtRepository with WidgetsBindingObserver {
     final db = _databaseService;
     if (db == null) return;
     try {
-      final count = await db.getCoverArtCacheCount();
-      if (count == 0) return;
-
-      final toRemove = (count / 2).ceil();
-      final allEntries = await db.getAllCoverArtCaches();
-      allEntries.sort((a, b) => a.lastAccessed.compareTo(b.lastAccessed));
-      final oldest = allEntries.take(toRemove).toList();
-
-      await db.deleteCoverArtCachesByFileNames(
-        oldest.map((e) => e.fileName).toList(),
-      );
-      AppLogger.i('cover_art.repository', 'force-evicted \$toRemove entries');
+      await db.evictHalfCoverArtCaches();
+      AppLogger.i('cover_art.repository', 'force-evicted half of disk cache');
     } catch (e, stack) {
       AppLogger.w(
         'cover_art.repository',
@@ -687,9 +684,10 @@ class CoverArtRepository with WidgetsBindingObserver {
     return null;
   }
 
-  /// Attempts to find a cover art image path for a local song by checking various locations.
-  /// Returns the first path that exists, or null if none are found.
-  static String? findLocalCoverPath(Song song) {
+  /// Attempts to find a cover art image path for a local song by checking
+  /// various locations. Returns the first path that exists, or null if none
+  /// are found.
+  static Future<String?> findLocalCoverPath(Song song) async {
     if (song.isBuiltIn) return null;
 
     final path = song.sourcePath;
@@ -722,7 +720,7 @@ class CoverArtRepository with WidgetsBindingObserver {
     ];
 
     for (final candidate in candidates) {
-      if (File(candidate).existsSync()) {
+      if (await File(candidate).exists()) {
         return candidate;
       }
     }

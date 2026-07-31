@@ -13,6 +13,9 @@ class PerformanceService {
   final Map<String, Stopwatch> _timers = {};
   final Map<String, List<Duration>> _metrics = {};
 
+  /// Maximum entries retained per metric name to prevent unbounded memory growth.
+  static const int _maxEntriesPerMetric = 100;
+
   /// Starts a timer with the given [name].
   void startTimer(String name) {
     _timers[name] = Stopwatch()..start();
@@ -28,7 +31,12 @@ class PerformanceService {
     }
 
     timer.stop();
-    _metrics.putIfAbsent(name, () => []).add(timer.elapsed);
+    final entries = _metrics.putIfAbsent(name, () => []);
+    entries.add(timer.elapsed);
+    // Prune to prevent unbounded memory growth
+    if (entries.length > _maxEntriesPerMetric) {
+      entries.removeRange(0, entries.length - _maxEntriesPerMetric);
+    }
 
     if (kDebugMode) {
       AppLogger.d(

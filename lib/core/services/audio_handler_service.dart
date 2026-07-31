@@ -125,7 +125,7 @@ class GaSongAudioHandler extends BaseAudioHandler
       if (song.isBuiltIn) {
         resolvedPath = await CoverArtRepository.findCoverAssetPath(song);
       } else {
-        resolvedPath = CoverArtRepository.findLocalCoverPath(song);
+        resolvedPath = await CoverArtRepository.findLocalCoverPath(song);
       }
 
       final fileName = song.fileName.replaceAll(

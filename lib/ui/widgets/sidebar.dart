@@ -577,6 +577,7 @@ class _NowPlayingIndicator extends StatefulWidget {
 class _NowPlayingIndicatorState extends State<_NowPlayingIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _wasPlaying = false;
 
   @override
   void initState() {
@@ -584,7 +585,7 @@ class _NowPlayingIndicatorState extends State<_NowPlayingIndicator>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
   }
 
   @override
@@ -597,9 +598,20 @@ class _NowPlayingIndicatorState extends State<_NowPlayingIndicator>
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        // Phase 2.2: read engine state from state provider.
         final engineState = ref.watch(engineStateProvider);
         final isPlaying = engineState == AudioEngineState.playing;
+
+        // Start/stop the animation based on playing state.
+        // This prevents the controller from burning CPU when no song is playing.
+        if (isPlaying != _wasPlaying) {
+          _wasPlaying = isPlaying;
+          if (isPlaying) {
+            _controller.repeat(reverse: true);
+          } else {
+            _controller.stop();
+          }
+        }
+
         if (!isPlaying) return const SizedBox.shrink();
 
         return AnimatedBuilder(

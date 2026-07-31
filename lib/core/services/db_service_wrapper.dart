@@ -9,7 +9,6 @@ import '../../models/playlist.dart';
 import '../../models/cover_art_cache.dart';
 import '../../models/extensions/song_extension.dart';
 import '../../models/extensions/playlist_extension.dart';
-import '../../models/extensions/cover_art_cache_extension.dart';
 import '../utils/result.dart';
 
 /// A wrapper around AppDatabase (Drift) that implements the old DatabaseService interface
@@ -90,7 +89,7 @@ class DatabaseServiceWrapper {
       AppLogger.i(
         'database.wrapper',
         'Built-in songs mismatch (expected=${expectedFileNames.length}, '
-        'actual=${actualPaths.length}); re-seeding…',
+            'actual=${actualPaths.length}); re-seeding…',
       );
 
       // Delete stale built-in rows and re-seed from JSON.
@@ -312,18 +311,29 @@ class DatabaseServiceWrapper {
     await _db.coverArtCache.deleteWhere((tbl) => tbl.fileName.equals(fileName));
   }
 
-  Future<List<CoverArtCache>> getAllCoverArtCaches() async {
-    final entries = await _db.select(_db.coverArtCache).get();
-    return entries.map((e) => e.toCoverArtCache()).toList();
-  }
-
   Future<int> getCoverArtCacheCount() async {
     return await _db.getCoverArtCacheCount();
   }
 
-  Future<void> deleteCoverArtCachesByFileNames(List<String> fileNames) async {
-    for (final fileName in fileNames) {
-      await deleteCoverArtCache(fileName);
-    }
+  /// Evicts the oldest [count] cover art cache entries (by last_accessed).
+  /// Uses a single SQL query — no loading of all entries into memory.
+  Future<void> evictOldestCoverArtCaches(int count) async {
+    if (count <= 0) return;
+    await _db.customStatement(
+      'DELETE FROM cover_art_cache WHERE id IN ('
+      'SELECT id FROM cover_art_cache ORDER BY last_accessed ASC LIMIT ?)',
+      [Variable.withInt(count)],
+    );
+  }
+
+  /// Evicts half of all cover art cache entries (oldest by last_accessed).
+  Future<void> evictHalfCoverArtCaches() async {
+    final count = await getCoverArtCacheCount();
+    if (count == 0) return;
+    await _db.customStatement(
+      'DELETE FROM cover_art_cache WHERE id IN ('
+      'SELECT id FROM cover_art_cache ORDER BY last_accessed ASC LIMIT ?)',
+      [Variable.withInt((count / 2).ceil())],
+    );
   }
 }

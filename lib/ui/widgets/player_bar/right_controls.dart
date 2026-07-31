@@ -87,7 +87,7 @@ class RightControls extends ConsumerWidget {
               constraints: const BoxConstraints.tightFor(width: 36, height: 36),
               tooltip: 'Lời bài hát (trong app)',
               onPressed: () {
-                ref.read(lyricVisibilityProvider.notifier).state = !showLyrics;
+                ref.read(lyricVisibilityProvider.notifier).toggle();
               },
             );
           },

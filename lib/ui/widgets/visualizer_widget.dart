@@ -43,10 +43,16 @@ class _PersonalVisualizerWidgetState
       duration: const Duration(seconds: 15),
     );
     _syncRotationState();
+
+    // Listen to engine state so _syncRotationState only fires on change
+    _engineService.engineState.addListener(_syncRotationState);
+    _settings.visualizerEnabledNotifier.addListener(_syncRotationState);
   }
 
   @override
   void dispose() {
+    _engineService.engineState.removeListener(_syncRotationState);
+    _settings.visualizerEnabledNotifier.removeListener(_syncRotationState);
     _visualizerController.dispose();
     _rotateController.dispose();
     super.dispose();
@@ -70,11 +76,6 @@ class _PersonalVisualizerWidgetState
     return ListenableBuilder(
       listenable: _visualizerController,
       builder: (context, _) {
-        // P2.2: ListenableBuilder only drives rebuilds; it does NOT advance
-        // AnimationController. We still need to imperatively sync the
-        // rotation controller's repeat/stop based on isAudioReactive
-        // on every controller notify.
-        _syncRotationState();
         return _buildVisualizerContent(context);
       },
     );
@@ -130,8 +131,7 @@ class _PersonalVisualizerWidgetState
                     animation: _visualizerController,
                     builder: (context, _) {
                       final isBeat = _visualizerController.snapshot.isBeat;
-                      return AnimatedContainer(
-                        duration: Duration(milliseconds: isBeat ? 50 : 200),
+                      return Container(
                         color: Colors.white.withValues(
                           alpha: isBeat ? 0.15 : 0.0,
                         ),
