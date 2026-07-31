@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/lyric_provider.dart';
+import '../../core/motion/app_motion.dart';
+import '../utils/animation_utils.dart';
 
 /// Enhanced lyric view with karaoke-style effects.
 ///
@@ -133,10 +135,21 @@ class _LyricViewState extends ConsumerState<LyricView> {
           onTap: () {
             ref.read(audioEngineServiceProvider).seek(line.startTime);
           },
-          child: Container(
-            height: widget.isFullScreen ? 70.0 : 48.0,
-            alignment: Alignment.center,
-            child: AnimatedDefaultTextStyle(
+          child: AnimatedSwitcher(
+            duration: animationsEnabled(context)
+                ? AppDurations.medium
+                : Duration.zero,
+            switchInCurve: AppCurves.decelerate,
+            switchOutCurve: AppCurves.accelerate,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
+            child: Container(
+              key: ValueKey(line.startTime),
+              height: widget.isFullScreen ? 70.0 : 48.0,
+              alignment: Alignment.center,
+              child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
               style: TextStyle(
@@ -185,8 +198,9 @@ class _LyricViewState extends ConsumerState<LyricView> {
               ),
             ),
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 }

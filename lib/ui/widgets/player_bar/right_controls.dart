@@ -7,6 +7,7 @@ import '../../../providers/service_providers.dart';
 import '../../../providers/lyric_provider.dart';
 import '../../../core/theme_utils.dart';
 import '../volume_control.dart';
+import '../queue_panel.dart';
 
 class RightControls extends ConsumerWidget {
   const RightControls({super.key});
@@ -115,6 +116,18 @@ class RightControls extends ConsumerWidget {
               );
             },
           ),
+        // Queue button — opens the playback queue panel
+        IconButton(
+          icon: Icon(
+            Icons.playlist_play_rounded,
+            color: context.adaptiveSecondary,
+            size: 22,
+          ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+          tooltip: 'Hàng đợi phát',
+          onPressed: () => QueuePanel.show(context),
+        ),
         const Expanded(child: VolumeControl()),
       ],
     );

@@ -2,7 +2,7 @@ name: ga_song
 description: "A full-featured music player with KTV mode, lyrics sync, and audio effects."
 publish_to: 'none'
 
-version: 0.6.8+1
+version: 0.8.0+1
 
 environment:
   sdk: ^3.11.4
