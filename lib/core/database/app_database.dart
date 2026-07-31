@@ -23,7 +23,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -44,6 +44,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(playlists, playlists.createdAt);
         await m.addColumn(playlists, playlists.updatedAt);
         await m.addColumn(coverArtCache, coverArtCache.sizeBytes);
+        await _createIndexes(m);
+      }
+      if (from < 4) {
+        // v3 → v4: Add composite index on playlist_songs for faster playlist queries
         await _createIndexes(m);
       }
     },
@@ -70,6 +74,10 @@ class AppDatabase extends _$AppDatabase {
     );
     await m.database.customStatement(
       'CREATE INDEX IF NOT EXISTS idx_lyrics_song_id ON lyrics_cache(song_id)',
+    );
+    await m.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist_id '
+      'ON playlist_songs(playlist_id)',
     );
   }
 
@@ -136,7 +144,11 @@ class AppDatabase extends _$AppDatabase {
   /// Get paginated songs with offset and limit.
   Future<List<SongEntry>> getSongsPaginated(int offset, int limit) =>
       (select(songs)
-            ..orderBy([(t) => OrderingTerm.asc(t.name)])
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.name),
+              // Tiebreaker: name isn't unique; id guarantees stable pagination.
+              (t) => OrderingTerm.asc(t.id),
+            ])
             ..limit(limit, offset: offset))
           .get();
 
@@ -206,20 +218,24 @@ class AppDatabase extends _$AppDatabase {
     return result.data['total'] as int;
   }
 
-  /// Get library statistics.
+  /// Get library statistics in a single query.
   Future<Map<String, dynamic>> getLibraryStats() async {
-    final totalSongs = await getSongCount();
-    final totalDurationMs = await getTotalDurationMs();
-    final totalPlayCount = await getTotalPlayCount();
+    final combined = await customSelect(
+      'SELECT COUNT(*) as totalSongs, '
+      'COALESCE(SUM(duration_ms), 0) as totalDurationMs, '
+      'COALESCE(SUM(play_count), 0) as totalPlayCount '
+      'FROM songs',
+    ).getSingle();
 
     final genreCounts = await customSelect(
-      'SELECT genre, COUNT(*) as count FROM songs WHERE genre IS NOT NULL GROUP BY genre ORDER BY count DESC',
+      'SELECT genre, COUNT(*) as count FROM songs '
+      'WHERE genre IS NOT NULL GROUP BY genre ORDER BY count DESC',
     ).get();
 
     return {
-      'totalSongs': totalSongs,
-      'totalDurationMs': totalDurationMs,
-      'totalPlayCount': totalPlayCount,
+      'totalSongs': combined.data['totalSongs'] as int,
+      'totalDurationMs': combined.data['totalDurationMs'] as int,
+      'totalPlayCount': combined.data['totalPlayCount'] as int,
       'genreCounts': genreCounts.map((r) => r.data).toList(),
     };
   }
@@ -305,14 +321,15 @@ class AppDatabase extends _$AppDatabase {
   /// [songIds] must contain the IDs of all songs currently in the playlist,
   /// in the desired new order.
   Future<void> reorderPlaylistSongs(int playlistId, List<int> songIds) async {
-    // Use a transaction so all positions update atomically.
-    await transaction(() async {
+    // Use a batch so all positions update atomically with minimal round-trips.
+    await batch((batch) {
       for (int i = 0; i < songIds.length; i++) {
-        await (update(playlistSongs)
-              ..where(
-                (t) =>
-                    t.playlistId.equals(playlistId) & t.songId.equals(songIds[i]),
-              )).write(PlaylistSongsCompanion(position: Value(i)));
+        batch.update(
+          playlistSongs,
+          PlaylistSongsCompanion(position: Value(i)),
+          where: (t) =>
+              t.playlistId.equals(playlistId) & t.songId.equals(songIds[i]),
+        );
       }
     });
   }
@@ -326,10 +343,8 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.fileName.equals(fileName))).getSingleOrNull();
 
     if (entry != null) {
-      // Update last accessed
-      await (update(coverArtCache)..where((t) => t.id.equals(entry.id))).write(
-        CoverArtCacheCompanion(lastAccessed: Value(DateTime.now())),
-      );
+      // last_accessed is tracked by CoverArtRepository's LRU cache.
+      // No need to write here — it would double every cache-hit read.
       return entry.bytes;
     }
     return null;
@@ -357,13 +372,13 @@ class AppDatabase extends _$AppDatabase {
 
     if (currentCount > maxEntries) {
       final toDelete = currentCount - maxEntries;
-      await customStatement('''
-        DELETE FROM cover_art_cache WHERE id IN (
-          SELECT id FROM cover_art_cache 
-          ORDER BY last_accessed ASC 
-          LIMIT $toDelete
-        )
-      ''');
+      await customStatement(
+        'DELETE FROM cover_art_cache WHERE id IN ('
+        'SELECT id FROM cover_art_cache '
+        'ORDER BY last_accessed ASC '
+        'LIMIT ?)',
+        [Variable.withInt(toDelete)],
+      );
     }
   }
 

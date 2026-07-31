@@ -1,41 +1,58 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
-
+import '../core/audio/audio_engine_service.dart';
 import '../core/audio/playlist_service.dart';
 import '../core/audio/lyric_parser.dart';
 import '../core/services/online_lyrics_service.dart';
 import '../core/services/db_service_wrapper.dart';
 import 'service_providers.dart';
 
-final lyricVisibilityProvider = StateProvider<bool>((ref) => false);
+/// Simple boolean notifier for lyric visibility toggle.
+class LyricVisibilityNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
 
-class LyricNotifier extends StateNotifier<List<LyricLine>> {
-  LyricNotifier(
-    this._playlistService,
-    this._databaseService,
-    this._onlineLyricsService,
-  ) : super([]) {
-    _playlistService.currentIndexNotifier.addListener(_onIndexChanged);
-    _loadLyrics();
-  }
+  void toggle() => state = !state;
+  void show() => state = true;
+  void hide() => state = false;
+}
 
-  final PlaylistService _playlistService;
-  final DatabaseServiceWrapper _databaseService;
-  final OnlineLyricsService _onlineLyricsService;
+final lyricVisibilityProvider = NotifierProvider<LyricVisibilityNotifier, bool>(
+  LyricVisibilityNotifier.new,
+);
 
-  void _onIndexChanged() {
-    _loadLyrics();
-  }
+/// Notifier managing the current song's parsed lyric lines.
+///
+/// Watches the playlist index and loads lyrics (local → cache → online).
+/// Uses the modern [Notifier] pattern (Riverpod v3).
+class LyricNotifier extends Notifier<List<LyricLine>> {
+  PlaylistService? _playlistService;
+  DatabaseServiceWrapper? _databaseService;
+  OnlineLyricsService? _onlineLyricsService;
+
+  /// Incremented on each song change; stale async loads are discarded.
+  int _loadGeneration = 0;
 
   @override
-  void dispose() {
-    _playlistService.currentIndexNotifier.removeListener(_onIndexChanged);
-    super.dispose();
+  List<LyricLine> build() {
+    _playlistService = ref.watch(playlistServiceProvider);
+    _databaseService = ref.watch(databaseServiceProvider);
+    _onlineLyricsService = ref.read(onlineLyricsServiceProvider);
+
+    // Listen to index changes
+    ref.listen<int>(currentPlayingIndexProvider, (_, _) {
+      _loadLyrics();
+    });
+
+    // Initial load
+    _loadLyrics();
+
+    return [];
   }
 
   Future<void> _loadLyrics() async {
-    final song = _playlistService.currentSong;
+    final generation = ++_loadGeneration;
+    final song = _playlistService?.currentSong;
     if (song == null) {
       state = [];
       return;
@@ -46,6 +63,7 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
       song.sourcePath,
       song.isBuiltIn,
     );
+    if (!_isCurrent(generation)) return;
     if (localLines.isNotEmpty) {
       state = localLines;
       return;
@@ -54,7 +72,8 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
     // 2. Check cache
     if (song.id != null) {
       try {
-        final cached = await _databaseService.getCachedLyrics(song.id!);
+        final cached = await _databaseService?.getCachedLyrics(song.id!);
+        if (!_isCurrent(generation)) return;
         if (cached != null) {
           final syncedLyrics = cached['syncedLyrics'];
           if (syncedLyrics != null && syncedLyrics.isNotEmpty) {
@@ -63,7 +82,6 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
           }
           final plainLyrics = cached['plainLyrics'];
           if (plainLyrics != null && plainLyrics.isNotEmpty) {
-            // Convert plain lyrics to LyricLine format (no timestamps)
             state = plainLyrics
                 .split('\n')
                 .map((line) => LyricLine(startTime: Duration.zero, text: line))
@@ -71,23 +89,23 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
             return;
           }
         }
-      } catch (e) {
+      } catch (_) {
         // Cache miss or error, continue to online fetch
       }
     }
 
     // 3. Fetch from online
     try {
-      final result = await _onlineLyricsService.getBestMatch(
+      final result = await _onlineLyricsService?.getBestMatch(
         title: song.name,
         artist: song.artist,
         album: song.album,
       );
+      if (!_isCurrent(generation)) return;
 
       if (result != null) {
-        // Cache the result
         if (song.id != null) {
-          await _databaseService.cacheLyrics(
+          await _databaseService?.cacheLyrics(
             songId: song.id!,
             syncedLyrics: result.syncedLyrics,
             plainLyrics: result.plainLyrics,
@@ -95,7 +113,6 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
           );
         }
 
-        // Parse and set lyrics
         if (result.hasSyncedLyrics) {
           state = result.parsedSyncedLyrics;
         } else if (result.hasPlainLyrics) {
@@ -109,28 +126,34 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
       } else {
         state = [];
       }
-    } catch (e) {
-      state = [];
+    } catch (_) {
+      if (_isCurrent(generation)) {
+        state = [];
+      }
     }
   }
 
-  /// Manually fetch lyrics for the current song (e.g., from search results)
+  /// True if [generation] is still the latest load request.
+  bool _isCurrent(int generation) => generation == _loadGeneration;
+
+  /// Manually fetch lyrics for the current song (e.g., from search results).
   Future<void> fetchLyrics({String? title, String? artist}) async {
-    final song = _playlistService.currentSong;
+    final song = _playlistService?.currentSong;
     if (song == null) return;
 
+    final generation = ++_loadGeneration;
     try {
-      final results = await _onlineLyricsService.search(
+      final results = await _onlineLyricsService?.search(
         title: title ?? song.name,
         artist: artist ?? song.artist,
       );
+      if (!_isCurrent(generation)) return;
 
-      if (results.isNotEmpty) {
+      if (results != null && results.isNotEmpty) {
         final best = results.first;
 
-        // Cache the result
         if (song.id != null) {
-          await _databaseService.cacheLyrics(
+          await _databaseService?.cacheLyrics(
             source: 'lrclib',
             songId: song.id!,
             syncedLyrics: best.syncedLyrics,
@@ -147,46 +170,75 @@ class LyricNotifier extends StateNotifier<List<LyricLine>> {
               .toList();
         }
       }
-    } catch (e) {
+    } catch (_) {
       // Error fetching lyrics
     }
   }
 }
 
-final lyricProvider = StateNotifierProvider<LyricNotifier, List<LyricLine>>((
-  ref,
-) {
-  final playlist = ref.watch(playlistServiceProvider);
-  final db = ref.watch(databaseServiceProvider);
-  final onlineLyrics = ref.read(onlineLyricsServiceProvider);
-  return LyricNotifier(playlist, db, onlineLyrics);
-});
+final lyricProvider = NotifierProvider<LyricNotifier, List<LyricLine>>(
+  LyricNotifier.new,
+);
 
 /// Combines lyric lines + current playback position into a reactive
 /// current-line string. Listens to BOTH lyric changes AND position changes.
-class CurrentLyricLineNotifier extends StateNotifier<String> {
-  final Ref _ref;
-  List<LyricLine> _lines = [];
+///
+/// The poll timer is only active when a song is playing and lyrics are
+/// available — saving CPU wake-ups when idle.
+class CurrentLyricLineNotifier extends Notifier<String> {
   Timer? _pollTimer;
+  List<LyricLine> _lines = [];
+  bool _isPlaying = false;
 
-  CurrentLyricLineNotifier(this._ref) : super('') {
-    _ref.listen<List<LyricLine>>(lyricProvider, (previous, next) {
+  @override
+  String build() {
+    // Listen to lyric changes
+    ref.listen<List<LyricLine>>(lyricProvider, (_, next) {
       _lines = next;
+      _syncTimer();
       _updateCurrentLine();
     });
 
-    _ref.listen(positionProvider, (_, _) => _onPositionChanged());
+    // Listen to engine state to pause/resume timer
+    ref.listen<AudioEngineState>(engineStateProvider, (_, next) {
+      _isPlaying = next == AudioEngineState.playing;
+      _syncTimer();
+    });
 
-    _lines = _ref.read(lyricProvider);
+    // Listen to position changes for real-time updates
+    ref.listen<Duration>(positionProvider, (_, _) => _onPositionChanged());
+
+    _lines = ref.read(lyricProvider);
+    _isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
+    _syncTimer();
     _updateCurrentLine();
 
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      _updateCurrentLine();
+    // Clean up timer when this provider is disposed
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _pollTimer = null;
     });
+
+    return '';
   }
 
   void _onPositionChanged() {
     _updateCurrentLine();
+  }
+
+  /// Starts the poll timer only when needed, stops it otherwise.
+  void _syncTimer() {
+    if (_lines.isNotEmpty && _isPlaying) {
+      if (_pollTimer == null || !_pollTimer!.isActive) {
+        _pollTimer?.cancel();
+        _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+          _updateCurrentLine();
+        });
+      }
+    } else {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
   }
 
   void _updateCurrentLine() {
@@ -195,29 +247,34 @@ class CurrentLyricLineNotifier extends StateNotifier<String> {
       return;
     }
 
-    final position = _ref.read(positionProvider);
+    final position = ref.read(positionProvider);
 
-    String newLine = '';
-    for (int i = _lines.length - 1; i >= 0; i--) {
-      if (_lines[i].startTime <= position) {
-        newLine = _lines[i].text;
-        break;
+    // Binary search: last line with startTime <= currentPosition.
+    // Falls back to the first line when position precedes all timestamps
+    // (matches the original reverse-scan behavior).
+    int low = 0;
+    int high = _lines.length - 1;
+    int matchIndex = -1;
+    while (low <= high) {
+      final mid = low + (high - low) ~/ 2;
+      if (_lines[mid].startTime <= position) {
+        matchIndex = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
       }
     }
 
+    final newLine = matchIndex == -1
+        ? _lines.first.text
+        : _lines[matchIndex].text;
     if (newLine != state) {
       state = newLine;
     }
   }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
 }
 
 final currentLyricLineProvider =
-    StateNotifierProvider<CurrentLyricLineNotifier, String>((ref) {
-      return CurrentLyricLineNotifier(ref);
-    });
+    NotifierProvider<CurrentLyricLineNotifier, String>(
+      CurrentLyricLineNotifier.new,
+    );

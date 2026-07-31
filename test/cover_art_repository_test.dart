@@ -77,7 +77,7 @@ void main() {
     },
   );
 
-  test('findLocalCoverPath checks sibling and folder covers', () {
+  test('findLocalCoverPath checks sibling and folder covers', () async {
     final tempDir = Directory.systemTemp.createTempSync('ga_song_test');
     try {
       final songFile = File('${tempDir.path}/mysong.mp3')..createSync();
@@ -89,16 +89,16 @@ void main() {
       );
 
       // Case 1: No cover exists
-      expect(CoverArtRepository.findLocalCoverPath(song), isNull);
+      expect(await CoverArtRepository.findLocalCoverPath(song), isNull);
 
       // Case 2: Sibling cover.png exists
       final coverFile = File('${tempDir.path}/cover.png')..createSync();
-      final resolved = CoverArtRepository.findLocalCoverPath(song);
+      final resolved = await CoverArtRepository.findLocalCoverPath(song);
       expect(resolved, coverFile.path.replaceAll('\\', '/'));
 
       // Case 3: Sibling song-specific png exists (higher priority)
       final specificCover = File('${tempDir.path}/mysong.png')..createSync();
-      final resolved2 = CoverArtRepository.findLocalCoverPath(song);
+      final resolved2 = await CoverArtRepository.findLocalCoverPath(song);
       expect(resolved2, specificCover.path.replaceAll('\\', '/'));
     } finally {
       tempDir.deleteSync(recursive: true);
