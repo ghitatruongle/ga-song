@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -6,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 import '../logging/app_logger.dart';
+import '../../models/song.dart';
 
 class SystemTrayService {
   SystemTrayService({
@@ -25,14 +27,32 @@ class SystemTrayService {
   // initialization so the platform-channel call only fires on desktop.
   late final AppWindow _appWindow = _isDesktop ? AppWindow() : _noOpAppWindow;
   late final Menu _menu = _isDesktop ? Menu() : _noOpMenu;
-  DateTime _lastMenuUpdate = DateTime(2000);
+  
+  // ─── Icon caching ──────────────────────────────────────────────────────
+  
+  String? _cachedIconPath;
+  Uint8List? _cachedIconBytes;
+  static const _iconCacheDuration = Duration(days: 7);
+  DateTime? _iconCacheTimestamp;
+
+  // ─── Event-driven updates ──────────────────────────────────────────────
+  
+  StreamSubscription<AudioEngineState>? _engineStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<int>? _currentSongSubscription;
+  
+  // ─── Live tooltip ──────────────────────────────────────────────────────
+  
+  Timer? _tooltipUpdateTimer;
+  String? _lastTooltipText;
 
   static bool get _isDesktop =>
       !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 
   /// Stand-in AppWindow for non-desktop platforms. The system_tray
   /// plugin's AppWindow exposes its methods as instance members that
-  /// forward to the platform channel; we never call them on mobile.
+  // forward to the platform channel; we never call them on mobile.
   AppWindow get _noOpAppWindow => throw StateError(
     'SystemTrayService._appWindow is unavailable on non-desktop platforms',
   );
@@ -52,62 +72,7 @@ class SystemTrayService {
 
     try {
       _systemTray = SystemTray();
-      String path = Platform.isWindows
-          ? 'assets/pic/app_icon.ico'
-          : 'assets/pic/app_logo.png';
-
-      if (Platform.isWindows) {
-        final iconFile = File(
-          '${Directory.systemTemp.path}\\ga_song_app_icon.ico',
-        );
-        final needsWrite = !iconFile.existsSync() || iconFile.lengthSync() == 0;
-        if (needsWrite) {
-          try {
-            final byteData = await rootBundle.load(path);
-            await iconFile.writeAsBytes(
-              byteData.buffer.asUint8List(
-                byteData.offsetInBytes,
-                byteData.lengthInBytes,
-              ),
-              flush: true,
-            );
-          } catch (e) {
-            AppLogger.w(
-              'system_tray.service',
-              'icon extraction failed',
-              error: e,
-            );
-          }
-        }
-        path = iconFile.path;
-      }
-
-      // Linux: cần copy icon từ assets vào temp giống Windows
-      if (Platform.isLinux) {
-        final iconFile = File(
-          '${Directory.systemTemp.path}/ga_song_app_icon.png',
-        );
-        final needsWrite = !iconFile.existsSync() || iconFile.lengthSync() == 0;
-        if (needsWrite) {
-          try {
-            final byteData = await rootBundle.load(path);
-            await iconFile.writeAsBytes(
-              byteData.buffer.asUint8List(
-                byteData.offsetInBytes,
-                byteData.lengthInBytes,
-              ),
-              flush: true,
-            );
-          } catch (e) {
-            AppLogger.w(
-              'system_tray.service',
-              'icon extraction failed (Linux)',
-              error: e,
-            );
-          }
-        }
-        path = iconFile.path;
-      }
+      String path = await _getCachedIconPath();
 
       final iconFileCheck = File(path);
       if (!iconFileCheck.existsSync()) {
@@ -135,9 +100,12 @@ class SystemTrayService {
         }
       });
 
-      _engine?.engineState.addListener(_updateMenu);
-      // Thêm listener cho position để cập nhật progress bar trong tray
-      _engine?.positionNotifier.addListener(_updateMenu);
+      // Set up event-driven updates (replaces polling)
+      _setupEventDrivenUpdates();
+      
+      // Start live tooltip updates
+      _startLiveTooltipUpdates();
+
     } catch (e, stackTrace) {
       AppLogger.e('system_tray.service', 'SystemTray init failed', error: e);
       AppLogger.d('system_tray.service', 'stack', error: stackTrace);
@@ -145,6 +113,107 @@ class SystemTrayService {
     }
   }
 
+  /// Gets icon path with memory + disk caching.
+  Future<String> _getCachedIconPath() async {
+    // Check memory cache first
+    if (_cachedIconPath != null && _cachedIconBytes != null) {
+      final cacheFile = File(_cachedIconPath!);
+      if (await cacheFile.exists()) {
+        AppLogger.d('system_tray.service', 'using memory cached icon');
+        return _cachedIconPath!;
+      }
+    }
+
+    // Check disk cache
+    final cacheDir = Directory.systemTemp;
+    final cacheFileName = Platform.isWindows 
+        ? 'ga_song_app_icon.ico' 
+        : 'ga_song_app_icon.png';
+    final cacheFile = File('${cacheDir.path}${Platform.pathSeparator}$cacheFileName');
+    
+    if (await cacheFile.exists()) {
+      final stat = await cacheFile.stat();
+      // Check if cache is still valid
+      if (DateTime.now().difference(stat.modified) < _iconCacheDuration) {
+        _cachedIconPath = cacheFile.path;
+        _cachedIconBytes = await cacheFile.readAsBytes();
+        _iconCacheTimestamp = stat.modified;
+        AppLogger.d('system_tray.service', 'using disk cached icon');
+        return cacheFile.path;
+      }
+    }
+
+    // Extract from assets and cache
+    final assetPath = Platform.isWindows
+        ? 'assets/pic/app_icon.ico'
+        : 'assets/pic/app_logo.png';
+    
+    try {
+      final byteData = await rootBundle.load(assetPath);
+      final bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      );
+      
+      // Write to disk cache
+      await cacheFile.writeAsBytes(bytes, flush: true);
+      
+      // Update memory cache
+      _cachedIconPath = cacheFile.path;
+      _cachedIconBytes = bytes;
+      _iconCacheTimestamp = DateTime.now();
+      
+      AppLogger.d('system_tray.service', 'icon extracted and cached');
+      return cacheFile.path;
+    } catch (e) {
+      AppLogger.w('system_tray.service', 'icon extraction failed', error: e);
+      // Return asset path as fallback (might not work on all platforms)
+      return assetPath;
+    }
+  }
+
+  /// Sets up event-driven updates from audio engine and playlist.
+  /// Replaces the old polling-based _updateMenu with 500ms debounce.
+  void _setupEventDrivenUpdates() {
+    final engine = _engine;
+    final playlist = _playlist;
+    if (engine == null || playlist == null) return;
+
+    // Listen to engine state changes
+    _engineStateSubscription = Stream.periodic(
+      const Duration(milliseconds: 500),
+      (_) => engine.engineState.value,
+    ).listen((_) => _scheduleMenuUpdate());
+
+    // Listen to position changes (throttled to avoid excessive updates)
+    _positionSubscription = Stream.periodic(
+      const Duration(milliseconds: 1000),
+      (_) => engine.positionNotifier.value,
+    ).listen((_) => _scheduleMenuUpdate());
+
+    // Listen to duration changes
+    _durationSubscription = Stream.periodic(
+      const Duration(milliseconds: 500),
+      (_) => engine.durationNotifier.value,
+    ).listen((_) => _scheduleMenuUpdate());
+
+    // Listen to current song changes
+    _currentSongSubscription = Stream.periodic(
+      const Duration(milliseconds: 500),
+      (_) => playlist.currentIndexNotifier.value,
+    ).listen((_) => _scheduleMenuUpdate());
+  }
+
+  /// Schedules a menu update (debounced to 200ms).
+  Timer? _menuUpdateDebounce;
+  void _scheduleMenuUpdate() {
+    _menuUpdateDebounce?.cancel();
+    _menuUpdateDebounce = Timer(const Duration(milliseconds: 200), () {
+      _buildMenu();
+    });
+  }
+
+  /// Builds and sets the system tray context menu with current playback info.
   Future<void> _buildMenu() async {
     if (_systemTray == null) return;
 
@@ -212,25 +281,63 @@ class SystemTrayService {
   }
 
   void _updateMenu() {
-    final now = DateTime.now();
-    // Giảm debounce từ 1000ms → 500ms để menu cập nhật nhanh hơn
-    if (now.difference(_lastMenuUpdate).inMilliseconds < 500) return;
-    _lastMenuUpdate = now;
-    _buildMenu();
+    _scheduleMenuUpdate();
+  }
+
+  /// Starts live tooltip updates (every 2 seconds when playing).
+  void _startLiveTooltipUpdates() {
+    _tooltipUpdateTimer?.cancel();
+    _tooltipUpdateTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      _updateTooltip();
+    });
+  }
+
+  /// Updates system tray tooltip with current track info.
+  Future<void> _updateTooltip() async {
+    if (_systemTray == null || _engine == null) return;
+
+    final engine = _engine!;
+    final isPlaying = engine.engineState.value == AudioEngineState.playing;
+    if (!isPlaying) return;
+
+    final position = _formatDuration(engine.positionNotifier.value);
+    final duration = _formatDuration(engine.durationNotifier.value);
+    final song = _playlist?.currentSong;
+    
+    String tooltip;
+    if (song != null) {
+      final artist = song.artist ?? 'Unknown Artist';
+      tooltip = '${song.name} - $artist\n$position / $duration';
+    } else {
+      tooltip = 'G.A - Song\n$position / $duration';
+    }
+
+    // Only update if changed (avoid flicker)
+    if (tooltip != _lastTooltipText) {
+      _lastTooltipText = tooltip;
+      try {
+        await _systemTray!.setToolTip(tooltip);
+      } catch (e) {
+        AppLogger.d('system_tray.service', 'tooltip update failed', error: e);
+      }
+    }
   }
 
   void dispose() {
-    try {
-      _engine?.engineState.removeListener(_updateMenu);
-      _engine?.positionNotifier.removeListener(_updateMenu);
-    } catch (e, stack) {
-      AppLogger.e(
-        'system_tray.service',
-        'operation failed',
-        error: e,
-        stack: stack,
-      );
-    }
+    // Cancel all subscriptions
+    _engineStateSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _durationSubscription?.cancel();
+    _currentSongSubscription?.cancel();
+    _menuUpdateDebounce?.cancel();
+    _tooltipUpdateTimer?.cancel();
+
+    // Clear caches
+    _cachedIconPath = null;
+    _cachedIconBytes = null;
+    _iconCacheTimestamp = null;
+    _lastTooltipText = null;
+
     try {
       _systemTray?.destroy();
     } catch (e) {

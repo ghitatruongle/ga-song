@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/audio/audio_engine_service.dart';
 import '../core/audio/audio_effect_service.dart';
 import '../core/audio/playlist_service.dart';
+import '../core/audio/smart_shuffle_service.dart';
 import '../core/cover_art_repository.dart';
 import '../core/pip_service.dart';
 import '../core/settings_manager.dart';
@@ -15,6 +16,10 @@ import '../core/services/desktop_lyrics_service.dart';
 import '../core/services/smart_playlist_service.dart';
 import '../core/services/online_lyrics_service.dart';
 import '../core/services/feedback_service.dart';
+import '../core/services/jump_list_service.dart';
+import '../core/services/protocol_handler_service.dart';
+import '../core/services/music_manager.dart';
+import '../providers/lyrics_editor_provider.dart';
 export '../core/settings/settings_notifier.dart';
 export 'state_providers.dart';
 
@@ -120,4 +125,40 @@ final smartPlaylistServiceProvider = Provider<SmartPlaylistService>((ref) {
 /// Online lyrics fetching from lrclib.net.
 final onlineLyricsServiceProvider = Provider<OnlineLyricsService>((ref) {
   return OnlineLyricsService();
+});
+
+/// Smart shuffle service for weighted shuffle algorithm.
+final smartShuffleServiceProvider = Provider<SmartShuffleService>((ref) {
+  return SmartShuffleService();
+});
+
+/// Windows Jump List service for taskbar integration.
+final jumpListServiceProvider = Provider<JumpListService>((ref) {
+  final settings = ref.read(settingsManagerProvider);
+  final db = ref.read(databaseServiceProvider);
+  final service = JumpListService(settingsManager: settings, databaseService: db);
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
+/// Protocol handler for gasong:// URIs.
+final protocolHandlerServiceProvider = Provider<ProtocolHandlerService>((ref) {
+  final db = ref.read(databaseServiceProvider);
+  final playlist = ref.read(playlistServiceProvider);
+  final engine = ref.read(audioEngineServiceProvider);
+  final settings = ref.read(settingsManagerProvider);
+  final service = ProtocolHandlerService(
+    databaseService: db,
+    playlistService: playlist,
+    audioEngineService: engine,
+    settingsManager: settings,
+  );
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
+/// Music manager for importing/deleting local songs.
+final musicManagerProvider = Provider<MusicManager>((ref) {
+  final db = ref.read(databaseServiceProvider);
+  return MusicManager(db);
 });

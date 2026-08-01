@@ -96,6 +96,53 @@ class AudioEngineService with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
   }
 
+  // ─── Async Warmup ──────────────────────────────────────────────────────────
+  
+  bool _isWarmedUp = false;
+  Completer<void>? _warmupCompleter;
+  
+  /// Initializes SoLoud and warms up the audio engine asynchronously.
+  /// This should be called early during app startup (before first paint)
+  /// to avoid blocking the UI thread when the user first plays a song.
+  /// Returns a future that completes when warmup is done.
+  Future<void> warmupAsync() async {
+    // Prevent multiple concurrent warmups
+    if (_isWarmedUp) return;
+    if (_warmupCompleter != null) return _warmupCompleter!.future;
+    
+    _warmupCompleter = Completer<void>();
+    
+    try {
+      AppLogger.i('audio.engine_service', 'Starting async warmup...');
+      
+      // Initialize SoLoud if not already done
+      if (!_soloud.isInitialized) {
+        await _soloud.init();
+      }
+      
+      _isWarmedUp = true;
+      _warmupCompleter!.complete();
+      
+      AppLogger.i('audio.engine_service', 'Async warmup completed');
+    } catch (e, stack) {
+      AppLogger.e('audio.engine_service', 'Async warmup failed', error: e, stack: stack);
+      _warmupCompleter!.completeError(e, stack);
+    } finally {
+      _warmupCompleter = null;
+    }
+  }
+  
+  /// Checks if the engine has been warmed up.
+  bool get isWarmedUp => _isWarmedUp;
+  
+  /// Ensures the engine is warmed up before playback.
+  /// Call this before playAsset if you want to guarantee warmup is done.
+  Future<void> ensureWarmedUp() async {
+    if (!_isWarmedUp) {
+      await warmupAsync();
+    }
+  }
+
   // ─── App Lifecycle ────────────────────────────────────────────────────────
 
   /// Reacts to OS-level lifecycle transitions (background / foreground).

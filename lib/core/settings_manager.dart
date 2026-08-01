@@ -74,6 +74,7 @@ class SettingsManager {
   final ValueNotifier<int> visualizerShapeNotifier = ValueNotifier(0);
 
   final ValueNotifier<bool> minimizeToTrayNotifier = ValueNotifier(true);
+  final ValueNotifier<bool> autoHidePlayerBarNotifier = ValueNotifier(false);
   final ValueNotifier<bool> visualizerEnabledNotifier = ValueNotifier(true);
   final ValueNotifier<bool> useDynamicColorNotifier = ValueNotifier(true);
   final ValueNotifier<bool> sidebarCollapsedNotifier = ValueNotifier(false);
@@ -95,6 +96,9 @@ class SettingsManager {
 
   // In-app lyric font size (12-36px, default 24 for active / 17 for inactive)
   final ValueNotifier<double> lyricFontSizeNotifier = ValueNotifier(1.0);
+
+  // Show lyrics inside the mini player
+  final ValueNotifier<bool> showLyricsInMiniPlayerNotifier = ValueNotifier(true);
 
   // Current tab index (0=home, 1=library, 2=online, 3=ktv, 4=personal, 5=settings)
   final ValueNotifier<int> currentTabIndexNotifier = ValueNotifier(0);
@@ -187,6 +191,13 @@ class SettingsManager {
     null,
   );
 
+  // Sleep Timer v2 settings (persisted)
+  final ValueNotifier<int> sleepTimerDurationPresetNotifier = ValueNotifier(0); // 0=custom, 1=15min, 2=30min, 3=45min, 4=60min, 5=end of song
+  final ValueNotifier<Duration> sleepTimerCustomDurationNotifier = ValueNotifier(const Duration(minutes: 30));
+  final ValueNotifier<int> sleepTimerFadeOutDurationNotifier = ValueNotifier(30); // seconds
+  final ValueNotifier<bool> sleepTimerStopAtEndOfSongNotifier = ValueNotifier(false);
+  final ValueNotifier<bool> sleepTimerFadeOutEnabledNotifier = ValueNotifier(true);
+
   // Preset definitions: [60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz], bassLevel
   static const Map<String, List<double>> _presetBands = {
     'Normal': [0.0, 0.0, 0.0, 0.0, 0.0],
@@ -231,6 +242,8 @@ class SettingsManager {
     blurLevelNotifier.value =
         _prefs.getDouble('blurLevel') ?? _kDefaultBlurLevel;
     minimizeToTrayNotifier.value = _prefs.getBool('minimizeToTray') ?? true;
+    autoHidePlayerBarNotifier.value =
+        _prefs.getBool('autoHidePlayerBar') ?? false;
     visualizerEnabledNotifier.value =
         _prefs.getBool('visualizerEnabled') ?? true;
     useDynamicColorNotifier.value = _prefs.getBool('useDynamicColor') ?? true;
@@ -247,8 +260,19 @@ class SettingsManager {
     sensitivityNotifier.value = _prefs.getDouble('sensitivity') ?? 1.0;
     lyricFontSizeNotifier.value =
         _prefs.getDouble('lyricFontSize') ?? 1.0;
+    showLyricsInMiniPlayerNotifier.value =
+        _prefs.getBool('showLyricsInMiniPlayer') ?? true;
     soundFeedbackEnabledNotifier.value =
         _prefs.getBool('soundFeedbackEnabled') ?? false;
+
+    // Sleep Timer v2 settings
+    sleepTimerDurationPresetNotifier.value = _prefs.getInt('sleepTimerDurationPreset') ?? 0;
+    sleepTimerCustomDurationNotifier.value = Duration(
+      seconds: _prefs.getInt('sleepTimerCustomDuration') ?? 1800,
+    );
+    sleepTimerFadeOutDurationNotifier.value = _prefs.getInt('sleepTimerFadeOutDuration') ?? 30;
+    sleepTimerStopAtEndOfSongNotifier.value = _prefs.getBool('sleepTimerStopAtEndOfSong') ?? false;
+    sleepTimerFadeOutEnabledNotifier.value = _prefs.getBool('sleepTimerFadeOutEnabled') ?? true;
 
     // C3 fix: Load saved window state that was previously forgotten
     final w = _prefs.getDouble('savedWindowWidth');
@@ -476,6 +500,11 @@ class SettingsManager {
     await _prefs.setBool('minimizeToTray', minimize);
   }
 
+  Future<void> setAutoHidePlayerBar(bool autoHide) async {
+    autoHidePlayerBarNotifier.value = autoHide;
+    await _prefs.setBool('autoHidePlayerBar', autoHide);
+  }
+
   Future<void> setVisualizerEnabled(bool enable) async {
     visualizerEnabledNotifier.value = enable;
     await _prefs.setBool('visualizerEnabled', enable);
@@ -502,6 +531,11 @@ class SettingsManager {
   Future<void> setLyricFontSize(double scale) async {
     lyricFontSizeNotifier.value = scale.clamp(0.5, 1.5);
     await _prefs.setDouble('lyricFontSize', lyricFontSizeNotifier.value);
+  }
+
+  Future<void> setShowLyricsInMiniPlayer(bool show) async {
+    showLyricsInMiniPlayerNotifier.value = show;
+    await _prefs.setBool('showLyricsInMiniPlayer', show);
   }
 
   Future<void> setUseDynamicColor(bool useDynamic) async {
@@ -709,6 +743,33 @@ class SettingsManager {
     await _prefs.setBool('soundFeedbackEnabled', enabled);
   }
 
+  // ─── Sleep Timer v2 Setters ───────────────────────────────────────────────────
+
+  Future<void> setSleepTimerDurationPreset(int preset) async {
+    sleepTimerDurationPresetNotifier.value = preset.clamp(0, 5);
+    await _prefs.setInt('sleepTimerDurationPreset', sleepTimerDurationPresetNotifier.value);
+  }
+
+  Future<void> setSleepTimerCustomDuration(Duration duration) async {
+    sleepTimerCustomDurationNotifier.value = duration;
+    await _prefs.setInt('sleepTimerCustomDuration', duration.inSeconds);
+  }
+
+  Future<void> setSleepTimerFadeOutDuration(int seconds) async {
+    sleepTimerFadeOutDurationNotifier.value = seconds.clamp(0, 300);
+    await _prefs.setInt('sleepTimerFadeOutDuration', sleepTimerFadeOutDurationNotifier.value);
+  }
+
+  Future<void> setSleepTimerStopAtEndOfSong(bool enabled) async {
+    sleepTimerStopAtEndOfSongNotifier.value = enabled;
+    await _prefs.setBool('sleepTimerStopAtEndOfSong', enabled);
+  }
+
+  Future<void> setSleepTimerFadeOutEnabled(bool enabled) async {
+    sleepTimerFadeOutEnabledNotifier.value = enabled;
+    await _prefs.setBool('sleepTimerFadeOutEnabled', enabled);
+  }
+
   Future<void> setLocale(Locale locale) async {
     localeNotifier.value = locale;
     await _prefs.setString('localeCode', locale.languageCode);
@@ -756,6 +817,7 @@ class SettingsManager {
     customBackgroundImageNotifier,
     visualizerShapeNotifier,
     minimizeToTrayNotifier,
+    autoHidePlayerBarNotifier,
     visualizerEnabledNotifier,
     useDynamicColorNotifier,
     sidebarCollapsedNotifier,
@@ -765,6 +827,7 @@ class SettingsManager {
     desktopLyricsClickThroughNotifier,
     sensitivityNotifier,
     lyricFontSizeNotifier,
+    showLyricsInMiniPlayerNotifier,
     customPrimaryColorNotifier,
     dynamicPrimaryColorNotifier,
     currentTabIndexNotifier,
@@ -791,6 +854,11 @@ class SettingsManager {
     customHotkeysNotifier,
     mediaKeyEnabledNotifier,
     sleepTimerDurationNotifier,
+    sleepTimerDurationPresetNotifier,
+    sleepTimerCustomDurationNotifier,
+    sleepTimerFadeOutDurationNotifier,
+    sleepTimerStopAtEndOfSongNotifier,
+    sleepTimerFadeOutEnabledNotifier,
   ];
 
   void dispose() {
@@ -832,6 +900,11 @@ class SettingsManager {
     customHotkeysNotifier.dispose();
     mediaKeyEnabledNotifier.dispose();
     sleepTimerDurationNotifier.dispose();
+    sleepTimerDurationPresetNotifier.dispose();
+    sleepTimerCustomDurationNotifier.dispose();
+    sleepTimerFadeOutDurationNotifier.dispose();
+    sleepTimerStopAtEndOfSongNotifier.dispose();
+    sleepTimerFadeOutEnabledNotifier.dispose();
     soundFeedbackEnabledNotifier.dispose();
     hapticFeedbackEnabledNotifier.dispose();
   }

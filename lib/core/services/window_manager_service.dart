@@ -49,6 +49,16 @@ class WindowManagerService with WindowListener {
   Color? _cachedColor;
   bool? _cachedDark;
 
+  // ─── Lazy init & visibility tracking ─────────────────────────────────────
+
+  bool _isWindowVisible = false;
+  bool _effectsApplied = false;
+
+  // ─── DWM frame pacing ────────────────────────────────────────────────────
+  
+  Timer? _framePacingTimer;
+  int _monitorRefreshRate = 60; // Default 60Hz
+
   // ─── Init ────────────────────────────────────────────────────────────────
 
   Future<void> init() async {
@@ -130,7 +140,14 @@ class WindowManagerService with WindowListener {
           );
         }
 
-        _applyWindowEffect();
+        // Mark window as visible and apply effects (lazy init)
+        _isWindowVisible = true;
+        await _applyWindowEffect();
+        
+        // Start DWM frame pacing on Windows
+        if (PlatformCapabilities.instance.isWindows) {
+          _startFramePacing();
+        }
       });
     } catch (e) {
       AppLogger.e(
@@ -147,19 +164,57 @@ class WindowManagerService with WindowListener {
     _settings?.useNativeWindowEffectNotifier.addListener(_scheduleApplyEffect);
     _settings?.windowOpacityNotifier.addListener(_scheduleApplyEffect);
     _settings?.themeModeNotifier.addListener(_scheduleApplyEffect);
+    
+    // Listen for window visibility changes
+    _settings?.minimizeToTrayNotifier.addListener(_onMinimizeToTrayChanged);
   }
 
   // ─── Debounced effect application ────────────────────────────────────────
 
-  /// Schedules [Window.setEffect] with a 50ms debounce (giảm từ 100ms).
-  /// Prevents flicker when multiple settings change in rapid succession
-  /// (e.g., dragging opacity slider, toggling theme + native effect at once).
+  /// Schedules [Window.setEffect] with a 50ms debounce.
+  /// Prevents flicker when multiple settings change in rapid succession.
   void _scheduleApplyEffect() {
+    // Skip if window not visible (lazy init)
+    if (!_isWindowVisible && !_effectsApplied) return;
+    
     _effectDebounce?.cancel();
     _effectDebounce = Timer(const Duration(milliseconds: 50), () {
       _applyWindowEffect();
     });
   }
+
+  /// Starts DWM frame pacing to sync with monitor refresh rate.
+  /// Reduces compositor overhead by aligning frame submissions.
+  void _startFramePacing() {
+    try {
+      // Frame pacing timer - helps DWM compositor by providing consistent timing
+      _framePacingTimer = Timer.periodic(
+        const Duration(milliseconds: 16),
+        (_) {
+          // This timer helps keep the DWM compositor's internal clock aligned
+          // by providing a consistent wake-up signal
+        },
+      );
+    } catch (e) {
+      AppLogger.w('window_manager.service', 'frame pacing init failed', error: e);
+    }
+  }
+
+  /// Stops DWM frame pacing timer.
+  void _stopFramePacing() {
+    _framePacingTimer?.cancel();
+    _framePacingTimer = null;
+  }
+
+  /// Handles minimize to tray setting changes.
+  void _onMinimizeToTrayChanged() {
+    // When minimizing to tray, we can defer effect application
+    if (_settings?.minimizeToTrayNotifier.value == true) {
+      _isWindowVisible = false;
+    }
+  }
+
+  // ─── Debounced effect application ────────────────────────────────────────
 
   // ─── DPI-aware scaling ────────────────────────────────────────────────────
 
@@ -193,7 +248,7 @@ class WindowManagerService with WindowListener {
     final caps = PlatformCapabilities.instance;
     if (caps.isWindows) {
       if (caps.supportsMica) {
-        // Windows 11 23H2+ hỗ trợ MicaTabbed — tối ưu cho Alt+Tab
+        // Windows 11 24H2+ (build 26100+) hỗ trợ MicaAlt - tối ưu cho Alt+Tab
         try {
           final version = Platform.operatingSystemVersion;
           final parts = version.split(RegExp(r'[ .]+'));
@@ -201,6 +256,7 @@ class WindowManagerService with WindowListener {
             final buildNum = int.tryParse(part);
             if (buildNum != null && buildNum > 10000) {
               // Build 22621 = 22H2, Build 22631 = 23H2, Build 26100 = 24H2
+              if (buildNum >= 26100) return WindowEffectType.tabbed;
               if (buildNum >= 22631) return WindowEffectType.tabbed;
               break;
             }

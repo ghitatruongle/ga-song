@@ -70,7 +70,8 @@ void main() {
 
     test('should not have placeholder values', () {
       enArb.forEach((key, value) {
-        if (key.startsWith('@@')) return;
+        // Skip metadata keys (@key) — gen_l10n placeholder metadata is a map.
+        if (key.startsWith('@')) return;
         expect(value, isA<String>(), reason: 'Key $key is not a string');
         expect(
           (value as String).contains('TODO'),

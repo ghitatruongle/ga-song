@@ -7,7 +7,7 @@ import 'package:ga_song/ui/widgets/album_grid_widget.dart';
 /// Helper to create a test-ready MaterialApp with AppLocalizations.
 Widget createTestApp(Widget child) {
   return MaterialApp(
-    localizationsDelegates: const [AppLocalizationsDelegate()],
+    localizationsDelegates: const [AppLocalizations.delegate],
     home: Builder(builder: (context) => child),
   );
 }

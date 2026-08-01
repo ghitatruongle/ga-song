@@ -224,6 +224,39 @@ class MockPlaylistService implements PlaylistService {
   Future<void> playSongByFileName(String fileName) async {}
 
   @override
+  Future<void> add(Song song) async {
+    playlist.add(song);
+  }
+
+  @override
+  Future<void> remove(int index) async {
+    if (index >= 0 && index < playlist.length) {
+      playlist.removeAt(index);
+    }
+  }
+
+  @override
+  Future<void> clear() async {
+    playlist.clear();
+  }
+
+  @override
+  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 ||
+        oldIndex >= playlist.length ||
+        newIndex < 0 ||
+        newIndex >= playlist.length ||
+        oldIndex == newIndex) {
+      return;
+    }
+    if (oldIndex < newIndex) {
+      newIndex--;
+    }
+    final song = playlist.removeAt(oldIndex);
+    playlist.insert(newIndex, song);
+  }
+
+  @override
   void setPlayMode(PlayMode mode) {}
 
   @override

@@ -1,0 +1,88 @@
+# MSIX Packaging Configuration for G.A - Song
+# This file contains the configuration for building MSIX packages for Windows Store distribution.
+
+# App Identity
+identity:
+  name: "GASong"
+  publisher: "CN=GA Song Publisher"
+  version: "0.8.0.0"
+
+# App Properties
+properties:
+  display_name: "GA Song"
+  publisher_display_name: "GA Song"
+  description: "A full-featured music player with KTV mode, lyrics sync, and audio effects."
+  logo: "assets/pic/app_logo.png"
+  background_color: "#000000"
+
+# Capabilities
+capabilities:
+  - internetClient
+  - internetClientServer
+  - privateNetworkClientServer
+  - musicLibrary
+  - removableStorage
+  - documentsLibrary
+
+# Visual Assets
+assets:
+  square_150x150_logo: "assets/pic/app_logo.png"
+  square_44x44_logo: "assets/pic/app_logo.png"
+  square_71x71_logo: "assets/pic/app_logo.png"
+  wide_310x150_logo: "assets/pic/app_logo.png"
+  splash_screen: "assets/pic/splash.png"
+
+# Default Tile
+default_tile:
+  show_name: true
+  short_name: "GA Song"
+  foreground_text: "light"
+
+# Default Start Menu Tile
+start_menu_tile:
+  square_150x150_logo: "assets/pic/app_logo.png"
+  wide_310x150_logo: "assets/pic/app_logo.png"
+  show_name: true
+  short_name: "GA Song"
+
+# Protocol Handler
+extensions:
+  - protocol: "gasong"
+    executable: "GA_Song.exe"
+    entry_point: "GA_Song"
+
+# File Associations
+file_associations:
+  - extension: ".m3u"
+    content_type: "audio/x-mpegurl"
+    perceived_type: "audio"
+  - extension: ".pls"
+    content_type: "audio/scpls"
+    perceived_type: "audio"
+  - extension: ".xspf"
+    content_type: "application/xspf+xml"
+    perceived_type: "audio"
+
+# Capabilities for file associations
+file_type_capabilities:
+  - musicLibrary
+  - removableStorage
+
+# Entry Point
+entry_point: "GA_Song.exe"
+
+# Minimum Windows Version
+min_version: "10.0.19041.0"
+
+# Target Device Families
+target_device_families:
+  - Windows.Desktop
+  - Windows.Tablet
+
+# Package Settings
+package:
+  output_path: "build/windows/msix"
+  generate_bundle: true
+  bundle_name: "GA_Song"
+  certificate_path: "certificate.pfx"
+  certificate_password_env: "MSIX_CERT_PASSWORD"

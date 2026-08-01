@@ -8,13 +8,17 @@ void main() {
     late AppLocalizations en;
 
     setUp(() {
-      vi = AppLocalizations(const Locale('vi'));
-      en = AppLocalizations(const Locale('en'));
+      vi = lookupAppLocalizations(const Locale('vi'))!;
+      en = lookupAppLocalizations(const Locale('en'))!;
     });
 
-    test('should return Vietnamese for unsupported locale', () {
-      final l10n = AppLocalizations(const Locale('fr'));
-      expect(l10n.home, 'Trang chủ');
+    test('should throw for unsupported locale', () {
+      // lookupAppLocalizations throws for unsupported locales; the app
+      // falls back via AppLocalizations.delegate + supportedLocales.
+      expect(
+        () => lookupAppLocalizations(const Locale('fr')),
+        throwsA(isA<FlutterError>()),
+      );
     });
 
     test('should return English for en locale', () {
@@ -29,25 +33,16 @@ void main() {
       expect(vi.settings, 'Cài đặt');
     });
 
-    test('translateWith should replace parameters', () {
-      final result = en.translateWith('songCount', {'count': '5'});
-      expect(result, '5 songs');
+    test('songCount should replace parameters', () {
+      expect(en.songCount(5), '5 songs');
     });
 
-    test('translateWith should replace parameters in Vietnamese', () {
-      final result = vi.translateWith('songCount', {'count': '5'});
-      expect(result, '5 bài hát');
+    test('songCount should replace parameters in Vietnamese', () {
+      expect(vi.songCount(5), '5 bài hát');
     });
 
-    test('translateWith should handle multiple parameters', () {
-      final result = en.translateWith('importErrorWithMsg', {
-        'error': 'File not found',
-      });
-      expect(result, 'Import error: File not found');
-    });
-
-    test('translate should return key as fallback for missing key', () {
-      expect(vi.translate('nonExistentKey'), 'nonExistentKey');
+    test('importErrorWithMsg should handle parameters', () {
+      expect(en.importErrorWithMsg('File not found'), 'Import error: File not found');
     });
 
     test('all convenience getters return non-empty for Vietnamese', () {

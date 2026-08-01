@@ -11,6 +11,7 @@ import '../../core/theme_utils.dart';
 import '../painters/visualizer_painters.dart';
 import '../visualizer/visualizer_controller.dart';
 import 'cover_art_image.dart';
+import 'gpu_visualizer_widget.dart';
 
 class PersonalVisualizerWidget extends ConsumerStatefulWidget {
   const PersonalVisualizerWidget({super.key});
@@ -406,6 +407,11 @@ class _PersonalVisualizerWidgetState
             willChange: true,
           ),
         );
+      case 7:
+        // GPU Fragment Shader Visualizer
+        return RepaintBoundary(
+          child: GpuVisualizerWidget(),
+        );
       default:
         final circleDim = min(min(availableWidth, availableHeight), 450.0);
         return CustomPaint(
@@ -462,6 +468,7 @@ class _PersonalVisualizerWidgetState
                   shape == 4,
                   shape == 5,
                   shape == 6,
+                  shape == 7,
                 ],
                 onPressed: _settings.setVisualizerShape,
                 children: const <Widget>[
@@ -492,6 +499,10 @@ class _PersonalVisualizerWidgetState
                   Tooltip(
                     message: 'Tia Sáng',
                     child: Icon(Icons.flare, size: 18),
+                  ),
+                  Tooltip(
+                    message: 'GPU Shader',
+                    child: Icon(Icons.memory_rounded, size: 18),
                   ),
                 ],
               );

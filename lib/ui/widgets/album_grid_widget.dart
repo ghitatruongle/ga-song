@@ -86,7 +86,7 @@ class AlbumGridWidget extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            AppLocalizations.of(context).noPlaylist,
+            AppLocalizations.of(context)!.noPlaylist,
             style: TextStyle(
               fontSize: 18,
               color: adaptiveColor.withValues(alpha: 0.6),
@@ -94,7 +94,7 @@ class AlbumGridWidget extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            AppLocalizations.of(context).addAlbumField,
+            AppLocalizations.of(context)!.addAlbumField,
             style: TextStyle(
               fontSize: 13,
               color: adaptiveColor.withValues(alpha: 0.4),
@@ -229,9 +229,9 @@ class _AlbumTileState extends State<_AlbumTile> {
                 const SizedBox(height: 4),
                 Flexible(
                   child: Text(
-                    AppLocalizations.of(context).translateWith('songCount', {
-                      'count': widget.songCount.toString(),
-                    }),
+                    AppLocalizations.of(context)!.songCount(
+                      widget.songCount,
+                    ),
                     style: TextStyle(
                       fontSize: 13,
                       color: adaptiveColor.withValues(alpha: 0.6),

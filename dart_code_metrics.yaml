@@ -1,0 +1,77 @@
+# dart_code_metrics configuration for G.A - Song
+# Run with: dart run dart_code_metrics:metrics lib/
+
+metrics:
+  # Cyclomatic complexity - max 10 per function
+  cyclomatic-complexity:
+    warning-threshold: 10
+    error-threshold: 15
+
+  # Maximum nesting level - max 4
+  maximum-nesting-level:
+    warning-threshold: 4
+    error-threshold: 6
+
+  # Number of parameters - max 5
+  number-of-parameters:
+    warning-threshold: 5
+    error-threshold: 8
+
+  # Lines of code per function - max 50
+  lines-of-code:
+    warning-threshold: 50
+    error-threshold: 100
+
+  # Weighted methods per class - max 30
+  weighted-methods-per-class:
+    warning-threshold: 30
+    error-threshold: 50
+
+  # Coupling between objects - max 10
+  coupling-between-object-classes:
+    warning-threshold: 10
+    error-threshold: 15
+
+  # Lack of cohesion of methods
+  lack-of-cohesion-of-methods:
+    warning-threshold: 0.5
+    error-threshold: 0.7
+
+  # Maintainability index
+  maintainability-index:
+    warning-threshold: 60
+    error-threshold: 40
+
+  # Halstead volume
+  halstead-volume:
+    warning-threshold: 5000
+    error-threshold: 10000
+
+  # Source lines of code
+  source-lines-of-code:
+    warning-threshold: 300
+    error-threshold: 500
+
+# Anti-patterns to detect
+anti-patterns:
+  - long-method
+  - long-parameter-list
+  - large-class
+  - data-class
+  - god-class
+  - feature-envy
+  - inappropriate-intimacy
+  - refused-bequest
+  - shotgun-surgery
+  - parallel-inheritance-hierarchies
+
+# Exclude generated files
+exclude:
+  - "**/*.g.dart"
+  - "**/*.freezed.dart"
+  - "**/*.gr.dart"
+  - "test/**"
+  - "integration_test/**"
+  - "benchmark/**"
+  - "build/**"
+  - ".dart_tool/**"

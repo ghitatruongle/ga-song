@@ -32,6 +32,7 @@
   "pip": "Picture in picture",
   "errorInit": "Audio Engine initialization error",
   "errorRestart": "Please restart the application",
+  "renderError": "An error occurred while rendering the interface",
   "permissionMic": "Microphone permission is required for KTV!",
   "permissionDenied": "Microphone permission denied. Please grant it in Settings.",
   "greetingMorning": "Good morning,",
@@ -80,8 +81,130 @@
   "retry": "Retry",
   "allSongs": "All songs",
   "songCount": "{count} songs",
+  "@songCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importSuccess": "Import successful!",
   "importErrorWithMsg": "Import error: {error}",
+  "@importErrorWithMsg": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "androidOnlyFeature": "This feature is only available on Android devices.",
-  "cannotLoadLibraryDb": "Cannot load song list from Database."
+  "cannotLoadLibraryDb": "Cannot load song list from Database.",
+
+  "categoryAppearance": "Appearance",
+  "categoryPlayback": "Playback",
+  "categoryVisualizer": "Visualizer",
+  "categoryLyrics": "Lyrics",
+  "categoryWindowSystem": "Window & System",
+  "categoryHotkeys": "Hotkeys",
+  "categorySleepTimer": "Sleep Timer",
+  "categoryAdvanced": "Advanced",
+  "categoryFeedback": "Feedback",
+
+  "themeMode": "Theme Mode",
+  "useDynamicColor": "Dynamic Color",
+  "customPrimaryColor": "Custom Primary Color",
+  "enableBlur": "Enable Blur",
+  "blurLevel": "Blur Level",
+  "useNativeWindowEffect": "Native Window Effect",
+  "windowOpacity": "Window Opacity",
+  "isGridView": "Grid View",
+  "customBackgroundImage": "Custom Background Image",
+  "crossfadeDuration": "Crossfade Duration",
+  "crossfadeCurve": "Crossfade Curve",
+  "normalizationLevel": "Normalization Level",
+  "eqBass": "Bass",
+  "visualizerEnabled": "Visualizer Enabled",
+  "visualizerShape": "Visualizer Shape",
+  "sensitivity": "Sensitivity",
+  "lyricsFontSize": "Lyrics Font Size",
+  "showLyricsInMiniPlayer": "Show Lyrics in Mini Player",
+  "autoFetchLyrics": "Auto-Fetch Lyrics",
+  "minimizeToTray": "Minimize to Tray",
+  "autoHidePlayerBar": "Auto-Hide Player Bar",
+  "language": "Language",
+  "customHotkeys": "Custom Hotkeys",
+  "mediaKeyEnabled": "Media Keys",
+  "sleepTimerDuration": "Sleep Timer Duration",
+  "sleepTimerFadeOut": "Sleep Timer Fade Out",
+  "stopAtEndOfSong": "Stop at End of Song",
+  "reverbRoomSize": "Reverb Room Size",
+  "compressorThreshold": "Compressor Threshold",
+  "compressorAttack": "Compressor Attack",
+  "compressorRelease": "Compressor Release",
+  "compressorKneeWidth": "Compressor Knee Width",
+  "compressorMakeupGain": "Compressor Makeup Gain",
+  "reverbDamp": "Reverb Damping",
+  "soundFeedbackEnabled": "Sound Feedback",
+  "hapticFeedbackEnabled": "Haptic Feedback",
+  "manageHotkeys": "Manage hotkey bindings",
+  "searchSettings": "Search settings...",
+  "noSettingsFound": "No settings found",
+  "pressCtrlKToSearch": "Press Ctrl+K to search settings",
+  "enabled": "Enabled",
+  "disabled": "Disabled",
+  "off": "Off",
+  "minutes": "minutes",
+  "seconds": "seconds",
+  "endOfSong": "End of song",
+  "set": "Set",
+  "notSet": "Not set",
+  "none": "None",
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System",
+  "linear": "Linear",
+  "exponential": "Exponential",
+  "sCurve": "S-Curve",
+  "visualizerShapeCircle": "Circle",
+  "visualizerShapeBars": "Bars",
+  "visualizerShapeWave": "Wave",
+  "visualizerShapeTunnel": "Tunnel",
+  "visualizerShapeStarfield": "Starfield",
+  "visualizerShapeOscilloscope": "Oscilloscope",
+  "visualizerShapeRadial": "Radial Burst",
+
+  "emptyLibraryTitle": "Your library is empty",
+  "emptyLibraryMessage": "Import local music files, scan for music, or create a playlist to get started.",
+  "importMusic": "Import Music",
+  "scanForMusic": "Scan for Music",
+  "addSongs": "Add Songs",
+  "importPlaylist": "Import Playlist",
+  "emptyPlaylistTitle": "This playlist is empty",
+  "emptyPlaylistMessage": "No songs in {playlistName} yet. Add songs to get started.",
+  "@emptyPlaylistMessage": {
+    "placeholders": {
+      "playlistName": {
+        "type": "String"
+      }
+    }
+  },
+  "noResultsTitle": "No results found",
+  "noResultsMessage": "No matches found for \"{query}\"",
+  "@noResultsMessage": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearSearch": "Clear Search",
+  "errorLoadingTitle": "Something went wrong",
+  "noInternetTitle": "No Internet Connection",
+  "noInternetMessage": "Check your connection and try again.",
+  "openNetworkSettings": "Open Network Settings",
+  "featureComingSoon": "This feature is coming soon",
+  "scanComplete": "Scan complete",
+  "songsFound": "songs found",
+  "languageVietnamese": "Tiếng Việt",
+  "languageEnglish": "English"
 }

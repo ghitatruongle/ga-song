@@ -32,6 +32,7 @@
   "pip": "Hình trong hình",
   "errorInit": "Lỗi khởi tạo Audio Engine",
   "errorRestart": "Vui lòng khởi động lại ứng dụng",
+  "renderError": "Đã xảy ra lỗi khi hiển thị giao diện",
   "permissionMic": "Ứng dụng cần quyền truy cập Microphone để hát KTV!",
   "permissionDenied": "Quyền Microphone đã bị từ chối. Vui lòng cấp lại trong Cài đặt.",
   "greetingMorning": "Chào buổi sáng,",
@@ -80,8 +81,130 @@
   "retry": "Thử tải lại",
   "allSongs": "Tất cả bài hát",
   "songCount": "{count} bài hát",
+  "@songCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importSuccess": "Đã import nhạc thành công!",
   "importErrorWithMsg": "Lỗi import nhạc: {error}",
+  "@importErrorWithMsg": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "androidOnlyFeature": "Tính năng này chỉ khả dụng trên thiết bị Android.",
-  "cannotLoadLibraryDb": "Không thể nạp danh sách bài hát từ Database."
+  "cannotLoadLibraryDb": "Không thể nạp danh sách bài hát từ Database.",
+
+  "categoryAppearance": "Giao diện",
+  "categoryPlayback": "Phát nhạc",
+  "categoryVisualizer": "Trực quan hóa",
+  "categoryLyrics": "Lời bài hát",
+  "categoryWindowSystem": "Cửa sổ & Hệ thống",
+  "categoryHotkeys": "Phím tắt",
+  "categorySleepTimer": "Hẹn giờ ngủ",
+  "categoryAdvanced": "Nâng cao",
+  "categoryFeedback": "Phản hồi",
+
+  "themeMode": "Chế độ giao diện",
+  "useDynamicColor": "Màu động",
+  "customPrimaryColor": "Màu chủ đạo tùy chỉnh",
+  "enableBlur": "Bật hiệu ứng mờ",
+  "blurLevel": "Mức độ mờ",
+  "useNativeWindowEffect": "Hiệu ứng cửa sổ gốc",
+  "windowOpacity": "Độ trong suốt cửa sổ",
+  "isGridView": "Chế độ lưới",
+  "customBackgroundImage": "Ảnh nền tùy chỉnh",
+  "crossfadeDuration": "Thời gian crossfade",
+  "crossfadeCurve": "Đường cong crossfade",
+  "normalizationLevel": "Mức normalization",
+  "eqBass": "Bass",
+  "visualizerEnabled": "Bật trực quan hóa",
+  "visualizerShape": "Kiểu trực quan hóa",
+  "sensitivity": "Độ nhạy",
+  "lyricsFontSize": "Cỡ chữ lời bài hát",
+  "showLyricsInMiniPlayer": "Hiện lời bài hát trong mini player",
+  "autoFetchLyrics": "Tự động tải lời bài hát",
+  "minimizeToTray": "Thu nhỏ vào khay hệ thống",
+  "autoHidePlayerBar": "Tự động ẩn thanh phát nhạc",
+  "language": "Ngôn ngữ",
+  "customHotkeys": "Phím tắt tùy chỉnh",
+  "mediaKeyEnabled": "Phím đa phương tiện",
+  "sleepTimerDuration": "Thời lượng hẹn giờ",
+  "sleepTimerFadeOut": "Giảm dần khi hết giờ",
+  "stopAtEndOfSong": "Dừng ở cuối bài hát",
+  "reverbRoomSize": "Kích thước phòng reverb",
+  "compressorThreshold": "Ngưỡng compressor",
+  "compressorAttack": "Attack compressor",
+  "compressorRelease": "Release compressor",
+  "compressorKneeWidth": "Độ rộng knee compressor",
+  "compressorMakeupGain": "Makeup gain compressor",
+  "reverbDamp": "Độ giảm âm reverb",
+  "soundFeedbackEnabled": "Phản hồi âm thanh",
+  "hapticFeedbackEnabled": "Phản hồi rung",
+  "manageHotkeys": "Quản lý phím tắt",
+  "searchSettings": "Tìm kiếm cài đặt...",
+  "noSettingsFound": "Không tìm thấy cài đặt",
+  "pressCtrlKToSearch": "Nhấn Ctrl+K để tìm kiếm cài đặt",
+  "enabled": "Bật",
+  "disabled": "Tắt",
+  "off": "Tắt",
+  "minutes": "phút",
+  "seconds": "giây",
+  "endOfSong": "Cuối bài hát",
+  "set": "Đã đặt",
+  "notSet": "Chưa đặt",
+  "none": "Không có",
+  "light": "Sáng",
+  "dark": "Tối",
+  "system": "Hệ thống",
+  "linear": "Tuyến tính",
+  "exponential": "Lũy thừa",
+  "sCurve": "Chữ S",
+  "visualizerShapeCircle": "Vòng tròn",
+  "visualizerShapeBars": "Cột",
+  "visualizerShapeWave": "Sóng",
+  "visualizerShapeTunnel": "Đường hầm",
+  "visualizerShapeStarfield": "Bầu trời sao",
+  "visualizerShapeOscilloscope": "Máy hiện sóng",
+  "visualizerShapeRadial": "Tia sáng",
+
+  "emptyLibraryTitle": "Thư viện của bạn đang trống",
+  "emptyLibraryMessage": "Nhập nhạc từ máy, quét nhạc hoặc tạo playlist để bắt đầu.",
+  "importMusic": "Nhập nhạc",
+  "scanForMusic": "Quét nhạc",
+  "addSongs": "Thêm bài hát",
+  "importPlaylist": "Nhập playlist",
+  "emptyPlaylistTitle": "Playlist này đang trống",
+  "emptyPlaylistMessage": "Chưa có bài hát nào trong {playlistName}. Thêm bài hát để bắt đầu.",
+  "@emptyPlaylistMessage": {
+    "placeholders": {
+      "playlistName": {
+        "type": "String"
+      }
+    }
+  },
+  "noResultsTitle": "Không tìm thấy kết quả",
+  "noResultsMessage": "Không tìm thấy kết quả cho \"{query}\"",
+  "@noResultsMessage": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearSearch": "Xóa tìm kiếm",
+  "errorLoadingTitle": "Đã xảy ra lỗi",
+  "noInternetTitle": "Mất kết nối Internet",
+  "noInternetMessage": "Kiểm tra kết nối và thử lại.",
+  "openNetworkSettings": "Mở cài đặt mạng",
+  "featureComingSoon": "Tính năng này sắp ra mắt",
+  "scanComplete": "Quét hoàn tất",
+  "songsFound": "bài hát được tìm thấy",
+  "languageVietnamese": "Tiếng Việt",
+  "languageEnglish": "English"
 }
