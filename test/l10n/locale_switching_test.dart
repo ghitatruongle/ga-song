@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('AppLocalizationsDelegate', () {
-    const delegate = AppLocalizationsDelegate();
+    const delegate = AppLocalizations.delegate;
 
     test('supports vi and en only', () {
       expect(delegate.isSupported(const Locale('vi')), isTrue);
@@ -29,7 +29,7 @@ void main() {
         locale: locale,
         supportedLocales: const [Locale('vi'), Locale('en')],
         localizationsDelegates: const [
-          AppLocalizationsDelegate(),
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
@@ -48,10 +48,10 @@ void main() {
     ) async {
       late AppLocalizations l10n;
       await tester.pumpWidget(
-        buildApp(const Locale('en'), (c) => l10n = AppLocalizations.of(c)),
+        buildApp(const Locale('en'), (c) => l10n = AppLocalizations.of(c)!),
       );
       await tester.pumpAndSettle();
-      expect(l10n.locale.languageCode, 'en');
+      expect(l10n.localeName, 'en');
       expect(l10n.home, 'Home');
     });
 
@@ -60,10 +60,10 @@ void main() {
     ) async {
       late AppLocalizations l10n;
       await tester.pumpWidget(
-        buildApp(const Locale('vi'), (c) => l10n = AppLocalizations.of(c)),
+        buildApp(const Locale('vi'), (c) => l10n = AppLocalizations.of(c)!),
       );
       await tester.pumpAndSettle();
-      expect(l10n.locale.languageCode, 'vi');
+      expect(l10n.localeName, 'vi');
       expect(l10n.home, 'Trang chủ');
     });
   });

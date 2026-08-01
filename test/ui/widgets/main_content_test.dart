@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
 import 'package:ga_song/core/cover_art_repository.dart';
 import 'package:ga_song/core/settings_manager.dart';
+import 'package:ga_song/l10n/app_localizations.dart';
 import 'package:ga_song/models/song.dart';
 import 'package:ga_song/providers/service_providers.dart';
 import 'package:ga_song/ui/widgets/main_content.dart';
@@ -59,6 +61,14 @@ void main() {
           coverArtRepositoryProvider.overrideWithValue(coverRepo),
         ],
         child: MaterialApp(
+          locale: const Locale('vi'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('vi'), Locale('en')],
           home: Scaffold(
             body: MainContentWidget(
               isLoading: isLoading,

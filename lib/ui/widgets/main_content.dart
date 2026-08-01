@@ -43,6 +43,11 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   // #6: TextEditingController so the "X" clear button actually clears the UI.
   late final TextEditingController _searchController;
   Timer? _debounceTimer;
+  
+  // Viewport-aware precache
+  final ScrollController _scrollController = ScrollController();
+  Timer? _precacheTimer;
+  final Set<int> _precachedIndices = {};
 
   // P-8 fix + Phase 2.3: Cached playback state, kept in sync via ref.listen
   // on [currentPlayingIndexProvider] and [engineStateProvider].
@@ -61,8 +66,57 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.searchQuery);
+    _scrollController.addListener(_onScrollForPrecache);
     // P-8 fix: Riverpod subscriptions replace direct addListener calls so
     // disposal is automatic on widget unmount.
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _precacheTimer?.cancel();
+    _scrollController.removeListener(_onScrollForPrecache);
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScrollForPrecache() {
+    // Debounce precache to avoid excessive calls during fast scroll
+    _precacheTimer?.cancel();
+    _precacheTimer = Timer(const Duration(milliseconds: 200), _precacheVisibleItems);
+  }
+
+  void _precacheVisibleItems() {
+    if (!mounted) return;
+    
+    final coverArtRepo = ref.read(coverArtRepositoryProvider);
+    final songs = widget.filteredSongs;
+    
+    // Calculate visible range based on scroll position
+    final itemExtent = 86.0;
+    final viewportHeight = _scrollController.position.viewportDimension;
+    final scrollOffset = _scrollController.offset;
+    
+    final firstVisible = (scrollOffset / itemExtent).floor().clamp(0, songs.length - 1);
+    final lastVisible = ((scrollOffset + viewportHeight) / itemExtent).ceil().clamp(0, songs.length - 1);
+    
+    // Precache slightly beyond visible range for smooth scrolling
+    final precacheStart = (firstVisible - 3).clamp(0, songs.length - 1);
+    final precacheEnd = (lastVisible + 3).clamp(0, songs.length - 1);
+    
+    for (int i = precacheStart; i <= precacheEnd; i++) {
+      if (!_precachedIndices.contains(i)) {
+        _precachedIndices.add(i);
+        final song = songs[i];
+        // Precache cover art at typical display sizes
+        coverArtRepo.getCachedProvider(song.fileName, cacheWidth: 72, cacheHeight: 72);
+        // Also preload next few songs
+        if (i < songs.length - 1) {
+          coverArtRepo.getCachedProvider(songs[i + 1].fileName, cacheWidth: 72, cacheHeight: 72);
+        }
+      }
+    }
   }
 
   @override
@@ -73,13 +127,6 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
         _searchController.text != widget.searchQuery) {
       _searchController.text = widget.searchQuery;
     }
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
@@ -276,6 +323,7 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
           if (isGrid) {
             return RepaintBoundary(
               child: GridView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
                 scrollCacheExtent: const ScrollCacheExtent.pixels(500),
                 addAutomaticKeepAlives: false,
@@ -300,6 +348,7 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
 
           return RepaintBoundary(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
               itemExtent: 86.0,
               scrollCacheExtent: const ScrollCacheExtent.pixels(500),

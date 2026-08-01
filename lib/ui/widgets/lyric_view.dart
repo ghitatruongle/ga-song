@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/lyric_provider.dart';
+import '../../providers/lyrics_editor_provider.dart';
+import '../../core/audio/lyric_parser.dart';
 import '../../core/motion/app_motion.dart';
 import '../utils/animation_utils.dart';
+import '../screens/lyrics_editor_screen.dart';
 
 /// Enhanced lyric view with karaoke-style effects.
 ///
@@ -13,6 +16,7 @@ import '../utils/animation_utils.dart';
 /// - Smooth scroll to current line
 /// - Tap to seek
 /// - Full-screen mode for KTV
+/// - Per-syllable karaoke highlighting (when enhanced LRC available)
 class LyricView extends ConsumerStatefulWidget {
   final bool isFullScreen;
   const LyricView({super.key, this.isFullScreen = false});
@@ -79,6 +83,8 @@ class _LyricViewState extends ConsumerState<LyricView> {
     final lyrics = ref.watch(lyricProvider);
     final accentColor = Theme.of(context).colorScheme.primary;
     final lyricScale = ref.watch(settingsNotifierProvider).lyricFontSize;
+    final currentPosition = ref.watch(positionProvider);
+
     // Phase 2.3: ref.listen for reactive position updates; auto-cleaned on
     // widget dispose (vs. manual addListener/removeListener).
     ref.listen<Duration>(positionProvider, (_, next) {
@@ -108,99 +114,241 @@ class _LyricViewState extends ConsumerState<LyricView> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.symmetric(
-        vertical: MediaQuery.of(context).size.height / 2.5,
-        horizontal: 24,
-      ),
-      itemCount: lyrics.length,
-      itemBuilder: (context, index) {
-        final line = lyrics[index];
-        final isActive = index == _currentIndex;
-        final isPast = index < _currentIndex;
-        final distance = (index - _currentIndex).abs();
-
-        // Calculate opacity based on distance from current line
-        double opacity;
-        if (isActive) {
-          opacity = 1.0;
-        } else if (isPast) {
-          opacity = (0.4 - (distance * 0.08)).clamp(0.1, 0.4);
-        } else {
-          opacity = (0.5 - (distance * 0.08)).clamp(0.15, 0.5);
-        }
-
-        return GestureDetector(
-          onTap: () {
-            ref.read(audioEngineServiceProvider).seek(line.startTime);
-          },
-          child: AnimatedSwitcher(
-            duration: animationsEnabled(context)
-                ? AppDurations.medium
-                : Duration.zero,
-            switchInCurve: AppCurves.decelerate,
-            switchOutCurve: AppCurves.accelerate,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-            child: Container(
-              key: ValueKey(line.startTime),
-              height: widget.isFullScreen ? 70.0 : 48.0,
-              alignment: Alignment.center,
-              child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              style: TextStyle(
-                color: isActive
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: opacity),
-                fontSize:
-                    (widget.isFullScreen
-                        ? (isActive ? 40 : 26)
-                        : (isActive ? 24 : 17)) *
-                    lyricScale,
-                fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
-                letterSpacing: isActive ? 0.5 : 0,
-                height: 1.4,
-                shadows: isActive && widget.isFullScreen
-                    ? [
-                        Shadow(
-                          color: accentColor.withValues(alpha: 0.5),
-                          blurRadius: 16,
-                        ),
-                        const Shadow(
-                          color: Colors.black54,
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ]
-                    : isActive
-                    ? [const Shadow(color: Colors.black38, blurRadius: 4)]
-                    : null,
-              ),
-              child: ShaderMask(
-                shaderCallback: (bounds) {
-                  if (!isActive) {
-                    return const LinearGradient(
-                      colors: [Colors.white, Colors.white],
-                    ).createShader(bounds);
-                  }
-                  // Gradient effect on active line
-                  return LinearGradient(
-                    colors: [accentColor, Colors.white],
-                    stops: const [0.0, 0.6],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.srcIn,
-                child: Text(line.text, textAlign: TextAlign.center),
-              ),
-            ),
+    return Stack(
+      children: [
+        ListView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.symmetric(
+            vertical: MediaQuery.of(context).size.height / 2.5,
+            horizontal: 24,
           ),
+          itemCount: lyrics.length,
+          itemBuilder: (context, index) {
+            final line = lyrics[index];
+            final isActive = index == _currentIndex;
+            final isPast = index < _currentIndex;
+            final distance = (index - _currentIndex).abs();
+
+            // Calculate opacity based on distance from current line
+            double opacity;
+            if (isActive) {
+              opacity = 1.0;
+            } else if (isPast) {
+              opacity = (0.4 - (distance * 0.08)).clamp(0.1, 0.4);
+            } else {
+              opacity = (0.5 - (distance * 0.08)).clamp(0.15, 0.5);
+            }
+
+            return RepaintBoundary(
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(audioEngineServiceProvider).seek(line.startTime);
+                },
+                child: AnimatedSwitcher(
+                  duration: animationsEnabled(context)
+                      ? AppDurations.medium
+                      : Duration.zero,
+                  switchInCurve: AppCurves.decelerate,
+                  switchOutCurve: AppCurves.accelerate,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: Container(
+                    key: ValueKey(line.startTime),
+                    height: widget.isFullScreen ? 70.0 : 48.0,
+                    alignment: Alignment.center,
+                    child: _buildLyricLine(line, isActive, opacity, accentColor, lyricScale, currentPosition),
+                  ),
+                ),
+              ),
+            );
+        },
+      ),
+      ],
+    );
+  }
+
+  Widget _buildLyricLine(
+    LyricLine line,
+    bool isActive,
+    double opacity,
+    Color accentColor,
+    double lyricScale,
+    Duration currentPosition,
+  ) {
+    // If line has syllable-level timing, render karaoke style
+    if (line.hasSyllables) {
+      return _buildKaraokeLine(line, isActive, accentColor, lyricScale, currentPosition);
+    }
+    
+    // Standard line rendering
+    return _buildStandardLine(line, isActive, opacity, accentColor, lyricScale);
+  }
+
+  Widget _buildStandardLine(
+    LyricLine line,
+    bool isActive,
+    double opacity,
+    Color accentColor,
+    double lyricScale,
+  ) {
+    return AnimatedDefaultTextStyle(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      style: TextStyle(
+        color: isActive
+            ? Colors.white
+            : Colors.white.withValues(alpha: opacity),
+        fontSize:
+            (widget.isFullScreen
+                ? (isActive ? 40 : 26)
+                : (isActive ? 24 : 17)) *
+            lyricScale,
+        fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+        letterSpacing: isActive ? 0.5 : 0,
+        height: 1.4,
+        shadows: isActive && widget.isFullScreen
+            ? [
+                Shadow(
+                  color: accentColor.withValues(alpha: 0.5),
+                  blurRadius: 16,
+                ),
+                const Shadow(
+                  color: Colors.black54,
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ]
+            : isActive
+            ? [const Shadow(color: Colors.black38, blurRadius: 4)]
+            : null,
+      ),
+      child: ShaderMask(
+        shaderCallback: (bounds) {
+          if (!isActive) {
+            return const LinearGradient(
+              colors: [Colors.white, Colors.white],
+            ).createShader(bounds);
+          }
+          // Gradient effect on active line
+          return LinearGradient(
+            colors: [accentColor, Colors.white],
+            stops: const [0.0, 0.6],
+          ).createShader(bounds);
+        },
+        blendMode: BlendMode.srcIn,
+        child: Text(line.text, textAlign: TextAlign.center),
+      ),
+    );
+  }
+
+  Widget _buildKaraokeLine(
+    LyricLine line,
+    bool isActive,
+    Color accentColor,
+    double lyricScale,
+    Duration currentPosition,
+  ) {
+    final syllables = line.syllables!;
+    final syllableIndex = line.getSyllableIndexAt(currentPosition);
+    final baseFontSize = widget.isFullScreen ? (isActive ? 40 : 26) : (isActive ? 24 : 17);
+    final fontSize = baseFontSize * lyricScale;
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: syllables.asMap().entries.map((entry) {
+        final i = entry.key;
+        final syllable = entry.value;
+        final isCurrentSyllable = i == syllableIndex;
+        final isPastSyllable = i < syllableIndex;
+        final progress = isCurrentSyllable ? syllable.progressAt(currentPosition) : (isPastSyllable ? 1.0 : 0.0);
+
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            if (isPastSyllable) {
+              // Past syllables: solid accent color
+              return LinearGradient(
+                colors: [accentColor, accentColor],
+              ).createShader(bounds);
+            } else if (isCurrentSyllable) {
+              // Current syllable: gradient based on progress
+              return LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.3),
+                  accentColor,
+                  Colors.white,
+                ],
+                stops: [0.0, progress, 1.0],
+              ).createShader(bounds);
+            } else {
+              // Future syllables: dimmed
+              return LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.3),
+                  Colors.white.withValues(alpha: 0.3),
+                ],
+              ).createShader(bounds);
+            }
+          },
+          blendMode: BlendMode.srcIn,
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 50),
+            curve: Curves.easeOut,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isCurrentSyllable ? FontWeight.w800 : FontWeight.w500,
+              letterSpacing: isCurrentSyllable ? 0.5 : 0,
+              height: 1.4,
+              shadows: isActive && widget.isFullScreen
+                  ? [
+                      Shadow(
+                        color: accentColor.withValues(alpha: 0.5),
+                        blurRadius: 16,
+                      ),
+                      const Shadow(
+                        color: Colors.black54,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                  : isCurrentSyllable
+                  ? [const Shadow(color: Colors.black38, blurRadius: 4)]
+                  : null,
+            ),
+            child: Text(syllable.text, textAlign: TextAlign.center),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _openLyricsEditor() {
+    final song = ref.read(playlistServiceProvider).currentSong;
+    if (song == null) return;
+
+    // Get current lyrics
+    final lyrics = ref.read(lyricProvider);
+    String? plainLyrics;
+    String? syncedLyrics;
+
+    if (lyrics.isNotEmpty) {
+      syncedLyrics = lyrics.map((l) => l.text).join('\n');
+      // Also try to get from provider
+      final editorState = ref.read(lyricsEditorProvider);
+      plainLyrics = editorState.plainLyrics.isNotEmpty ? editorState.plainLyrics : null;
+      syncedLyrics = editorState.syncedLyrics.isNotEmpty ? editorState.syncedLyrics : syncedLyrics;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => LyricsEditorScreen(
+          song: ref.read(playlistServiceProvider).currentSong,
+          initialPlainLyrics: plainLyrics,
+          initialSyncedLyrics: syncedLyrics,
         ),
-      );
-    },
+      ),
     );
   }
 }

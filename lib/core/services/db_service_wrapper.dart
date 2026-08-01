@@ -155,6 +155,18 @@ class DatabaseServiceWrapper {
     return entries.map((e) => e.toSong()).toList();
   }
 
+  /// Gets a single song by ID.
+  Future<Song?> getSong(int id) async {
+    final entry = await _db.getSongById(id);
+    return entry?.toSong();
+  }
+
+  /// Searches songs by name or artist.
+  Future<List<Song>> searchSongs(String query) async {
+    final entries = await _db.searchSongs(query);
+    return entries.map((e) => e.toSong()).toList();
+  }
+
   Future<Result<List<Song>>> querySongs() async {
     try {
       final songs = await getAllSongs();

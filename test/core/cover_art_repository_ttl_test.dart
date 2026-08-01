@@ -47,6 +47,7 @@ CoverArtEntry _entryWith({
     imagePath: imagePath,
     exists: exists,
     isAsset: isAsset,
+    tier: CoverArtCacheTier.memory,
     capturedAt: capturedAt,
   );
 }

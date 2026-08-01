@@ -5,14 +5,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:  # Manual trigger
 
 env:
   FLUTTER_VERSION: '3.32.0'
-  # Regression ratchet: measured baseline is ~25% overall (~27% excluding
-  # generated *.g.dart/*.freezed.dart) as of v0.6.0. Keep the floor slightly
-  # below baseline so the warning only fires on real coverage regressions;
-  # raise it as coverage grows.
-  COVERAGE_MIN_PERCENT: '20'
+  # Coverage thresholds - will be enforced (not just warning)
+  COVERAGE_MIN_LINES: '80'
+  COVERAGE_MIN_BRANCHES: '70'
+  COVERAGE_MIN_WIDGET: '60'
 
 jobs:
   format:
@@ -39,10 +39,13 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
       - run: flutter pub get
-      # Phase 6: treat warnings as errors so regressions fail CI; infos stay
-      # warnings to avoid blocking on pre-existing info-level findings.
-      - name: flutter analyze
-        run: flutter analyze --fatal-warnings
+      - name: flutter analyze (strict)
+        run: flutter analyze --fatal-warnings --fatal-infos
+      - name: dart_code_metrics
+        run: |
+          dart pub global activate dart_code_metrics
+          dart run dart_code_metrics:metrics lib/
+        continue-on-error: false
 
   test:
     name: Unit + Widget Tests
@@ -54,6 +57,7 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
+          cache: true
       - run: flutter pub get
       # Generate coverage report.
       - name: Run tests with coverage
@@ -65,17 +69,32 @@ jobs:
             sudo apt-get install -y lcov
             genhtml coverage/lcov.info -o coverage/html --quiet
           fi
-      - name: Compute coverage % (lib/core)
+      - name: Compute coverage % (enforced thresholds)
         id: coverage
         run: |
           if [ -f coverage/lcov.info ]; then
-            PCT=$(lcov --summary coverage/lcov.info 2>/dev/null | grep -oP 'lines.*:\K[0-9.]+' | head -1)
-            echo "coverage_pct=$PCT" >> $GITHUB_OUTPUT
-            echo "lib/core coverage: $PCT%"
-            # Floor at COVERAGE_MIN_PERCENT — does not fail, only annotates.
-            if awk "BEGIN {exit !($PCT < $COVERAGE_MIN_PERCENT)}"; then
-              echo "::warning::lib/core coverage $PCT% is below target $COVERAGE_MIN_PERCENT%"
+            # Lines coverage
+            LINES_PCT=$(lcov --summary coverage/lcov.info 2>/dev/null | grep -oP 'lines.*:\K[0-9.]+' | head -1)
+            echo "lines_pct=$LINES_PCT" >> $GITHUB_OUTPUT
+            echo "Lines coverage: $LINES_PCT%"
+            
+            # Branches coverage (requires lcov 1.14+)
+            BRANCHES_PCT=$(lcov --summary coverage/lcov.info 2>/dev/null | grep -oP 'branches.*:\K[0-9.]+' | head -1)
+            echo "branches_pct=$BRANCHES_PCT" >> $GITHUB_OUTPUT
+            echo "Branches coverage: $BRANCHES_PCT%"
+            
+            # Fail if below thresholds
+            if awk "BEGIN {exit !($LINES_PCT < $COVERAGE_MIN_LINES)}"; then
+              echo "::error::Lines coverage $LINES_PCT% is below required $COVERAGE_MIN_LINES%"
+              exit 1
             fi
+            if awk "BEGIN {exit !($BRANCHES_PCT < $COVERAGE_MIN_BRANCHES)}"; then
+              echo "::error::Branches coverage $BRANCHES_PCT% is below required $COVERAGE_MIN_BRANCHES%"
+              exit 1
+            fi
+          else
+            echo "::error::No coverage data found"
+            exit 1
           fi
       - name: Upload coverage artifact
         if: always()
@@ -84,9 +103,9 @@ jobs:
           name: coverage-report
           path: coverage/
 
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
     needs: test
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +113,97 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
+          cache: true
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev
+      - run: flutter pub get
+      - name: Run integration tests (Linux desktop)
+        run: |
+          xvfb-run -a flutter test integration_test/app_test.dart -d linux
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: integration_test/
+
+  golden-test:
+    name: Golden Tests (Visual Regression)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev
+      - run: flutter pub get
+      - name: Run golden tests
+        run: |
+          xvfb-run -a flutter test --update-goldens || true
+      - name: Check for golden diffs
+        run: |
+          if git diff --quiet; then
+            echo "No golden file changes"
+          else
+            echo "::error::Golden test differences detected"
+            git diff
+            exit 1
+          fi
+      - name: Upload golden test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-test-diffs
+          path: test/goldens/
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev
+      - run: flutter pub get
+      - name: Run startup benchmark
+        run: |
+          xvfb-run -a dart run benchmark/startup_benchmark.dart
+      - name: Run frame time benchmark
+        run: |
+          xvfb-run -a dart run benchmark/frame_benchmark.dart
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark/results/
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: [test, integration-test, golden-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
       - run: flutter pub get
       - name: Build Windows
         run: flutter build windows --release
@@ -106,7 +216,7 @@ jobs:
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, integration-test, golden-test]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -117,6 +227,7 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
+          cache: true
       - run: flutter pub get
 
       - name: Build APK (universal + split per ABI)
@@ -124,8 +235,7 @@ jobs:
       - name: Build AAB (Play Store)
         run: flutter build appbundle --release
 
-      # Phase 6: APK size budget — note that built-in MP3 assets dominate size.
-      # App code + native libs target: ≤20MB; built-in songs are excluded from this target.
+      # APK size budget
       - name: Analyze APK sizes
         run: |
           APK_DIR="build/app/outputs/flutter-apk"
@@ -169,7 +279,7 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, integration-test, golden-test]
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux dependencies
@@ -180,6 +290,7 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
+          cache: true
       - run: flutter pub get
       - name: Build Linux
         run: flutter build linux --release
@@ -188,3 +299,23 @@ jobs:
         with:
           name: linux-build
           path: build/linux/x64/release/bundle/
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: [test, integration-test, golden-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build macOS
+        run: flutter build macos --release
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: build/macos/Build/Products/Release/

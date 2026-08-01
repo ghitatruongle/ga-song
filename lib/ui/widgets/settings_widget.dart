@@ -101,7 +101,7 @@ class SettingsWidget extends ConsumerWidget {
                   child: ValueListenableBuilder<Locale>(
                     valueListenable: settings.localeNotifier,
                     builder: (context, currentLocale, _) {
-                      final l10n = AppLocalizations.of(context);
+                      final l10n = AppLocalizations.of(context)!;
                       return ListTile(
                         leading: Icon(Icons.language, color: textColor),
                         title: Text(

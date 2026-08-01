@@ -10,9 +10,11 @@ import '../../core/theme_utils.dart';
 import '../../core/utils/time_utils.dart';
 import '../../models/song.dart';
 import '../../providers/lyric_provider.dart';
+import '../../core/audio/lyric_parser.dart';
 import '../../providers/service_providers.dart';
-import '../widgets/cover_art_image.dart';
 import '../utils/haptic_helper.dart';
+import '../widgets/cover_art_image.dart';
+import '../widgets/queue_management.dart';
 
 /// Whether the current platform is desktop (Windows/macOS/Linux).
 bool get _isDesktopPlatform =>
@@ -73,6 +75,25 @@ Future<void> _restoreFromMiniPlayer(
   await windowManager.setAlwaysOnTop(false);
 }
 
+/// Dismisses the mini player (closes it without restoring).
+Future<void> _dismissMiniPlayer(
+  BuildContext context,
+  SettingsManager settings,
+) async {
+  settings.setIsMiniPlayer(false);
+  await windowManager.hide();
+}
+
+/// Shows the queue management sheet.
+void _showQueueSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const QueueManagementSheet(),
+  );
+}
+
 class _DesktopMiniPlayer extends ConsumerWidget {
   const _DesktopMiniPlayer();
 
@@ -129,7 +150,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
             ),
           ),
 
-          // Drag Window Area (desktop only)
+          // Drag Area - handles both horizontal (next/prev) and vertical (expand/dismiss) swipes
           Positioned.fill(
             child: GestureDetector(
               onHorizontalDragEnd: (details) {
@@ -138,6 +159,16 @@ class _DesktopMiniPlayer extends ConsumerWidget {
                   ref.read(playlistServiceProvider).next();
                 } else if (details.primaryVelocity! > 300) {
                   ref.read(playlistServiceProvider).previous();
+                }
+              },
+              onVerticalDragEnd: (details) {
+                if (details.primaryVelocity == null) return;
+                if (details.primaryVelocity! < -500) {
+                  // Swipe up → expand to full player
+                  _restoreFromMiniPlayer(context, settings);
+                } else if (details.primaryVelocity! > 500) {
+                  // Swipe down → dismiss/hide mini player
+                  _dismissMiniPlayer(context, settings);
                 }
               },
               child: const DragToMoveArea(child: SizedBox.expand()),
@@ -269,11 +300,20 @@ class _DesktopMiniPlayer extends ConsumerWidget {
                           },
                         ),
                         IconButton(
+                          icon: const Icon(Icons.queue_music_rounded, size: 22),
+                          color: textColor,
+                          onPressed: () {
+                            safeHaptic(HapticType.light);
+                            _showQueueSheet(context);
+                          },
+                          tooltip: 'Hàng đợi phát',
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.close_rounded, size: 20),
                           color: textColor.withValues(alpha: 0.6),
                           tooltip: 'Đóng mini player',
                           onPressed: () =>
-                              _restoreFromMiniPlayer(context, settings),
+                              _dismissMiniPlayer(context, settings),
                         ),
                         const SizedBox(width: 4),
                         IconButton(
@@ -309,6 +349,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final playlist = ref.read(playlistServiceProvider);
+    final settings = ref.read(settingsManagerProvider);
     final song = playlist.currentSong;
 
     return Scaffold(
@@ -345,7 +386,10 @@ class _MobileMiniPlayer extends ConsumerWidget {
             ),
           ),
 
-          // Content
+          // Content with swipe gestures:
+          // - Horizontal: next/prev track
+          // - Vertical up: expand to full now playing screen
+          // - Vertical down: dismiss mini player
           SafeArea(
             child: GestureDetector(
               onHorizontalDragEnd: (details) {
@@ -354,6 +398,16 @@ class _MobileMiniPlayer extends ConsumerWidget {
                   ref.read(playlistServiceProvider).next();
                 } else if (details.primaryVelocity! > 300) {
                   ref.read(playlistServiceProvider).previous();
+                }
+              },
+              onVerticalDragEnd: (details) {
+                if (details.primaryVelocity == null) return;
+                if (details.primaryVelocity! < -500) {
+                  // Swipe up → expand to full now playing screen
+                  settings.setIsMiniPlayer(false);
+                } else if (details.primaryVelocity! > 500) {
+                  // Swipe down → dismiss mini player
+                  settings.setIsMiniPlayer(false);
                 }
               },
               child: song == null
@@ -671,6 +725,17 @@ class _PipCompactPlayer extends ConsumerWidget {
                   ref.read(playlistServiceProvider).previous();
                 }
               },
+              onVerticalDragEnd: (details) {
+                if (details.primaryVelocity == null) return;
+                if (details.primaryVelocity! < -500) {
+                  // Swipe up → expand to full now playing screen
+                  // In PiP mode, we just close PiP
+                  ref.read(pipServiceProvider).isInPipNotifier.value = false;
+                } else if (details.primaryVelocity! > 500) {
+                  // Swipe down → close PiP
+                  ref.read(pipServiceProvider).isInPipNotifier.value = false;
+                }
+              },
               onTap: () {
                 final playing =
                     ref.read(engineStateProvider) == AudioEngineState.playing;
@@ -724,56 +789,48 @@ class _PipCompactPlayer extends ConsumerWidget {
 }
 
 /// Compact lyric line for the desktop mini player.
-/// Uses the shared LyricProvider via Riverpod to show the current line.
-class _MiniPlayerLyricLine extends ConsumerStatefulWidget {
+/// Uses the shared LyricProvider via Riverpod to show the current line with karaoke highlighting.
+class _MiniPlayerLyricLine extends ConsumerWidget {
   final Song? song;
   const _MiniPlayerLyricLine({required this.song});
 
   @override
-  ConsumerState<_MiniPlayerLyricLine> createState() =>
-      _MiniPlayerLyricLineState();
-}
-
-class _MiniPlayerLyricLineState extends ConsumerState<_MiniPlayerLyricLine> {
-  final ScrollController _scrollController = ScrollController();
-  String _currentLine = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final song = widget.song;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final song = this.song;
     if (song == null) return const SizedBox.shrink();
 
-    // Watch the current lyric line provider
-    final line = ref.watch(currentLyricLineProvider);
+    final lyrics = ref.watch(lyricProvider);
+    final currentPosition = ref.watch(positionProvider);
+    final currentSyllableIndex = ref.watch(currentSyllableIndexProvider);
+    final textColor = context.adaptive;
 
-    // Auto-scroll horizontally when line changes
-    if (line != _currentLine) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // P4 BUG-3: state may have been disposed before the next frame
-        // fires (e.g. mini-player closed mid-lyric-change). Guard so we
-        // don't touch the ScrollController of a defunct widget.
-        if (!mounted) return;
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-      _currentLine = line;
+    if (lyrics.isEmpty) return const SizedBox.shrink();
+
+    // Find the current lyric line
+    LyricLine? currentLine;
+    for (int i = lyrics.length - 1; i >= 0; i--) {
+      if (lyrics[i].startTime <= currentPosition) {
+        currentLine = lyrics[i];
+        break;
+      }
     }
 
-    if (line.isEmpty) return const SizedBox.shrink();
+    if (currentLine == null || currentLine.text.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-    final textColor = context.adaptive;
+    // If line has syllables, show karaoke style
+    if (currentLine.hasSyllables) {
+      return _buildKaraokeLine(currentLine, currentSyllableIndex, textColor, context);
+    }
+
+    // Standard line
     return SizedBox(
       height: 18,
       child: SingleChildScrollView(
-        controller: _scrollController,
         scrollDirection: Axis.horizontal,
         child: Text(
-          line,
+          currentLine.text,
           style: TextStyle(
             color: textColor.withValues(alpha: 0.8),
             fontSize: 11,
@@ -785,9 +842,72 @@ class _MiniPlayerLyricLineState extends ConsumerState<_MiniPlayerLyricLine> {
     );
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+  Widget _buildKaraokeLine(
+    LyricLine line,
+    int currentSyllableIndex,
+    Color textColor,
+    BuildContext context,
+  ) {
+    final syllables = line.syllables!;
+    final baseFontSize = 11.0;
+
+    return SizedBox(
+      height: 18,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: syllables.asMap().entries.map((entry) {
+            final i = entry.key;
+            final syllable = entry.value;
+            final isCurrentSyllable = i == currentSyllableIndex;
+            final isPastSyllable = i < currentSyllableIndex;
+
+            return ShaderMask(
+              shaderCallback: (bounds) {
+                if (isPastSyllable) {
+                  // Past syllables: solid accent color
+                  return LinearGradient(
+                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary],
+                  ).createShader(bounds);
+                } else if (isCurrentSyllable) {
+                  // Current syllable: gradient from dim to accent to white
+                  return LinearGradient(
+                    colors: [
+                      textColor.withValues(alpha: 0.3),
+                      Theme.of(context).colorScheme.primary,
+                      textColor,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ).createShader(bounds);
+                } else {
+                  // Future syllables: dimmed
+                  return LinearGradient(
+                    colors: [
+                      textColor.withValues(alpha: 0.3),
+                      textColor.withValues(alpha: 0.3),
+                    ],
+                  ).createShader(bounds);
+                }
+              },
+              blendMode: BlendMode.srcIn,
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 50),
+                curve: Curves.easeOut,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isCurrentSyllable ? FontWeight.w800 : FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                  letterSpacing: isCurrentSyllable ? 0.5 : 0,
+                  height: 1.4,
+                ),
+                child: Text(syllable.text),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 }

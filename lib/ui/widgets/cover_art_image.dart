@@ -86,6 +86,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
           imagePath: '',
           exists: false,
           isAsset: false,
+          tier: CoverArtCacheTier.memory,
         );
       });
     }
@@ -104,19 +105,21 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
       return widget.fallbackBuilder(context);
     }
 
-    return Image(
-      image: provider,
-      fit: widget.fit,
-      filterQuality: widget.filterQuality,
-      gaplessPlayback: true,
-      errorBuilder: (context, error, stackTrace) {
-        AppLogger.w(
-          'ui.cover_art_image',
-          'rendering failed for ${widget.song.fileName}',
-          error: error,
-        );
-        return widget.fallbackBuilder(context);
-      },
+    return RepaintBoundary(
+      child: Image(
+        image: provider,
+        fit: widget.fit,
+        filterQuality: widget.filterQuality,
+        gaplessPlayback: true,
+        errorBuilder: (context, error, stackTrace) {
+          AppLogger.w(
+            'ui.cover_art_image',
+            'rendering failed for ${widget.song.fileName}',
+            error: error,
+          );
+          return widget.fallbackBuilder(context);
+        },
+      ),
     );
   }
 }

@@ -278,3 +278,106 @@ final currentLyricLineProvider =
     NotifierProvider<CurrentLyricLineNotifier, String>(
       CurrentLyricLineNotifier.new,
     );
+
+/// Provider for the current syllable index in the active lyric line.
+/// Returns -1 if no syllable-level timing or no lyrics.
+class CurrentSyllableIndexNotifier extends Notifier<int> {
+  Timer? _pollTimer;
+  List<LyricLine> _lines = [];
+  bool _isPlaying = false;
+
+  @override
+  int build() {
+    // Listen to lyric changes
+    ref.listen<List<LyricLine>>(lyricProvider, (_, next) {
+      _lines = next;
+      _syncTimer();
+      _updateCurrentSyllable();
+    });
+
+    // Listen to engine state to pause/resume timer
+    ref.listen<AudioEngineState>(engineStateProvider, (_, next) {
+      _isPlaying = next == AudioEngineState.playing;
+      _syncTimer();
+    });
+
+    // Listen to position changes for real-time updates
+    ref.listen<Duration>(positionProvider, (_, _) => _onPositionChanged());
+
+    _lines = ref.read(lyricProvider);
+    _isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
+    _syncTimer();
+    _updateCurrentSyllable();
+
+    // Clean up timer when this provider is disposed
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    });
+
+    return -1;
+  }
+
+  void _onPositionChanged() {
+    _updateCurrentSyllable();
+  }
+
+  /// Starts the poll timer only when needed, stops it otherwise.
+  void _syncTimer() {
+    if (_lines.isNotEmpty && _isPlaying) {
+      if (_pollTimer == null || !_pollTimer!.isActive) {
+        _pollTimer?.cancel();
+        _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+          _updateCurrentSyllable();
+        });
+      }
+    } else {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
+  }
+
+  void _updateCurrentSyllable() {
+    if (_lines.isEmpty) {
+      if (state != -1) state = -1;
+      return;
+    }
+
+    final position = ref.read(positionProvider);
+
+    // Binary search: last line with startTime <= currentPosition.
+    int low = 0;
+    int high = _lines.length - 1;
+    int matchIndex = -1;
+    while (low <= high) {
+      final mid = low + (high - low) ~/ 2;
+      if (_lines[mid].startTime <= position) {
+        matchIndex = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    if (matchIndex == -1) {
+      if (state != -1) state = -1;
+      return;
+    }
+
+    final line = _lines[matchIndex];
+    if (!line.hasSyllables) {
+      if (state != -1) state = -1;
+      return;
+    }
+
+    final syllableIndex = line.getSyllableIndexAt(position);
+    if (syllableIndex != state) {
+      state = syllableIndex;
+    }
+  }
+}
+
+final currentSyllableIndexProvider =
+    NotifierProvider<CurrentSyllableIndexNotifier, int>(
+      CurrentSyllableIndexNotifier.new,
+    );

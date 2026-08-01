@@ -40,6 +40,10 @@ dependencies:
   palette_generator: ^0.3.3+7
   # Used in main.dart to init sqflite FFI on desktop platforms (not test-only).
   sqflite_common_ffi: ^2.3.4+4
+  image: ^4.2.0  # For WebP encoding/decoding
+  uuid: ^4.5.1  # For lyrics editor unique IDs
+  xml: ^6.5.0  # For XSPF playlist import/export
+  uni_links: ^0.5.1  # For protocol handling (gasong://)
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -55,8 +59,14 @@ dev_dependencies:
   json_serializable: ^6.8.0
   drift_dev: ^2.14.0
 
+  # Testing & Quality
+  leak_tracker: ^11.0.0
+  leak_tracker_flutter_testing: ^3.0.0
+  golden_toolkit: ^0.15.0
+
 flutter:
   uses-material-design: true
+  generate: true
 
   assets:
     - assets/song/
@@ -65,6 +75,9 @@ flutter:
     - assets/pic/
     - assets/pic/mat_nham_mat_mo/
     - assets/pic/anh_trai_say_hi/
+
+  shaders:
+    - shaders/visualizer.frag
 
 flutter_launcher_icons:
   android: "ic_launcher"

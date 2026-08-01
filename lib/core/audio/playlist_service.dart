@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../models/song.dart';
+import '../../core/settings_manager.dart';
 import '../audio_source_cache_policy.dart';
 import '../logging/app_logger.dart';
 import '../platform_capabilities.dart';
@@ -9,6 +10,7 @@ import '../services/db_service_wrapper.dart';
 import '../utils/sort_utils.dart';
 import 'audio_engine_service.dart';
 import 'audio_effect_service.dart';
+import 'smart_shuffle_service.dart';
 
 enum PlayMode { sequential, repeatOne, playOneStop, shuffle }
 
@@ -28,7 +30,9 @@ class PlaylistService {
   final AudioEngineService _engineService;
   final AudioEffectService _effectService;
   final DatabaseServiceWrapper _databaseService;
+  final SettingsManager _settingsManager;
   final AudioSourceCachePolicy _cachePolicy = const AudioSourceCachePolicy();
+  final SmartShuffleService _smartShuffle = SmartShuffleService();
 
   List<Song> _playlist = [];
   int _currentIndex = -1;
@@ -50,13 +54,19 @@ class PlaylistService {
   );
 
   Timer? _sleepTimer;
+  Timer? _fadeOutTimer;
   StreamSubscription<void>? _songCompletedSub;
+
+  // Sleep Timer v2 state
+  bool _sleepAtEndOfSong = false;
+  bool _isFadingOut = false;
 
   PlaylistService(
     this._engineService,
     this._effectService,
-    this._databaseService,
-  ) {
+    this._databaseService, [
+    SettingsManager? settingsManager,
+  ]) : _settingsManager = settingsManager ?? SettingsManager() {
     _songCompletedSub = _engineService.onSongCompleted.listen((_) {
       _onSongCompleted();
     });
@@ -112,6 +122,65 @@ class PlaylistService {
       if (newIndex >= 0) {
         _currentIndex = newIndex;
         currentIndexNotifier.value = _currentIndex;
+      }
+    }
+
+    unawaited(_prepareCacheWindow());
+  }
+
+  /// Reorders queue by moving song from oldIndex to newIndex.
+  /// Used for drag-drop reordering in the queue management UI.
+  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= _playlist.length) return;
+    if (newIndex < 0 || newIndex >= _playlist.length) return;
+    if (oldIndex == newIndex) return;
+
+    // Adjust for removal shifting
+    if (oldIndex < newIndex) {
+      newIndex--;
+    }
+
+    final song = _playlist.removeAt(oldIndex);
+    _playlist.insert(newIndex, song);
+
+    // Update current index if affected
+    if (_currentIndex == oldIndex) {
+      _currentIndex = newIndex;
+    } else if (oldIndex < _currentIndex && newIndex >= _currentIndex) {
+      _currentIndex--;
+    } else if (oldIndex > _currentIndex && newIndex <= _currentIndex) {
+      _currentIndex++;
+    }
+    currentIndexNotifier.value = _currentIndex;
+
+    // Update shuffle history indices
+    for (int i = 0; i < _shuffleHistory.length; i++) {
+      int histIndex = _shuffleHistory[i];
+      if (histIndex == oldIndex) {
+        _shuffleHistory[i] = newIndex;
+      } else if (oldIndex < newIndex) {
+        if (histIndex > oldIndex && histIndex <= newIndex) {
+          _shuffleHistory[i] = histIndex - 1;
+        }
+      } else if (oldIndex > newIndex) {
+        if (histIndex >= newIndex && histIndex < oldIndex) {
+          _shuffleHistory[i] = histIndex + 1;
+        }
+      }
+    }
+
+    // Update planned shuffle index
+    if (_plannedShuffleIndex != null) {
+      if (_plannedShuffleIndex == oldIndex) {
+        _plannedShuffleIndex = newIndex;
+      } else if (oldIndex < newIndex) {
+        if (_plannedShuffleIndex! > oldIndex && _plannedShuffleIndex! <= newIndex) {
+          _plannedShuffleIndex = _plannedShuffleIndex! - 1;
+        }
+      } else if (oldIndex > newIndex) {
+        if (_plannedShuffleIndex! >= newIndex && _plannedShuffleIndex! < oldIndex) {
+          _plannedShuffleIndex = _plannedShuffleIndex! + 1;
+        }
       }
     }
 
@@ -183,6 +252,48 @@ class PlaylistService {
       _historyOffset = 0;
     }
     await _playCurrentSong();
+  }
+
+  /// Adds a song to the end of the queue.
+  Future<void> add(Song song) async {
+    _playlist.add(song);
+    currentIndexNotifier.value = _currentIndex;
+    unawaited(_prepareCacheWindow());
+  }
+
+  /// Removes a song at [index] from the queue.
+  Future<void> remove(int index) async {
+    if (index < 0 || index >= _playlist.length) return;
+
+    final wasCurrent = index == _currentIndex;
+    _playlist.removeAt(index);
+
+    // Adjust current index
+    if (_currentIndex > index) {
+      _currentIndex--;
+    } else if (wasCurrent) {
+      if (_playlist.isEmpty) {
+        _currentIndex = -1;
+      } else {
+        _currentIndex = _currentIndex.clamp(0, _playlist.length - 1);
+      }
+    }
+    currentIndexNotifier.value = _currentIndex;
+
+    // Update shuffle history
+    _sanitizeShuffleHistory();
+    unawaited(_prepareCacheWindow());
+  }
+
+  /// Removes all songs from the queue.
+  Future<void> clear() async {
+    await _engineService.stop();
+    _playlist.clear();
+    _currentIndex = -1;
+    currentIndexNotifier.value = -1;
+    _shuffleHistory.clear();
+    _plannedShuffleIndex = null;
+    _historyOffset = 0;
   }
 
   Future<void> playSongByFileName(String fileName) async {
@@ -395,33 +506,28 @@ class PlaylistService {
   }
 
   int _selectNextShuffleIndex() {
-    // C2 fix: Sanitize history before using it to prevent stale index access
-    _sanitizeShuffleHistory();
-
-    final historySize = (_playlist.length * 0.4).ceil().clamp(
-      1,
-      _playlist.length - 1,
+    // Use SmartShuffleService for weighted selection
+    return _smartShuffle.selectNextMixed(
+      playlist: _playlist,
+      currentIndex: _currentIndex,
+      recentlyPlayedIndices: _shuffleHistory.toSet(),
+      genrePreferences: _buildGenrePreferences(),
     );
-    final recentlyPlayed = _shuffleHistory.length > historySize
-        ? _shuffleHistory.sublist(_shuffleHistory.length - historySize)
-        : List.of(_shuffleHistory);
+  }
 
-    List<int> available = List.generate(
-      _playlist.length,
-      (i) => i,
-    ).where((i) => i != _currentIndex && !recentlyPlayed.contains(i)).toList();
-
-    if (available.isEmpty) {
-      available = List.generate(
-        _playlist.length,
-        (i) => i,
-      ).where((i) => i != _currentIndex).toList();
+  /// Builds genre preferences map from play history
+  Map<String, double> _buildGenrePreferences() {
+    final genreCounts = <String, int>{};
+    for (final song in _playlist) {
+      if (song.genre != null && song.playCount > 0) {
+        genreCounts[song.genre!] = (genreCounts[song.genre!] ?? 0) + song.playCount;
+      }
     }
-
-    if (available.isEmpty) return _currentIndex.clamp(0, _playlist.length - 1);
-
-    available.shuffle();
-    return available.first;
+    
+    if (genreCounts.isEmpty) return {};
+    
+    final maxCount = genreCounts.values.reduce((a, b) => a > b ? a : b);
+    return genreCounts.map((genre, count) => MapEntry(genre, count / maxCount));
   }
 
   // ─── Caching ───────────────────────────────────────────────────────────────
@@ -481,20 +587,56 @@ class PlaylistService {
 
   // ─── Sleep Timer ───────────────────────────────────────────────────────────
 
-  bool _sleepAtEndOfSong = false;
-
   void startSleepTimer(Duration duration) {
     cancelSleepTimer();
+    
+    final fadeOutEnabled = _settingsManager.sleepTimerFadeOutEnabledNotifier.value;
+    final fadeOutDuration = Duration(seconds: _settingsManager.sleepTimerFadeOutDurationNotifier.value);
+    
     sleepTimerRemainingNotifier.value = duration;
     _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final remaining = sleepTimerRemainingNotifier.value;
       if (remaining == null || remaining.inSeconds <= 1) {
         cancelSleepTimer();
-        _engineService.pause();
+        
+        // Handle fade out before pause
+        if (fadeOutEnabled && !_isFadingOut) {
+          _startFadeOut(fadeOutDuration);
+        } else {
+          _engineService.pause();
+        }
+        
         sleepTimerRemainingNotifier.value = null;
       } else {
         sleepTimerRemainingNotifier.value =
             remaining - const Duration(seconds: 1);
+      }
+    });
+  }
+
+  /// Starts fade out over the specified duration, then pauses.
+  void _startFadeOut(Duration fadeOutDuration) {
+    if (_isFadingOut) return;
+    _isFadingOut = true;
+    
+    final currentVolume = _engineService.volumeNotifier.value;
+    final steps = fadeOutDuration.inMilliseconds ~/ 50; // 50ms steps
+    double volumeStep = currentVolume / steps;
+    
+    _fadeOutTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!_isFadingOut) {
+        timer.cancel();
+        return;
+      }
+      
+      final newVolume = (_engineService.volumeNotifier.value - volumeStep).clamp(0.0, 1.0);
+      _engineService.setVolume(newVolume);
+      
+      if (newVolume <= 0.01) {
+        timer.cancel();
+        _isFadingOut = false;
+        _engineService.pause();
+        _engineService.setVolume(currentVolume); // Restore volume for next play
       }
     });
   }
@@ -506,12 +648,15 @@ class PlaylistService {
 
   void cancelSleepTimer() {
     _sleepTimer?.cancel();
+    _fadeOutTimer?.cancel();
     _sleepTimer = null;
+    _fadeOutTimer = null;
+    _isFadingOut = false;
     sleepTimerRemainingNotifier.value = null;
     _sleepAtEndOfSong = false;
   }
 
-  bool get isSleepTimerActive => _sleepTimer != null || _sleepAtEndOfSong;
+  bool get isSleepTimerActive => _sleepTimer != null || _sleepAtEndOfSong || _isFadingOut;
 
   // ─── Sort Mode ─────────────────────────────────────────────────────────────
 
@@ -534,6 +679,7 @@ class PlaylistService {
   void dispose() {
     _songCompletedSub?.cancel();
     _sleepTimer?.cancel();
+    _fadeOutTimer?.cancel();
     currentIndexNotifier.dispose();
     playModeNotifier.dispose();
     sleepTimerRemainingNotifier.dispose();

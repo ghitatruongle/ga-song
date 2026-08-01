@@ -15,6 +15,7 @@ import '../../models/song.dart';
 import '../../ui/utils/haptic_helper.dart';
 import '../utils/theme_helpers.dart';
 import '../widgets/cover_art_image.dart';
+import '../widgets/queue_management.dart';
 
 /// Full-screen "Now Playing" view — the Spotify signature interaction.
 ///
@@ -584,6 +585,16 @@ class _PlaybackControls extends ConsumerWidget {
           isDark: isDark,
         ),
 
+        // Queue
+        _ControlIcon(
+          icon: Icons.queue_music_rounded,
+          onTap: () {
+            safeHaptic(HapticType.light);
+            _showQueueSheet(context);
+          },
+          isDark: isDark,
+        ),
+
         // Repeat
         _ControlIcon(
           icon: isRepeatOne ? Icons.repeat_one_rounded : Icons.repeat_rounded,
@@ -599,6 +610,15 @@ class _PlaybackControls extends ConsumerWidget {
           isDark: isDark,
         ),
       ],
+    );
+  }
+
+  void _showQueueSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const QueueManagementSheet(),
     );
   }
 }

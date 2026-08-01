@@ -253,7 +253,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       setState(() {
         _songs = <Song>[];
         _songIndexByFileName = <String, int>{};
-        _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
+        _loadingError = AppLocalizations.of(context)!.cannotLoadLibraryDb;
       });
     } finally {
       if (mounted) {
@@ -471,7 +471,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // Hiển thị thông báo trên các nền tảng không hỗ trợ
         return _buildUnsupportedPlatformMessage(
           'YouTube',
-          AppLocalizations.of(context).androidOnlyFeature,
+          AppLocalizations.of(context)!.androidOnlyFeature,
         );
 
       case TabItem.smart:
@@ -523,7 +523,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           );
           setState(() {
             _isLoading = false;
-            _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
+            _loadingError = AppLocalizations.of(context)!.cannotLoadLibraryDb;
           });
         },
       );
@@ -577,7 +577,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           );
           setState(() {
             _isLoading = false;
-            _loadingError = AppLocalizations.of(context).cannotLoadLibraryDb;
+            _loadingError = AppLocalizations.of(context)!.cannotLoadLibraryDb;
           });
         },
       );
@@ -887,7 +887,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (!mounted) return;
       snackMessenger.showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context).importSuccess),
+          content: Text(AppLocalizations.of(context)!.importSuccess),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -896,9 +896,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       snackMessenger.showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(
-              context,
-            ).translateWith('importErrorWithMsg', {'error': e.toString()}),
+            AppLocalizations.of(context)!.importErrorWithMsg(
+              e.toString(),
+            ),
           ),
           duration: const Duration(seconds: 3),
         ),

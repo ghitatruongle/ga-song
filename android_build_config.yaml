@@ -1,0 +1,216 @@
+# Android Build Configuration for G.A - Song
+# This file contains the configuration for building APK and AAB packages for Google Play Store distribution.
+
+# App Identity
+android:
+  namespace: "com.ghitatruongle.gasong"
+  compile_sdk: 34
+  min_sdk: 21
+  target_sdk: 34
+
+# Version
+version:
+  name: "0.8.0"
+  code: 80001
+
+# Signing Configuration
+signing:
+  release:
+    store_file: "keystore.jks"
+    store_password_env: "ANDROID_KEYSTORE_PASSWORD"
+    key_alias: "gasong"
+    key_password_env: "ANDROID_KEY_PASSWORD"
+  debug:
+    store_file: "debug.keystore"
+    store_password: "android"
+    key_alias: "androiddebugkey"
+    key_password: "android"
+
+# Build Types
+build_types:
+  release:
+    minify_enabled: true
+    shrink_resources: true
+    proguard_files:
+      - "proguard-rules.pro"
+    signing_config: "release"
+    debuggable: false
+    jni_debuggable: false
+    renderscript_debuggable: false
+    zip_align_enabled: true
+  debug:
+    minify_enabled: false
+    shrink_resources: false
+    debuggable: true
+    jni_debuggable: true
+    renderscript_debuggable: true
+    signing_config: "debug"
+    application_id_suffix: ".debug"
+    version_name_suffix: "-debug"
+
+# Product Flavors
+product_flavors:
+  playstore:
+    dimension: "store"
+    application_id: "com.ghitatruongle.gasong"
+    version_name_suffix: ""
+  github:
+    dimension: "store"
+    application_id: "com.ghitatruongle.gasong.github"
+    version_name_suffix: "-github"
+  fdroid:
+    dimension: "store"
+    application_id: "com.ghitatruongle.gasong.fdroid"
+    version_name_suffix: "-fdroid"
+
+# Splits
+splits:
+  abi:
+    enable: true
+    reset: true
+    include:
+      - "arm64-v8a"
+      - "armeabi-v7a"
+      - "x86_64"
+    universal_apk: false
+  density:
+    enable: false
+
+# APK Size Budget
+apk_size_budget:
+  app_code_and_native_libs: "20MB"
+  builtin_songs_excluded: true
+
+# ProGuard Rules
+proguard:
+  rules_files:
+    - "proguard-rules.pro"
+    - "proguard-audio.pro"
+    - "proguard-drift.pro"
+    - "proguard-riverpod.pro"
+
+# Bundle Configuration
+bundle:
+  language:
+    enable_split: true
+  density:
+    enable_split: true
+  abi:
+    enable_split: true
+
+# App Bundle Settings
+bundle_config:
+  enable_uncompressed_native_libs: true
+  enable_uncompressed_dex: false
+
+# Android App Bundle Settings
+aab:
+  enable: true
+  version_code: 80001
+  version_name: "0.8.0"
+
+# Play Store Listing
+play_store:
+  title: "GA Song"
+  short_description: "Full-featured music player with KTV mode, lyrics sync, and audio effects."
+  full_description: |
+    GA Song is a full-featured, open-source music player designed for audiophiles and casual listeners alike.
+    
+    ✨ Key Features:
+    🎵 High-quality audio playback with SoLoud engine
+    🎤 KTV mode with synchronized lyrics (LRC support)
+    🎚️ 10-band equalizer with presets and custom curves
+    🎛️ Audio effects: Reverb, Compressor, Pitch Shift, Normalization
+    🎨 Beautiful Material 3 UI with dynamic theming
+    📱 KTV mode with full-screen lyrics display
+    🎨 Custom visualizers with multiple modes
+    🌙 Dark/Light theme with dynamic color extraction
+    🔊 Sleep timer with fade-out
+    📱 Picture-in-Picture support (Android)
+    🖥️ Native Windows desktop app with Jump List
+    🔗 Custom protocol handler (gasong://)
+    📂 Playlist management with drag-drop reordering
+    📥 Import/Export playlists (M3U, PLS, XSPF, JSON)
+    🌐 Online lyrics fetching from LRCLIB
+    ✏️ Built-in lyrics editor with karaoke preview
+    🌍 Multi-language support (Vietnamese/English)
+    
+    🔧 Advanced Audio:
+    • 10-band parametric EQ
+    • Bass boost
+    • Crossfade with curves
+    • Loudness normalization (EBU R128)
+    • Reverb (Freeverb)
+    • Dynamic range compressor
+    • Pitch shift
+    
+    🌐 Online Features:
+    • Lyrics from LRCLIB
+    • YouTube playback (Android)
+    • Album art fetching
+    
+    💾 Local-First:
+    • No account required
+    • All data stored locally
+    • Import/Export playlists (M3U, PLS, XSPF, JSON)
+    • SQLite database with Drift ORM
+    
+    🎨 Customization:
+    • Dynamic Material You theming
+    • Custom accent colors
+    • Window blur/opacity (Windows)
+    • Custom background images
+    • Grid/List view modes
+    
+    ⌨️ Shortcuts:
+    • Global hotkeys (Windows/Linux)
+    • Media keys support
+    • Customizable hotkeys
+    • Ctrl+K settings search
+    
+    ♿ Accessibility:
+    • Screen reader support
+    • Reduced motion
+    • High contrast support
+    • Adjustable font sizes
+    
+    🔒 Privacy:
+    • No data collection
+    • No network requests without consent
+    • Local-first architecture
+  
+  screenshots:
+    - "fastlane/metadata/android/en-US/images/phoneScreenshots/1.png"
+    - "fastlane/metadata/android/en-US/images/phoneScreenshots/2.png"
+    - "fastlane/metadata/android/en-US/images/phoneScreenshots/3.png"
+    - "fastlane/metadata/android/en-US/images/phoneScreenshots/4.png"
+    - "fastlane/metadata/android/en-US/images/phoneScreenshots/5.png"
+    - "fastlane/metadata/android/en-US/images/tabletScreenshots/1.png"
+    - "fastlane/metadata/android/en-US/images/tabletScreenshots/2.png"
+  feature_graphic: "fastlane/metadata/android/en-US/images/featureGraphic.png"
+  icon: "assets/pic/app_logo.png"
+  promo_video: ""
+  category: "MUSIC_AND_AUDIO"
+  tags:
+    - "music player"
+    - "equalizer"
+    - "lyrics"
+    - "ktv"
+    - "audio effects"
+    - "offline"
+    - "open source"
+
+# Fastlane Configuration
+fastlane:
+  lanes:
+    beta:
+      - "gradle bundle"
+      - "upload_to_play_store"
+    production:
+      - "gradle bundle"
+      - "upload_to_play_store --track production"
+    promote:
+      - "play_store_promote --track beta --target_track production"
+    internal:
+      - "gradle bundle"
+      - "upload_to_play_store --track internal"

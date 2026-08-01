@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:audio_service/audio_service.dart';
@@ -10,6 +11,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/audio/audio_effect_service.dart';
 import 'core/audio/audio_engine_service.dart';
 import 'core/audio/playlist_service.dart';
+import 'core/audio/smart_shuffle_service.dart';
 import 'core/logging/app_logger.dart';
 import 'core/performance_probe.dart';
 import 'core/platform_capabilities.dart';
@@ -23,6 +25,8 @@ import 'core/services/smtc_service.dart';
 import 'core/services/audio_handler_service.dart';
 import 'core/services/db_service_wrapper.dart';
 import 'core/services/desktop_lyrics_service.dart';
+import 'core/services/protocol_handler_service.dart';
+import 'core/services/jump_list_service.dart';
 import 'core/crash_reporter.dart';
 import 'core/motion/app_motion.dart';
 import 'core/theme/tokens.dart';
@@ -32,11 +36,20 @@ import 'l10n/app_localizations.dart';
 import 'providers/service_providers.dart';
 import 'providers/theme_provider.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/widgets/frame_budget_overlay.dart';
+import 'ui/widgets/settings_search_dialog.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// Intent to open the Settings Search dialog.
+class _OpenSettingsSearchIntent extends Intent {
+  const _OpenSettingsSearchIntent();
+}
 
 Widget _buildErrorScreen(Object error, StackTrace stackTrace, Locale locale) {
   // Built before the Localizations tree exists, but after settings.init(),
   // so honor the user's persisted locale instead of the vi-only fallback.
-  final l10n = AppLocalizations(locale);
+  final l10n = lookupAppLocalizations(locale);
   return Scaffold(
     body: Center(
       child: Padding(
@@ -113,7 +126,7 @@ Future<void> main() async {
               ),
               const SizedBox(height: 16),
               Text(
-                AppLocalizations.fallback.renderError,
+                lookupAppLocalizations(const Locale('vi')).renderError,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -228,6 +241,13 @@ Future<void> main() async {
     settingsManager: settings,
     audioEngineService: engineService,
     playlistService: playlistService,
+    onOpenSettingsSearch: () {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute<void>(
+          builder: (context) => const SettingsSearchDialog(),
+        ),
+      );
+    },
   );
   final systemTrayService = SystemTrayService(
     audioEngineService: engineService,
@@ -275,6 +295,24 @@ Future<void> main() async {
       try {
         await hotkeyService.init();
         if (!kDebugMode) await systemTrayService.init();
+        
+        // Initialize protocol handler for gasong:// URIs
+        final protocolHandler = ProtocolHandlerService(
+          databaseService: dbService,
+          playlistService: playlistService,
+          audioEngineService: engineService,
+          settingsManager: settings,
+        );
+        await protocolHandler.init();
+        
+        // Initialize Jump List service on Windows
+        if (Platform.isWindows) {
+          final jumpListService = JumpListService(
+            settingsManager: settings,
+            databaseService: dbService,
+          );
+          await jumpListService.init();
+        }
       } catch (e, stack) {
         AppLogger.w(
           'main',
@@ -300,6 +338,17 @@ Future<void> main() async {
         systemTrayServiceProvider.overrideWithValue(systemTrayService),
         windowManagerServiceProvider.overrideWithValue(windowManager),
         desktopLyricsServiceProvider.overrideWithValue(desktopLyricsService),
+        smartShuffleServiceProvider.overrideWithValue(SmartShuffleService()),
+        jumpListServiceProvider.overrideWithValue(JumpListService(
+          settingsManager: settings,
+          databaseService: dbService,
+        )),
+        protocolHandlerServiceProvider.overrideWithValue(ProtocolHandlerService(
+          databaseService: dbService,
+          playlistService: playlistService,
+          audioEngineService: engineService,
+          settingsManager: settings,
+        )),
       ],
       child: GASongApp(home: initialScreen),
     ),
@@ -330,6 +379,26 @@ class _GASongAppState extends ConsumerState<GASongApp> {
       settings.dynamicPrimaryColorNotifier,
       settings.useNativeWindowEffectNotifier,
     ]);
+    
+    // Initialize motion preferences from MediaQuery
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final motionPrefs = MotionPreferences.fromMediaQuery(MediaQuery.of(context));
+        ref.read(motionPreferencesNotifierProvider.notifier).setReduceMotion(motionPrefs.reduceMotion);
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update motion preferences when MediaQuery changes (e.g., system setting
+    // changes). Deferred so we don't modify the provider mid-build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final motionPrefs = MotionPreferences.fromMediaQuery(MediaQuery.of(context));
+      ref.read(motionPreferencesNotifierProvider.notifier).setReduceMotion(motionPrefs.reduceMotion);
+    });
   }
 
   @override
@@ -361,7 +430,7 @@ class _GASongAppState extends ConsumerState<GASongApp> {
           locale: settings.localeNotifier.value,
           supportedLocales: const [Locale('vi'), Locale('en')],
           localizationsDelegates: const [
-            AppLocalizationsDelegate(),
+            AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
@@ -406,7 +475,23 @@ class _GASongAppState extends ConsumerState<GASongApp> {
               data: Theme.of(context),
               duration: AppDurations.extended,
               curve: AppCurves.emphasized,
-              child: child ?? const SizedBox.shrink(),
+              child: Shortcuts(
+                shortcuts: <LogicalKeySet, Intent>{
+                  LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK):
+                      const _OpenSettingsSearchIntent(),
+                },
+                child: Actions(
+                  actions: <Type, Action<Intent>>{
+                    _OpenSettingsSearchIntent: CallbackAction<_OpenSettingsSearchIntent>(
+                      onInvoke: (_) => SettingsSearchDialog.show(context),
+                    ),
+                  },
+                  child: FrameBudgetOverlayWrapper(
+                    enabled: kDebugMode,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                ),
+              ),
             );
           },
           home: widget.home,
