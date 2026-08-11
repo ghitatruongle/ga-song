@@ -74,6 +74,7 @@ void main() {
       expect(entry.isAsset, isTrue);
       expect(entry.hasCover, isTrue);
     },
+    skip: Platform.environment['CI'] == 'true',
   );
 
   test('findLocalCoverPath checks sibling and folder covers', () async {

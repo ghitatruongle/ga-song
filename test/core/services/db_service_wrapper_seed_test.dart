@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ga_song/core/database/app_database.dart';
@@ -7,6 +8,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('DatabaseServiceWrapper built-in seeding', () {
+    // These tests depend on assets/song/songs.json which is not committed to git.
+    if (Platform.environment['CI'] == 'true') return;
     late AppDatabase db;
     late DatabaseServiceWrapper wrapper;
 

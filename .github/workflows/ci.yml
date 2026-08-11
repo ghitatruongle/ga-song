@@ -34,6 +34,11 @@ jobs:
     needs: format
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -53,6 +58,11 @@ jobs:
     needs: analyze
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -109,6 +119,11 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -135,6 +150,11 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -170,6 +190,11 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -201,6 +226,11 @@ jobs:
     needs: [test, integration-test, golden-test]
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -236,6 +266,11 @@ jobs:
     needs: [test, integration-test, golden-test]
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -311,6 +346,11 @@ jobs:
     needs: [test, integration-test, golden-test]
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -335,6 +375,11 @@ jobs:
     needs: [test, integration-test, golden-test]
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}

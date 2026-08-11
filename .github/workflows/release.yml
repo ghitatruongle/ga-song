@@ -34,6 +34,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -99,6 +105,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -181,6 +193,12 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
 
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
+
       - name: Install Linux Dependencies
         run: |
           sudo apt-get update
@@ -207,7 +225,6 @@ jobs:
           Exec=GA_Song
           Icon=GA_Song
           Type=Application
-          Categories=AudioVideo;Audio;Player;
           Categories=AudioVideo;Audio;Player;
           StartupNotify=true
           EOF
