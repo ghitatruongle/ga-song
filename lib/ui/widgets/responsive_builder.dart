@@ -13,14 +13,12 @@ class ResponsiveBuilder extends StatelessWidget {
   const ResponsiveBuilder({super.key, required this.builder});
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = ScreenSize.fromWidth(constraints.maxWidth);
-        return builder(context, size);
-      },
-    );
-  }
+  Widget build(final BuildContext context) => LayoutBuilder(
+    builder: (final context, final constraints) {
+      final size = ScreenSize.fromWidth(constraints.maxWidth);
+      return builder(context, size);
+    },
+  );
 }
 
 /// Information about the current screen size.
@@ -35,7 +33,7 @@ class ScreenSize {
   const ScreenSize({required this.width, required this.type});
 
   /// Creates ScreenSize from a width value.
-  factory ScreenSize.fromWidth(double width) {
+  factory ScreenSize.fromWidth(final double width) {
     final type = ScreenType.fromWidth(width);
     return ScreenSize(width: width, type: type);
   }
@@ -74,7 +72,7 @@ enum ScreenType {
   largeDesktop;
 
   /// Returns the screen type for the given width.
-  static ScreenType fromWidth(double width) {
+  static ScreenType fromWidth(final double width) {
     if (Breakpoints.isMobile(width)) return ScreenType.mobile;
     if (Breakpoints.isTablet(width)) return ScreenType.tablet;
     if (Breakpoints.isLargeDesktop(width)) return ScreenType.largeDesktop;

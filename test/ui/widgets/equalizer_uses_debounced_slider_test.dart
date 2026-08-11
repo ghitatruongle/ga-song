@@ -4,7 +4,7 @@ import 'package:ga_song/ui/widgets/debounced_slider.dart';
 
 void main() {
   testWidgets('DebouncedSlider accepts a value, onChanged, debounceMs', (
-    tester,
+    final tester,
   ) async {
     var calls = 0;
 
@@ -13,8 +13,6 @@ void main() {
         home: Scaffold(
           body: DebouncedSlider(
             value: 0.5,
-            min: 0,
-            max: 1,
             debounceMs: 50,
             onChanged: (_) {
               calls++;

@@ -1,5 +1,6 @@
 /// Mock implementation of [WindowManagerService] for testing.
 /// Provides controlled window behavior without platform dependencies.
+library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -9,7 +10,6 @@ import 'package:ga_song/core/services/window_manager_service.dart';
 import 'package:ga_song/core/settings_manager.dart';
 
 class MockWindowManagerService implements WindowManagerService {
-  @override
   final SettingsManager? settingsManager;
 
   bool initialized = false;
@@ -27,6 +27,8 @@ class MockWindowManagerService implements WindowManagerService {
   int disposeCallCount = 0;
 
   // State
+  @override
+  final ValueNotifier<bool> macMiniPlayerNotifier = ValueNotifier<bool>(false);
   WindowEffectType? lastEffectType;
   Color? lastColor;
   bool? lastDark;
@@ -48,9 +50,11 @@ class MockWindowManagerService implements WindowManagerService {
       final useNative = settingsManager!.useNativeWindowEffectNotifier.value;
       final theme = settingsManager!.themeModeNotifier.value;
       final opacity = settingsManager!.windowOpacityNotifier.value;
-      final isDark = theme == ThemeMode.dark ||
+      final isDark =
+          theme == ThemeMode.dark ||
           (theme == ThemeMode.system &&
-              PlatformDispatcher.instance.platformBrightness == Brightness.dark);
+              PlatformDispatcher.instance.platformBrightness ==
+                  Brightness.dark);
 
       WindowEffectType? effectType;
       Color? bgColor;
@@ -83,33 +87,25 @@ class MockWindowManagerService implements WindowManagerService {
     applyWindowEffect();
   }
 
-  double _getDpiScale() => 1.0;
-
-  WindowEffectType _getPreferredWindowEffect() => WindowEffectType.mica;
-
   @override
   void onWindowResize() {
     // Mock implementation
   }
 
-  Future<void> _setSolidBackgroundDuringResize() async {}
-
-  Future<void> _onResizeEnd() async {}
-
   @override
-  void onWindowClose() async {
+  Future<void> onWindowClose() async {
     if (initialized) {
       hideCallCount++;
       visible = false;
     }
   }
 
-  Future<void> setPosition(Offset position) async {
+  Future<void> setPosition(final Offset position) async {
     setPositionCallCount++;
     this.position = position;
   }
 
-  Future<void> setSize(Size size) async {
+  Future<void> setSize(final Size size) async {
     setSizeCallCount++;
     this.size = size;
   }
@@ -142,5 +138,6 @@ class MockWindowManagerService implements WindowManagerService {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

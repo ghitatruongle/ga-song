@@ -7,121 +7,121 @@ class MockAudioEffectService implements AudioEffectService {
   @override
   ValueNotifier<int> bassLevelNotifier = ValueNotifier(0);
   @override
-  ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3.0);
+  ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3);
   @override
-  ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(0.0);
+  ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(0);
   @override
-  ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1.0);
+  ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1);
   @override
-  ValueNotifier<double> reverbMixNotifier = ValueNotifier(0.0);
+  ValueNotifier<double> reverbMixNotifier = ValueNotifier(0);
   @override
-  ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1.0);
+  ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1);
   @override
   ValueNotifier<double> reverbRoomSizeNotifier = ValueNotifier(0.5);
   @override
   ValueNotifier<double> reverbDampNotifier = ValueNotifier(0.5);
   @override
-  ValueNotifier<double> compThresholdNotifier = ValueNotifier(-6.0);
+  ValueNotifier<double> compThresholdNotifier = ValueNotifier(-6);
   @override
-  ValueNotifier<double> compAttackNotifier = ValueNotifier(10.0);
+  ValueNotifier<double> compAttackNotifier = ValueNotifier(10);
   @override
-  ValueNotifier<double> compReleaseNotifier = ValueNotifier(100.0);
+  ValueNotifier<double> compReleaseNotifier = ValueNotifier(100);
   @override
-  ValueNotifier<double> compKneeWidthNotifier = ValueNotifier(2.0);
+  ValueNotifier<double> compKneeWidthNotifier = ValueNotifier(2);
   @override
-  ValueNotifier<double> compMakeupGainNotifier = ValueNotifier(0.0);
+  ValueNotifier<double> compMakeupGainNotifier = ValueNotifier(0);
 
   bool _normalizationEnabled = false;
 
   @override
-  void setBassLevel(int level) {
+  void setBassLevel(final int level) {
     bassLevelNotifier.value = level.clamp(0, 100);
   }
 
   @override
-  void applyAllEqualizer(List<double> bands) {
+  void applyAllEqualizer(final List<double> bands) {
     // No-op in mock
   }
 
   @override
-  void setNormalizationLevel(double level) {
+  void setNormalizationLevel(final double level) {
     normalizationLevelNotifier.value = level.clamp(-24.0, 0.0);
   }
 
   @override
-  void enableNormalization(bool enabled) {
+  void enableNormalization(final bool enabled) {
     _normalizationEnabled = enabled;
   }
 
   @override
-  double calculateNormalizationGain(double trackPeakDb) {
-    if (!_normalizationEnabled) return 1.0;
+  double calculateNormalizationGain(final double trackPeakDb) {
+    if (!_normalizationEnabled) return 1;
     final targetDb = normalizationLevelNotifier.value;
     final gainDb = targetDb - trackPeakDb;
-    if (gainDb <= -24.0) return 0.0;
+    if (gainDb <= -24.0) return 0;
     // Convert dB to linear: 10^(gainDb/20)
     return _dbToLinear(gainDb);
   }
 
-  double _dbToLinear(double db) {
-    if (db <= -24.0) return 0.0;
+  double _dbToLinear(final double db) {
+    if (db <= -24.0) return 0;
     if (db >= 24.0) return 15.85; // clamp max gain
     // Simple approximation
     return (1.0 + db / 20.0).clamp(0.0, 15.85);
   }
 
   @override
-  void setPitchShift(double pitch) {
+  void setPitchShift(final double pitch) {
     pitchShiftNotifier.value = pitch.clamp(0.5, 2.0);
   }
 
   @override
-  void setReverbMix(double mix) {
+  void setReverbMix(final double mix) {
     reverbMixNotifier.value = mix.clamp(0.0, 1.0);
   }
 
   @override
-  void setReverbRoomSize(double size) {
+  void setReverbRoomSize(final double size) {
     reverbRoomSizeNotifier.value = size.clamp(0.0, 1.0);
   }
 
   @override
-  void setReverbDamp(double damp) {
+  void setReverbDamp(final double damp) {
     reverbDampNotifier.value = damp.clamp(0.0, 1.0);
   }
 
   @override
-  void setCompressionRatio(double ratio) {
+  void setCompressionRatio(final double ratio) {
     compressionRatioNotifier.value = ratio.clamp(1.0, 10.0);
   }
 
   @override
-  void setCompThreshold(double threshold) {
+  void setCompThreshold(final double threshold) {
     compThresholdNotifier.value = threshold.clamp(-80.0, 0.0);
   }
 
   @override
-  void setCompAttack(double attack) {
+  void setCompAttack(final double attack) {
     compAttackNotifier.value = attack.clamp(0.0, 100.0);
   }
 
   @override
-  void setCompRelease(double release) {
+  void setCompRelease(final double release) {
     compReleaseNotifier.value = release.clamp(0.0, 1000.0);
   }
 
   @override
-  void setCompKneeWidth(double knee) {
+  void setCompKneeWidth(final double knee) {
     compKneeWidthNotifier.value = knee.clamp(0.0, 40.0);
   }
 
   @override
-  void setCompMakeupGain(double gain) {
+  void setCompMakeupGain(final double gain) {
     compMakeupGainNotifier.value = gain.clamp(-40.0, 40.0);
   }
 
   @override
-  void setCrossfadeDuration(double seconds) {
+  void setCrossfadeDuration(final double seconds) {
     crossfadeDurationNotifier.value = seconds.clamp(0.0, 10.0);
   }
 
@@ -144,5 +144,6 @@ class MockAudioEffectService implements AudioEffectService {
 
   // Handle any other methods not explicitly overridden
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

@@ -4,12 +4,7 @@ import 'package:ga_song/core/cover_art_repository.dart';
 void main() {
   test('CoverArtEntry exposes a capturedAt timestamp', () {
     final before = DateTime.now();
-    final entry = _entryWith(
-      fileName: 'a.png',
-      imagePath: '/tmp/a.png',
-      exists: true,
-      isAsset: false,
-    );
+    final entry = _entryWith(fileName: 'a.png', imagePath: '/tmp/a.png');
     final after = DateTime.now();
     expect(
       entry.capturedAt.isAfter(before.subtract(const Duration(seconds: 1))),
@@ -36,18 +31,16 @@ void main() {
 }
 
 CoverArtEntry _entryWith({
-  required String fileName,
-  DateTime? capturedAt,
-  String imagePath = '/tmp/x.png',
-  bool exists = true,
-  bool isAsset = false,
-}) {
-  return CoverArtEntry(
-    fileName: fileName,
-    imagePath: imagePath,
-    exists: exists,
-    isAsset: isAsset,
-    tier: CoverArtCacheTier.memory,
-    capturedAt: capturedAt,
-  );
-}
+  required final String fileName,
+  final DateTime? capturedAt,
+  final String imagePath = '/tmp/x.png',
+  final bool exists = true,
+  final bool isAsset = false,
+}) => CoverArtEntry(
+  fileName: fileName,
+  imagePath: imagePath,
+  exists: exists,
+  isAsset: isAsset,
+  tier: CoverArtCacheTier.memory,
+  capturedAt: capturedAt,
+);

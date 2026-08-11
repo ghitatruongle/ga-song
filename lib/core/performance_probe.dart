@@ -26,7 +26,7 @@ class PerformanceProbe {
 
   void recordPreload() => _totalPreloads++;
   void recordEviction() => _totalEvictions++;
-  void recordCacheSize(int size) {
+  void recordCacheSize(final int size) {
     if (size > _peakAudioCacheSize) _peakAudioCacheSize = size;
   }
 
@@ -47,7 +47,7 @@ class PerformanceProbe {
     }());
   }
 
-  void markSurface(String surface) {
+  void markSurface(final String surface) {
     assert(() {
       if (_surface == surface) {
         return true;
@@ -67,7 +67,7 @@ class PerformanceProbe {
     );
   }
 
-  void _onTimings(List<FrameTiming> timings) {
+  void _onTimings(final List<FrameTiming> timings) {
     _timings.addAll(timings);
     _frameCount += timings.length;
     if (_timings.length < 120) {
@@ -76,12 +76,14 @@ class PerformanceProbe {
 
     final buildTimes =
         _timings
-            .map((timing) => timing.buildDuration.inMicroseconds / 1000.0)
+            .map((final timing) => timing.buildDuration.inMicroseconds / 1000.0)
             .toList()
           ..sort();
     final rasterTimes =
         _timings
-            .map((timing) => timing.rasterDuration.inMicroseconds / 1000.0)
+            .map(
+              (final timing) => timing.rasterDuration.inMicroseconds / 1000.0,
+            )
             .toList()
           ..sort();
 
@@ -111,5 +113,9 @@ class PerformanceProbe {
   void dispose() {
     _memoryTimer?.cancel();
     _memoryTimer = null;
+    // Unregister the frame-timing callback too — otherwise the probe keeps
+    // accumulating/logging after dispose.
+    WidgetsBinding.instance.removeTimingsCallback(_onTimings);
+    _timings.clear();
   }
 }

@@ -1,6 +1,5 @@
 import '../logging/app_logger.dart';
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,19 +12,22 @@ import '../platform_capabilities.dart';
 
 class HotkeyService {
   HotkeyService({
-    required SettingsManager settingsManager,
-    AudioEngineService? audioEngineService,
-    PlaylistService? playlistService,
-    VoidCallback? onOpenSettingsSearch,
+    required final SettingsManager settingsManager,
+    final AudioEngineService? audioEngineService,
+    final PlaylistService? playlistService,
+    final VoidCallback? onOpenSettingsSearch,
+    final VoidCallback? onToggleMiniPlayer,
   }) : _settings = settingsManager,
        _engine = audioEngineService,
        _playlist = playlistService,
-       _onOpenSettingsSearch = onOpenSettingsSearch;
+       _onOpenSettingsSearch = onOpenSettingsSearch,
+       _onToggleMiniPlayer = onToggleMiniPlayer;
 
   final SettingsManager _settings;
   final AudioEngineService? _engine;
   final PlaylistService? _playlist;
   final VoidCallback? _onOpenSettingsSearch;
+  final VoidCallback? _onToggleMiniPlayer;
 
   final Map<String, String> _defaultHotkeys = {
     'playPause': 'Alt + Space',
@@ -33,12 +35,14 @@ class HotkeyService {
     'previous': 'Alt + Arrow Left',
     'volumeUp': 'Alt + Arrow Up',
     'volumeDown': 'Alt + Arrow Down',
-    // Thêm media keys chuẩn cho seek forward/backward (10s)
-    'seekForward': 'Alt + Arrow Right',
-    'seekBackward': 'Alt + Arrow Left',
-    // New: settings search
+    // Seek uses Ctrl modifier to avoid conflict with next/previous
+    'seekForward': 'Control + Arrow Right',
+    'seekBackward': 'Control + Arrow Left',
+    // Settings search
     'settingsSearch': 'Control + KeyK',
-    // New: media keys (native)
+    // macOS Pinned Mini Player
+    'toggleMiniPlayer': 'Meta + Shift + KeyM',
+    // Media keys (native)
     'mediaPlayPause': 'MediaPlayPause',
     'mediaNext': 'MediaTrackNext',
     'mediaPrevious': 'MediaTrackPrevious',
@@ -54,13 +58,18 @@ class HotkeyService {
   DateTime _lastSpacePressTime = DateTime(2000);
   static const _doubleTapThreshold = Duration(milliseconds: 300);
 
+  // ─── Media key tracking ─────────────────────────────────────────────────
+
+  DateTime _lastMediaKeyTime = DateTime(2000);
+  static const _mediaKeyDebounce = Duration(milliseconds: 150);
+
   // ─── Conflict detection ─────────────────────────────────────────────────
-  
+
   final Map<String, HotKey> _registeredHotkeys = {};
   final Set<String> _conflictingHotkeys = {};
 
   // ─── Hotkey profiles ────────────────────────────────────────────────────
-  
+
   static const Map<String, Map<String, String>> _hotkeyProfiles = {
     'default': {
       'playPause': 'Alt + Space',
@@ -68,8 +77,8 @@ class HotkeyService {
       'previous': 'Alt + Arrow Left',
       'volumeUp': 'Alt + Arrow Up',
       'volumeDown': 'Alt + Arrow Down',
-      'seekForward': 'Alt + Arrow Right',
-      'seekBackward': 'Alt + Arrow Left',
+      'seekForward': 'Control + Arrow Right',
+      'seekBackward': 'Control + Arrow Left',
       'mediaPlayPause': 'MediaPlayPause',
       'mediaNext': 'MediaTrackNext',
       'mediaPrevious': 'MediaTrackPrevious',
@@ -81,8 +90,8 @@ class HotkeyService {
       'previous': 'Ctrl + Alt + Left',
       'volumeUp': 'Ctrl + Alt + Up',
       'volumeDown': 'Ctrl + Alt + Down',
-      'seekForward': 'Ctrl + Alt + Right',
-      'seekBackward': 'Ctrl + Alt + Left',
+      'seekForward': 'Ctrl + Alt + Shift + Right',
+      'seekBackward': 'Ctrl + Alt + Shift + Left',
     },
     'presentation': {
       'playPause': 'F8',
@@ -90,12 +99,16 @@ class HotkeyService {
       'previous': 'F7',
       'volumeUp': 'F11',
       'volumeDown': 'F10',
+      'seekForward': 'F6',
+      'seekBackward': 'F5',
     },
   };
 
   // ─── Native Windows media keys ──────────────────────────────────────────
-  
-  static const MethodChannel _mediaKeyChannel = MethodChannel('ga_song/media_keys');
+
+  static const MethodChannel _mediaKeyChannel = MethodChannel(
+    'ga_song/media_keys',
+  );
   bool _nativeMediaKeysRegistered = false;
 
   Future<void> init() async {
@@ -106,19 +119,101 @@ class HotkeyService {
     }
     HardwareKeyboard.instance.addHandler(_handleLocalKey);
     await _registerGlobalHotkeys();
-    
+
     // Register native Windows media keys
     if (PlatformCapabilities.instance.isWindows) {
       await _registerNativeMediaKeys();
     }
-    
+
     _settings.customHotkeysNotifier.addListener(_onHotkeysSettingsChanged);
     _settings.mediaKeyEnabledNotifier.addListener(_onMediaKeySettingChanged);
   }
 
   void _onHotkeysSettingsChanged() {
     if (!_isDisposed) {
-      _registerGlobalHotkeys();
+      // v0.9.5: Only re-register changed hotkeys instead of unregistering all.
+      // This preserves registrations for unchanged keys and reduces latency.
+      _registerChangedHotkeys();
+    }
+  }
+
+  /// v0.9.5: Re-register only the hotkeys whose bindings have changed,
+  /// leaving all others registered. This avoids the O(n) unregister-all
+  /// + re-register cycle on every settings change.
+  Future<void> _registerChangedHotkeys() async {
+    if (_registrationLock != null && !_registrationLock!.isCompleted) {
+      await _registrationLock!.future;
+    }
+    _registrationLock = Completer<void>();
+
+    Completer<void>? currentCompleter;
+    _registerCompleters.add(currentCompleter = Completer<void>());
+
+    try {
+      final customHotkeys = _settings.customHotkeysNotifier.value;
+
+      for (final entry in _defaultHotkeys.entries) {
+        final action = entry.key;
+        final newKeyString = customHotkeys[action] ?? entry.value;
+        final newHotkey = _parseHotkeyString(newKeyString);
+
+        final existing = _registeredHotkeys[action];
+        final existingString = existing?.toString();
+
+        // Only re-register if the key actually changed
+        if (existingString == newHotkey?.toString()) continue;
+
+        // Unregister old
+        if (existing != null) {
+          try {
+            await hotKeyManager.unregister(existing);
+          } catch (e) {
+            // Ignore
+          }
+          _registeredHotkeys.remove(action);
+        }
+
+        // Register new
+        if (newHotkey != null) {
+          try {
+            await hotKeyManager.register(
+              newHotkey,
+              keyDownHandler: (_) => _handleAction(action),
+            );
+            _registeredHotkeys[action] = newHotkey;
+          } catch (e) {
+            AppLogger.w(
+              'hotkey.service',
+              'register failed for $action',
+              error: e,
+            );
+          }
+        }
+      }
+
+      // Clear previous conflicts before re-detecting — otherwise stale
+      // conflict entries from the initial full registration pollute results.
+      _conflictingHotkeys.clear();
+      detectConflicts();
+      if (_conflictingHotkeys.isNotEmpty) {
+        AppLogger.w(
+          'hotkey.service',
+          'Hotkey conflicts detected: $_conflictingHotkeys',
+        );
+      }
+    } catch (error) {
+      AppLogger.w(
+        'hotkey.service',
+        'changed hotkey registration failed',
+        error: error,
+      );
+    } finally {
+      _registerCompleters.remove(currentCompleter);
+      currentCompleter.complete();
+      if (!_registrationLock!.isCompleted) {
+        _registrationLock!.complete();
+      }
+      _registrationLock = null;
     }
   }
 
@@ -143,14 +238,18 @@ class HotkeyService {
 
       // Register native media key handler via platform channel
       await _mediaKeyChannel.invokeMethod('registerMediaKeys');
-      
+
       // Listen for media key events
       _mediaKeyChannel.setMethodCallHandler(_handleNativeMediaKey);
-      
+
       _nativeMediaKeysRegistered = true;
       AppLogger.d('hotkey.service', 'Native media keys registered');
     } catch (e) {
-      AppLogger.w('hotkey.service', 'Native media key registration failed', error: e);
+      AppLogger.w(
+        'hotkey.service',
+        'Native media key registration failed',
+        error: e,
+      );
     }
   }
 
@@ -158,21 +257,34 @@ class HotkeyService {
   Future<void> _unregisterNativeMediaKeys() async {
     try {
       if (!_nativeMediaKeysRegistered) return;
-      
+
       await _mediaKeyChannel.invokeMethod('unregisterMediaKeys');
       _mediaKeyChannel.setMethodCallHandler(null);
       _nativeMediaKeysRegistered = false;
       AppLogger.d('hotkey.service', 'Native media keys unregistered');
     } catch (e) {
-      AppLogger.w('hotkey.service', 'Native media key unregistration failed', error: e);
+      AppLogger.w(
+        'hotkey.service',
+        'Native media key unregistration failed',
+        error: e,
+      );
     }
   }
 
   /// Handles native media key events from platform channel.
-  Future<dynamic> _handleNativeMediaKey(MethodCall call) async {
+  Future<dynamic> _handleNativeMediaKey(final MethodCall call) async {
     switch (call.method) {
       case 'onMediaKey':
         final key = call.arguments as String;
+
+        // Debounce media keys to prevent rapid-fire
+        final now = DateTime.now();
+        if (now.difference(_lastMediaKeyTime).inMilliseconds <
+            _mediaKeyDebounce.inMilliseconds) {
+          return null;
+        }
+        _lastMediaKeyTime = now;
+
         switch (key) {
           case 'playPause':
             _handleAction('playPause');
@@ -193,17 +305,17 @@ class HotkeyService {
   }
 
   /// Applies a hotkey profile by name.
-  Future<void> applyHotkeyProfile(String profileName) async {
+  Future<void> applyHotkeyProfile(final String profileName) async {
     final profile = _hotkeyProfiles[profileName];
     if (profile == null) {
       AppLogger.w('hotkey.service', 'Unknown profile: $profileName');
       return;
     }
-    
+
     // Update settings with profile hotkeys
     _settings.customHotkeysNotifier.value = Map.from(profile);
     await _registerGlobalHotkeys();
-    
+
     AppLogger.i('hotkey.service', 'Applied hotkey profile: $profileName');
   }
 
@@ -211,20 +323,21 @@ class HotkeyService {
   List<String> get availableProfiles => _hotkeyProfiles.keys.toList();
 
   /// Gets the hotkey mapping for a profile.
-  Map<String, String>? getProfile(String name) => _hotkeyProfiles[name];
+  Map<String, String>? getProfile(final String name) => _hotkeyProfiles[name];
 
   /// Detects and resolves hotkey conflicts.
   /// Returns list of conflicting actions.
   List<String> detectConflicts() {
     _conflictingHotkeys.clear();
-    
+
     final seen = <String, String>{}; // keyString -> action
-    
+
     for (final entry in _registeredHotkeys.entries) {
       final action = entry.key;
       final hotkey = entry.value;
-      final keyString = hotkey.toString(); // HotKey.toString() gives unique representation
-      
+      final keyString = hotkey
+          .toString(); // HotKey.toString() gives unique representation
+
       if (seen.containsKey(keyString)) {
         _conflictingHotkeys.add(action);
         _conflictingHotkeys.add(seen[keyString]!);
@@ -232,7 +345,7 @@ class HotkeyService {
         seen[keyString] = action;
       }
     }
-    
+
     return _conflictingHotkeys.toList();
   }
 
@@ -240,24 +353,29 @@ class HotkeyService {
   Future<void> autoResolveConflicts() async {
     final conflicts = detectConflicts();
     if (conflicts.isEmpty) return;
-    
-    final customHotkeys = Map<String, String>.from(_settings.customHotkeysNotifier.value);
-    
+
+    final customHotkeys = Map<String, String>.from(
+      _settings.customHotkeysNotifier.value,
+    );
+
     for (final action in conflicts) {
       // Try to find an alternative key combination
       final alternative = _findAlternativeHotkey(action);
       if (alternative != null) {
         customHotkeys[action] = alternative;
-        AppLogger.i('hotkey.service', 'Auto-resolved conflict for $action -> $alternative');
+        AppLogger.i(
+          'hotkey.service',
+          'Auto-resolved conflict for $action -> $alternative',
+        );
       }
     }
-    
+
     _settings.customHotkeysNotifier.value = customHotkeys;
     await _registerGlobalHotkeys();
   }
 
   /// Finds an alternative hotkey for an action.
-  String? _findAlternativeHotkey(String action) {
+  String? _findAlternativeHotkey(final String action) {
     final modifiers = [
       [HotKeyModifier.control],
       [HotKeyModifier.alt],
@@ -266,7 +384,7 @@ class HotkeyService {
       [HotKeyModifier.control, HotKeyModifier.shift],
       [HotKeyModifier.alt, HotKeyModifier.shift],
     ];
-    
+
     final keys = [
       PhysicalKeyboardKey.keyM,
       PhysicalKeyboardKey.keyN,
@@ -280,37 +398,47 @@ class HotkeyService {
       PhysicalKeyboardKey.f3,
       PhysicalKeyboardKey.f4,
     ];
-    
-    final existing = _registeredHotkeys.values.map((h) => h.toString()).toSet();
-    
+
+    final existing = _registeredHotkeys.values
+        .map((final h) => h.toString())
+        .toSet();
+
     for (final key in keys) {
       for (final modList in modifiers) {
-        final hotkey = HotKey(
-          key: key,
-          modifiers: modList,
-          scope: HotKeyScope.system,
-        );
+        final hotkey = HotKey(key: key, modifiers: modList);
         if (!existing.contains(hotkey.toString())) {
           return _hotkeyToString(hotkey);
         }
       }
     }
-    
+
     return null;
   }
 
   /// Converts HotKey to string representation.
-  String _hotkeyToString(HotKey hotkey) {
+  String _hotkeyToString(final HotKey hotkey) {
     final parts = <String>[];
     if (hotkey.modifiers != null) {
       for (final mod in hotkey.modifiers!) {
         switch (mod) {
-          case HotKeyModifier.control: parts.add('Ctrl'); break;
-          case HotKeyModifier.alt: parts.add('Alt'); break;
-          case HotKeyModifier.shift: parts.add('Shift'); break;
-          case HotKeyModifier.meta: parts.add('Win'); break;
-          case HotKeyModifier.capsLock: parts.add('CapsLock'); break;
-          case HotKeyModifier.fn: parts.add('Fn'); break;
+          case HotKeyModifier.control:
+            parts.add('Ctrl');
+            break;
+          case HotKeyModifier.alt:
+            parts.add('Alt');
+            break;
+          case HotKeyModifier.shift:
+            parts.add('Shift');
+            break;
+          case HotKeyModifier.meta:
+            parts.add('Win');
+            break;
+          case HotKeyModifier.capsLock:
+            parts.add('CapsLock');
+            break;
+          case HotKeyModifier.fn:
+            parts.add('Fn');
+            break;
         }
       }
     }
@@ -318,7 +446,7 @@ class HotkeyService {
     return parts.join(' + ');
   }
 
-  String _keyToString(KeyboardKey key) {
+  String _keyToString(final KeyboardKey key) {
     if (key == PhysicalKeyboardKey.space) return 'Space';
     if (key == PhysicalKeyboardKey.arrowRight) return 'ArrowRight';
     if (key == PhysicalKeyboardKey.arrowLeft) return 'ArrowLeft';
@@ -330,7 +458,7 @@ class HotkeyService {
     if (key == PhysicalKeyboardKey.pageDown) return 'PageDown';
     if (key == PhysicalKeyboardKey.home) return 'Home';
     if (key == PhysicalKeyboardKey.end) return 'End';
-    
+
     // F keys
     if (key == PhysicalKeyboardKey.f1) return 'F1';
     if (key == PhysicalKeyboardKey.f2) return 'F2';
@@ -344,7 +472,7 @@ class HotkeyService {
     if (key == PhysicalKeyboardKey.f10) return 'F10';
     if (key == PhysicalKeyboardKey.f11) return 'F11';
     if (key == PhysicalKeyboardKey.f12) return 'F12';
-    
+
     // Letter keys (a-z)
     if (key == PhysicalKeyboardKey.keyA) return 'A';
     if (key == PhysicalKeyboardKey.keyB) return 'B';
@@ -372,7 +500,7 @@ class HotkeyService {
     if (key == PhysicalKeyboardKey.keyX) return 'X';
     if (key == PhysicalKeyboardKey.keyY) return 'Y';
     if (key == PhysicalKeyboardKey.keyZ) return 'Z';
-    
+
     return key.toString();
   }
 
@@ -432,11 +560,14 @@ class HotkeyService {
           _registeredHotkeys[action] = hotkey;
         }
       }
-      
+
       // Auto-detect conflicts after registration
       detectConflicts();
       if (_conflictingHotkeys.isNotEmpty) {
-        AppLogger.w('hotkey.service', 'Hotkey conflicts detected: $_conflictingHotkeys');
+        AppLogger.w(
+          'hotkey.service',
+          'Hotkey conflicts detected: $_conflictingHotkeys',
+        );
       }
     } catch (error) {
       AppLogger.w('hotkey.service', 'global hotkey failed', error: error);
@@ -450,7 +581,7 @@ class HotkeyService {
     }
   }
 
-  void _handleAction(String action) {
+  void _handleAction(final String action) {
     if (_isDisposed) return;
 
     // Debounce: tránh trigger liên tục khi giữ phím (tối thiểu 100ms giữa mỗi lần)
@@ -505,12 +636,16 @@ class HotkeyService {
       case 'settingsSearch':
         _onOpenSettingsSearch?.call();
         break;
+      // macOS Pinned Mini Player toggle (Cmd+Shift+M)
+      case 'toggleMiniPlayer':
+        _onToggleMiniPlayer?.call();
+        break;
     }
   }
 
-  HotKey? _parseHotkeyString(String keys) {
+  HotKey? _parseHotkeyString(final String keys) {
     try {
-      final parts = keys.split('+').map((e) => e.trim()).toList();
+      final parts = keys.split('+').map((final e) => e.trim()).toList();
       if (parts.isEmpty) return null;
 
       final modifiers = <HotKeyModifier>[];
@@ -549,7 +684,7 @@ class HotkeyService {
     return null;
   }
 
-  PhysicalKeyboardKey? _mapStringToKey(String keyLabel) {
+  PhysicalKeyboardKey? _mapStringToKey(final String keyLabel) {
     final Map<String, PhysicalKeyboardKey> keyMap = {
       'Space': PhysicalKeyboardKey.space,
       'Arrow Right': PhysicalKeyboardKey.arrowRight,
@@ -661,7 +796,7 @@ class HotkeyService {
     return null;
   }
 
-  bool _handleLocalKey(KeyEvent event) {
+  bool _handleLocalKey(final KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.space) {
         if (FocusManager.instance.primaryFocus?.context?.widget
@@ -698,6 +833,4 @@ class HotkeyService {
     }
     return false;
   }
-
-
 }

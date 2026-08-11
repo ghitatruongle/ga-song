@@ -14,8 +14,12 @@ analyzer:
     - test_project/**
     - integration_test/**
     - build/**
+    - benchmark/**
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+  errors:
+    # URLs like ga-song://... in doc comments are intentional.
+    unintended_html_in_doc_comment: ignore
 linter:
   rules:
     # ─── Code Quality ──────────────────────────────────────────────────
@@ -52,50 +56,31 @@ linter:
     - avoid_unnecessary_containers
 
     # ─── Type Safety ───────────────────────────────────────────────────
-    - avoid_dynamic_calls
     - prefer_interpolation_to_compose_strings
     - prefer_relative_imports
-
-    # ─── Performance ───────────────────────────────────────────────────
-    - prefer_const_constructors
-    - prefer_const_literals_to_create_immutables
-    - avoid_unnecessary_containers
-    - sized_box_for_whitespace
-    - use_build_context_synchronously
 
     # ─── Maintainability ───────────────────────────────────────────────
     - avoid_bool_literals_in_conditional_expressions
     - avoid_double_and_int_checks
     - avoid_escaping_inner_quotes
-    - avoid_field_initializers_in_const_classes
     - avoid_function_literals_in_foreach_calls
     - avoid_js_rounded_ints
     - avoid_multiple_declarations_per_line
-    - avoid_null_checks_in_equality_operators
-    - avoid_positional_boolean_parameters
-    - avoid_redundant_argument_values
-    - avoid_returning_null_for_future
     - avoid_returning_this
     - avoid_setters_without_getters
     - avoid_shadowing_type_parameters
     - avoid_single_cascade_in_expression_statements
     - avoid_type_to_string
-    - avoid_unnecessary_type_assertions
     - avoid_unused_constructor_parameters
     - avoid_void_async
     - prefer_asserts_in_initializer_lists
-    - prefer_asserts_with_message
     - prefer_constructors_over_static_methods
-    - prefer_expression_function_bodies
-    - prefer_final_parameters
     - prefer_foreach
     - prefer_if_null_operators
     - prefer_initializing_formals
     - prefer_inlined_adds
-    - prefer_int_literals
     - prefer_mixin
     - prefer_null_aware_method_calls
-    - prefer_ternary_over_if_else
     - prefer_void_to_null
     - unnecessary_await_in_return
     - unnecessary_constructor_name
@@ -103,17 +88,12 @@ linter:
     - unnecessary_parenthesis
     - unnecessary_raw_strings
     - unnecessary_string_escapes
-    - use_colored_box
     - use_decorated_box
     - use_full_hex_values_for_flutter_colors
-    - use_if_null_to_convert_nulls_to_bools
     - use_is_even_rather_than_modulo
-    - use_late_for_private_fields_and_variables
     - use_named_constants
     - use_raw_strings
     - use_rethrow_when_possible
-    - use_setters_to_change_properties
-    - use_string_buffers
     - use_super_parameters
     - use_test_throws_matchers
 

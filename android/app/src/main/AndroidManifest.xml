@@ -47,6 +47,19 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Disable Impeller: old GPUs (Adreno 308 on SM-J610F) run the
+                 Skia legacy renderer much more reliably & smoothly; Impeller
+                 GLES/Vulkan there causes black frames and heavy jank. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.EnableImpeller"
+              android:value="false"
+              />
+            <!-- Adreno 308 has no usable Vulkan; force the OpenGLES Impeller
+                 backend so startup skips the Vulkan probe/fallback. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.ImpellerBackend"
+              android:value="opengles"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

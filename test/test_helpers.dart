@@ -1,32 +1,20 @@
 /// Test Helpers for G.A - Song
 ///
 /// Common utilities, matchers, and setup helpers for unit, widget, and integration tests.
+library;
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/misc.dart' show Override;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
-import 'package:ga_song/core/settings_manager.dart';
-import 'package:ga_song/core/services/db_service_wrapper.dart';
-import 'package:ga_song/core/audio/audio_engine_service.dart';
-import 'package:ga_song/core/audio/audio_effect_service.dart';
-import 'package:ga_song/core/audio/playlist_service.dart';
-import 'package:ga_song/core/cover_art_repository.dart';
-import 'package:ga_song/core/services/window_manager_service.dart';
-import 'package:ga_song/core/services/system_tray_service.dart';
-import 'package:ga_song/core/services/hotkey_service.dart';
-import 'package:ga_song/core/services/audio_handler_service.dart';
-import 'package:ga_song/core/services/smtc_service.dart';
 import 'package:ga_song/core/pip_service.dart';
 import 'package:ga_song/core/services/desktop_lyrics_service.dart';
 import 'package:ga_song/providers/service_providers.dart';
+import 'package:ga_song/providers/song_provider.dart';
 import 'package:ga_song/models/song.dart';
 import 'package:ga_song/models/playlist.dart';
 
@@ -44,72 +32,76 @@ import 'mocks/mock_audio_handler_service.dart';
 // ─── Test Data Factories ─────────────────────────────────────────────
 
 Song createTestSong({
-  int? id,
-  String name = 'Test Song',
-  String? artist = 'Test Artist',
-  String? album = 'Test Album',
-  int? durationMs = 180000,
-  double peakDb = -12.0,
-  String sourcePath = 'assets/song/test.mp3',
-  bool isBuiltIn = false,
-  bool isFavorite = false,
-  DateTime? dateAdded,
-  int playCount = 0,
-  DateTime? lastPlayed,
-}) {
-  return Song(
-    id: id,
-    name: name,
-    artist: artist,
-    album: album,
-    durationMs: durationMs,
-    peakDb: peakDb,
-    sourcePath: sourcePath,
-    isBuiltIn: isBuiltIn,
-    isFavorite: isFavorite,
-    dateAdded: dateAdded,
-    playCount: playCount,
-    lastPlayed: lastPlayed,
-  );
-}
+  final int? id,
+  final String name = 'Test Song',
+  final String? artist = 'Test Artist',
+  final String? album = 'Test Album',
+  final int? durationMs = 180000,
+  final double peakDb = -12.0,
+  final String sourcePath = 'assets/song/test.mp3',
+  final bool isBuiltIn = false,
+  final bool isFavorite = false,
+  final DateTime? dateAdded,
+  final int playCount = 0,
+  final DateTime? lastPlayed,
+}) => Song(
+  id: id,
+  name: name,
+  artist: artist,
+  album: album,
+  durationMs: durationMs,
+  peakDb: peakDb,
+  sourcePath: sourcePath,
+  isBuiltIn: isBuiltIn,
+  isFavorite: isFavorite,
+  dateAdded: dateAdded,
+  playCount: playCount,
+  lastPlayed: lastPlayed,
+);
 
-List<Song> createTestSongList(int count, {String prefix = 'Song'}) {
-  return List.generate(count, (i) {
-    return createTestSong(
-      id: i + 1,
-      name: '$prefix ${i + 1}',
-      artist: 'Artist ${(i % 3) + 1}',
-      album: 'Album ${(i % 2) + 1}',
-      sourcePath: 'assets/song/${prefix.toLowerCase()}_${i + 1}.mp3',
-      dateAdded: DateTime(2026, 1, i + 1),
-      playCount: i * 2,
-      lastPlayed: DateTime(2026, 7, 1).subtract(Duration(days: i)),
-    );
-  });
-}
+List<Song> createTestSongList(
+  final int count, {
+  final String prefix = 'Song',
+}) => List.generate(
+  count,
+  (final i) => createTestSong(
+    id: i + 1,
+    name: '$prefix ${i + 1}',
+    artist: 'Artist ${(i % 3) + 1}',
+    album: 'Album ${(i % 2) + 1}',
+    sourcePath: 'assets/song/${prefix.toLowerCase()}_${i + 1}.mp3',
+    dateAdded: DateTime(2026, 1, i + 1),
+    playCount: i * 2,
+    lastPlayed: DateTime(2026, 7).subtract(Duration(days: i)),
+  ),
+);
 
 Playlist createTestPlaylist({
-  int? id,
-  String name = 'Test Playlist',
-  List<int> songIds = const [],
-}) {
-  return Playlist(id: id, name: name, songIds: songIds);
-}
+  final int? id,
+  final String name = 'Test Playlist',
+  final List<int> songIds = const [],
+}) => Playlist(id: id, name: name, songIds: songIds);
 
-List<Playlist> createTestPlaylistList(int count, {List<Song>? songs}) {
+List<Playlist> createTestPlaylistList(
+  final int count, {
+  final List<Song>? songs,
+}) {
   final songPool = songs ?? createTestSongList(20);
-  return List.generate(count, (i) {
+  return List.generate(count, (final i) {
     final start = (i * 3) % songPool.length;
     final end = (start + 3).clamp(0, songPool.length);
     return createTestPlaylist(
       id: i + 1,
       name: 'Playlist ${i + 1}',
-      songIds: songPool.sublist(start, end).map((s) => s.id!).toList(),
+      songIds: songPool.sublist(start, end).map((final s) => s.id!).toList(),
     );
   });
 }
 
-Uint8List createTestImageBytes({int width = 100, int height = 100}) {
+Uint8List createTestImageBytes({
+  final int width = 100,
+  final int height = 100,
+}) {
   // Create a simple PNG header + minimal data
   return Uint8List.fromList([
     0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
@@ -137,16 +129,16 @@ class MockServices {
   final MockAudioHandlerService audioHandler;
 
   MockServices({
-    MockSettingsManager? settings,
-    MockDatabaseServiceWrapper? database,
-    MockAudioEngineService? audioEngine,
-    MockAudioEffectService? audioEffect,
-    MockPlaylistService? playlist,
-    MockCoverArtRepository? coverArt,
-    MockWindowManagerService? windowManager,
-    MockSystemTrayService? systemTray,
-    MockHotkeyService? hotkey,
-    MockAudioHandlerService? audioHandler,
+    final MockSettingsManager? settings,
+    final MockDatabaseServiceWrapper? database,
+    final MockAudioEngineService? audioEngine,
+    final MockAudioEffectService? audioEffect,
+    final MockPlaylistService? playlist,
+    final MockCoverArtRepository? coverArt,
+    final MockWindowManagerService? windowManager,
+    final MockSystemTrayService? systemTray,
+    final MockHotkeyService? hotkey,
+    final MockAudioHandlerService? audioHandler,
   }) : settings = settings ?? MockSettingsManager(),
        database = database ?? MockDatabaseServiceWrapper(),
        audioEngine = audioEngine ?? MockAudioEngineService(),
@@ -155,13 +147,17 @@ class MockServices {
        coverArt = coverArt ?? MockCoverArtRepository(),
        windowManager = windowManager ?? MockWindowManagerService(),
        systemTray = systemTray ?? MockSystemTrayService(),
-       hotkey = hotkey ?? MockHotkeyService(
-         settingsManager: settings ?? MockSettingsManager(),
-       ),
-       audioHandler = audioHandler ?? MockAudioHandlerService(
-         audioEngine ?? MockAudioEngineService(),
-         playlist ?? MockPlaylistService(),
-       );
+       hotkey =
+           hotkey ??
+           MockHotkeyService(
+             settingsManager: settings ?? MockSettingsManager(),
+           ),
+       audioHandler =
+           audioHandler ??
+           MockAudioHandlerService(
+             audioEngine ?? MockAudioEngineService(),
+             playlist ?? MockPlaylistService(),
+           );
 
   /// Initialize all services
   Future<void> initAll() async {
@@ -197,7 +193,10 @@ class MockServices {
     systemTrayServiceProvider.overrideWithValue(systemTray),
     hotkeyServiceProvider.overrideWithValue(hotkey),
     pipServiceProvider.overrideWithValue(PipService.instance),
-    desktopLyricsServiceProvider.overrideWithValue(DesktopLyricsService(settingsManager: settings)),
+    desktopLyricsServiceProvider.overrideWithValue(
+      DesktopLyricsService(settingsManager: settings),
+    ),
+    songListProvider.overrideWithValue(AsyncData(createTestSongList(5))),
   ];
 }
 
@@ -205,15 +204,18 @@ class MockServices {
 
 /// Pumps a widget with all mock services initialized
 Future<void> pumpTestWidget(
-  WidgetTester tester,
-  Widget widget, {
-  MockServices? services,
-  List<Override>? additionalOverrides,
+  final WidgetTester tester,
+  final Widget widget, {
+  final MockServices? services,
+  final List<Override>? additionalOverrides,
 }) async {
   final mockServices = services ?? MockServices();
   await mockServices.initAll();
 
-  final List<Override> overrides = [...mockServices.overrides, ...(additionalOverrides ?? const [])];
+  final List<Override> overrides = [
+    ...mockServices.overrides,
+    ...(additionalOverrides ?? const []),
+  ];
 
   await tester.pumpWidget(
     ProviderScope(
@@ -233,12 +235,15 @@ Future<void> pumpTestWidget(
 
 /// Creates a test app wrapper with providers
 Widget createTestApp({
-  required Widget child,
-  MockServices? services,
-  List<Override>? additionalOverrides,
+  required final Widget child,
+  final MockServices? services,
+  final List<Override>? additionalOverrides,
 }) {
   final mockServices = services ?? MockServices();
-  final List<Override> overrides = [...mockServices.overrides, ...(additionalOverrides ?? const [])];
+  final List<Override> overrides = [
+    ...mockServices.overrides,
+    ...(additionalOverrides ?? const []),
+  ];
 
   return ProviderScope(
     overrides: overrides,
@@ -251,19 +256,29 @@ Widget createTestApp({
 }
 
 /// Waits for all microtasks and frames to complete
-Future<void> pumpAndSettle(WidgetTester tester, {Duration? timeout}) async {
+Future<void> pumpAndSettle(
+  final WidgetTester tester, {
+  final Duration? timeout,
+}) async {
   await tester.pumpAndSettle(timeout ?? const Duration(seconds: 5));
 }
 
 // ─── Async Test Helpers ──────────────────────────────────────────────
 
 /// Runs a test with a timeout
-Future<T> withTimeout<T>(Future<T> future, Duration timeout, {T? onTimeout}) async {
+Future<T> withTimeout<T>(
+  final Future<T> future,
+  final Duration timeout, {
+  final T? onTimeout,
+}) async {
   try {
-    return await future.timeout(timeout, onTimeout: () {
-      if (onTimeout != null) return onTimeout;
-      throw TimeoutException('Test timed out after $timeout', timeout);
-    });
+    return await future.timeout(
+      timeout,
+      onTimeout: () {
+        if (onTimeout != null) return onTimeout;
+        throw TimeoutException('Test timed out after $timeout', timeout);
+      },
+    );
   } on TimeoutException {
     rethrow;
   }
@@ -271,9 +286,9 @@ Future<T> withTimeout<T>(Future<T> future, Duration timeout, {T? onTimeout}) asy
 
 /// Waits for a condition to become true
 Future<void> waitFor(
-  bool Function() condition, {
-  Duration timeout = const Duration(seconds: 5),
-  Duration interval = const Duration(milliseconds: 50),
+  final bool Function() condition, {
+  final Duration timeout = const Duration(seconds: 5),
+  final Duration interval = const Duration(milliseconds: 50),
 }) async {
   final stopwatch = Stopwatch()..start();
   while (!condition()) {
@@ -286,12 +301,12 @@ Future<void> waitFor(
 
 /// Waits for a ValueNotifier to emit a specific value
 Future<void> waitForValue<T>(
-  ValueNotifier<T> notifier,
-  T expectedValue, {
-  Duration timeout = const Duration(seconds: 5),
+  final ValueNotifier<T> notifier,
+  final T expectedValue, {
+  final Duration timeout = const Duration(seconds: 5),
 }) async {
   if (notifier.value == expectedValue) return;
-  
+
   final completer = Completer<void>();
   late VoidCallback listener;
   listener = () {
@@ -301,7 +316,7 @@ Future<void> waitForValue<T>(
     }
   };
   notifier.addListener(listener);
-  
+
   await completer.future.timeout(timeout);
 }
 
@@ -317,7 +332,7 @@ class SongMatcher extends Matcher {
   const SongMatcher({this.name, this.artist, this.album, this.durationMs});
 
   @override
-  bool matches(Object? item, Map matchState) {
+  bool matches(final Object? item, final Map matchState) {
     if (item is! Song) return false;
     if (name != null && item.name != name) return false;
     if (artist != null && item.artist != artist) return false;
@@ -327,7 +342,7 @@ class SongMatcher extends Matcher {
   }
 
   @override
-  Description describe(Description description) {
+  Description describe(final Description description) {
     description.add('Song(');
     if (name != null) description.add('name: $name, ');
     if (artist != null) description.add('artist: $artist, ');
@@ -339,11 +354,16 @@ class SongMatcher extends Matcher {
 }
 
 Matcher isSong({
-  String? name,
-  String? artist,
-  String? album,
-  int? durationMs,
-}) => SongMatcher(name: name, artist: artist, album: album, durationMs: durationMs);
+  final String? name,
+  final String? artist,
+  final String? album,
+  final int? durationMs,
+}) => SongMatcher(
+  name: name,
+  artist: artist,
+  album: album,
+  durationMs: durationMs,
+);
 
 /// Matcher for Playlist objects
 class PlaylistMatcher extends Matcher {
@@ -353,7 +373,7 @@ class PlaylistMatcher extends Matcher {
   const PlaylistMatcher({this.name, this.songCount});
 
   @override
-  bool matches(Object? item, Map matchState) {
+  bool matches(final Object? item, final Map matchState) {
     if (item is! Playlist) return false;
     if (name != null && item.name != name) return false;
     if (songCount != null && item.songIds.length != songCount) return false;
@@ -361,7 +381,7 @@ class PlaylistMatcher extends Matcher {
   }
 
   @override
-  Description describe(Description description) {
+  Description describe(final Description description) {
     description.add('Playlist(');
     if (name != null) description.add('name: $name, ');
     if (songCount != null) description.add('songCount: $songCount, ');
@@ -370,13 +390,13 @@ class PlaylistMatcher extends Matcher {
   }
 }
 
-Matcher isPlaylist({String? name, int? songCount}) => PlaylistMatcher(name: name, songCount: songCount);
-
+Matcher isPlaylist({final String? name, final int? songCount}) =>
+    PlaylistMatcher(name: name, songCount: songCount);
 
 // ─── Performance Test Helpers ────────────────────────────────────────
 
 /// Measures execution time of a callback
-Future<Duration> measureTime(FutureOr<void> Function() callback) async {
+Future<Duration> measureTime(final FutureOr<void> Function() callback) async {
   final stopwatch = Stopwatch()..start();
   await callback();
   stopwatch.stop();
@@ -385,9 +405,9 @@ Future<Duration> measureTime(FutureOr<void> Function() callback) async {
 
 /// Runs a callback multiple times and returns statistics
 Future<Map<String, Duration>> benchmark(
-  FutureOr<void> Function() callback, {
-  int iterations = 100,
-  Duration? warmupDuration,
+  final FutureOr<void> Function() callback, {
+  final int iterations = 100,
+  final Duration? warmupDuration,
 }) async {
   // Warmup
   if (warmupDuration != null) {
@@ -404,7 +424,7 @@ Future<Map<String, Duration>> benchmark(
   }
 
   times.sort();
-  final sum = times.fold<Duration>(Duration.zero, (a, b) => a + b);
+  final sum = times.fold<Duration>(Duration.zero, (final a, final b) => a + b);
   return {
     'min': times.first,
     'max': times.last,
@@ -414,4 +434,3 @@ Future<Map<String, Duration>> benchmark(
     'p99': times[(iterations * 0.99).floor()],
   };
 }
-

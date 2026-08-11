@@ -7,12 +7,11 @@ import 'package:window_manager/window_manager.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 import '../logging/app_logger.dart';
-import '../../models/song.dart';
 
 class SystemTrayService {
   SystemTrayService({
-    AudioEngineService? audioEngineService,
-    PlaylistService? playlistService,
+    final AudioEngineService? audioEngineService,
+    final PlaylistService? playlistService,
   }) : _engine = audioEngineService,
        _playlist = playlistService;
 
@@ -27,23 +26,20 @@ class SystemTrayService {
   // initialization so the platform-channel call only fires on desktop.
   late final AppWindow _appWindow = _isDesktop ? AppWindow() : _noOpAppWindow;
   late final Menu _menu = _isDesktop ? Menu() : _noOpMenu;
-  
+
   // ─── Icon caching ──────────────────────────────────────────────────────
-  
+
   String? _cachedIconPath;
   Uint8List? _cachedIconBytes;
   static const _iconCacheDuration = Duration(days: 7);
-  DateTime? _iconCacheTimestamp;
 
   // ─── Event-driven updates ──────────────────────────────────────────────
-  
-  StreamSubscription<AudioEngineState>? _engineStateSubscription;
-  StreamSubscription<Duration>? _positionSubscription;
-  StreamSubscription<Duration>? _durationSubscription;
-  StreamSubscription<int>? _currentSongSubscription;
-  
+  // v0.9.5: Uses addListener (returns void) — we store WeakReferences via
+  // a helper to allow removal. Listeners are added/removed by reference.
+  final Set<VoidCallback> _trayListeners = {};
+
   // ─── Live tooltip ──────────────────────────────────────────────────────
-  
+
   Timer? _tooltipUpdateTimer;
   String? _lastTooltipText;
 
@@ -72,7 +68,7 @@ class SystemTrayService {
 
     try {
       _systemTray = SystemTray();
-      String path = await _getCachedIconPath();
+      final String path = await _getCachedIconPath();
 
       final iconFileCheck = File(path);
       if (!iconFileCheck.existsSync()) {
@@ -88,7 +84,7 @@ class SystemTrayService {
 
       await _buildMenu();
 
-      _systemTray!.registerSystemTrayEventHandler((eventName) {
+      _systemTray!.registerSystemTrayEventHandler((final eventName) {
         if (eventName == kSystemTrayEventClick) {
           Platform.isWindows
               ? _appWindow.show()
@@ -102,10 +98,9 @@ class SystemTrayService {
 
       // Set up event-driven updates (replaces polling)
       _setupEventDrivenUpdates();
-      
+
       // Start live tooltip updates
       _startLiveTooltipUpdates();
-
     } catch (e, stackTrace) {
       AppLogger.e('system_tray.service', 'SystemTray init failed', error: e);
       AppLogger.d('system_tray.service', 'stack', error: stackTrace);
@@ -126,18 +121,19 @@ class SystemTrayService {
 
     // Check disk cache
     final cacheDir = Directory.systemTemp;
-    final cacheFileName = Platform.isWindows 
-        ? 'ga_song_app_icon.ico' 
+    final cacheFileName = Platform.isWindows
+        ? 'ga_song_app_icon.ico'
         : 'ga_song_app_icon.png';
-    final cacheFile = File('${cacheDir.path}${Platform.pathSeparator}$cacheFileName');
-    
+    final cacheFile = File(
+      '${cacheDir.path}${Platform.pathSeparator}$cacheFileName',
+    );
+
     if (await cacheFile.exists()) {
       final stat = await cacheFile.stat();
       // Check if cache is still valid
       if (DateTime.now().difference(stat.modified) < _iconCacheDuration) {
         _cachedIconPath = cacheFile.path;
         _cachedIconBytes = await cacheFile.readAsBytes();
-        _iconCacheTimestamp = stat.modified;
         AppLogger.d('system_tray.service', 'using disk cached icon');
         return cacheFile.path;
       }
@@ -147,22 +143,21 @@ class SystemTrayService {
     final assetPath = Platform.isWindows
         ? 'assets/pic/app_icon.ico'
         : 'assets/pic/app_logo.png';
-    
+
     try {
       final byteData = await rootBundle.load(assetPath);
       final bytes = byteData.buffer.asUint8List(
         byteData.offsetInBytes,
         byteData.lengthInBytes,
       );
-      
+
       // Write to disk cache
       await cacheFile.writeAsBytes(bytes, flush: true);
-      
+
       // Update memory cache
       _cachedIconPath = cacheFile.path;
       _cachedIconBytes = bytes;
-      _iconCacheTimestamp = DateTime.now();
-      
+
       AppLogger.d('system_tray.service', 'icon extracted and cached');
       return cacheFile.path;
     } catch (e) {
@@ -173,39 +168,26 @@ class SystemTrayService {
   }
 
   /// Sets up event-driven updates from audio engine and playlist.
-  /// Replaces the old polling-based _updateMenu with 500ms debounce.
+  /// v0.9.5: Uses direct addListener on ValueNotifiers instead of polling
+  /// Stream.periodic, eliminating redundant timers and reducing CPU wake-ups.
   void _setupEventDrivenUpdates() {
     final engine = _engine;
     final playlist = _playlist;
     if (engine == null || playlist == null) return;
 
-    // Listen to engine state changes
-    _engineStateSubscription = Stream.periodic(
-      const Duration(milliseconds: 500),
-      (_) => engine.engineState.value,
-    ).listen((_) => _scheduleMenuUpdate());
-
-    // Listen to position changes (throttled to avoid excessive updates)
-    _positionSubscription = Stream.periodic(
-      const Duration(milliseconds: 1000),
-      (_) => engine.positionNotifier.value,
-    ).listen((_) => _scheduleMenuUpdate());
-
-    // Listen to duration changes
-    _durationSubscription = Stream.periodic(
-      const Duration(milliseconds: 500),
-      (_) => engine.durationNotifier.value,
-    ).listen((_) => _scheduleMenuUpdate());
-
-    // Listen to current song changes
-    _currentSongSubscription = Stream.periodic(
-      const Duration(milliseconds: 500),
-      (_) => playlist.currentIndexNotifier.value,
-    ).listen((_) => _scheduleMenuUpdate());
+    // addListener returns void; we add the same callback to each notifier
+    // and store a reference so we can remove them later.
+    void onEvent() => _scheduleMenuUpdate();
+    engine.engineState.addListener(onEvent);
+    engine.positionNotifier.addListener(onEvent);
+    engine.durationNotifier.addListener(onEvent);
+    playlist.currentIndexNotifier.addListener(onEvent);
+    _trayListeners.add(onEvent);
   }
 
   /// Schedules a menu update (debounced to 200ms).
   Timer? _menuUpdateDebounce;
+  bool _isBuildingMenu = false;
   void _scheduleMenuUpdate() {
     _menuUpdateDebounce?.cancel();
     _menuUpdateDebounce = Timer(const Duration(milliseconds: 200), () {
@@ -216,72 +198,89 @@ class SystemTrayService {
   /// Builds and sets the system tray context menu with current playback info.
   Future<void> _buildMenu() async {
     if (_systemTray == null) return;
+    // Guard: skip if a previous build is still in flight — overlapping
+    // platform channel calls can interleave and install a stale menu.
+    if (_isBuildingMenu) return;
+    _isBuildingMenu = true;
 
     final engineService = _engine;
     final playlistService = _playlist;
-    if (engineService == null || playlistService == null) return;
+    if (engineService == null || playlistService == null) {
+      _isBuildingMenu = false;
+      return;
+    }
 
-    final isPlaying =
-        engineService.engineState.value == AudioEngineState.playing;
-    final position = engineService.positionNotifier.value;
-    final duration = engineService.durationNotifier.value;
+    try {
+      final isPlaying =
+          engineService.engineState.value == AudioEngineState.playing;
+      final position = engineService.positionNotifier.value;
+      final duration = engineService.durationNotifier.value;
 
-    // Format position/duration cho progress display
-    final positionStr = _formatDuration(position);
-    final durationStr = _formatDuration(duration);
-    final progressPercent = duration.inSeconds > 0
-        ? (position.inSeconds / duration.inSeconds * 100).clamp(0, 100)
-        : 0.0;
+      // Format position/duration cho progress display
+      final positionStr = _formatDuration(position);
+      final durationStr = _formatDuration(duration);
+      final progressPercent = duration.inSeconds > 0
+          ? (position.inSeconds / duration.inSeconds * 100).clamp(0, 100)
+          : 0.0;
 
-    await _menu.buildFrom([
-      // Progress bar (displayed as text)
-      MenuItemLabel(
-        label: '$positionStr / $durationStr (${progressPercent.toInt()}%)',
-        onClicked: null,
-      ),
-      MenuSeparator(),
-      MenuItemLabel(label: 'Show', onClicked: (menuItem) => _appWindow.show()),
-      MenuItemLabel(label: 'Hide', onClicked: (menuItem) => _appWindow.hide()),
-      MenuSeparator(),
-      MenuItemLabel(
-        label: isPlaying ? 'Pause' : 'Play',
-        onClicked: (menuItem) {
-          if (isPlaying) {
-            engineService.pause();
-          } else {
-            playlistService.play();
-          }
-        },
-      ),
-      MenuItemLabel(
-        label: 'Next',
-        onClicked: (menuItem) => playlistService.next(),
-      ),
-      MenuItemLabel(
-        label: 'Previous',
-        onClicked: (menuItem) => playlistService.previous(),
-      ),
-      MenuSeparator(),
-      MenuItemLabel(
-        label: 'Exit',
-        onClicked: (menuItem) async {
-          await windowManager.destroy();
-        },
-      ),
-    ]);
+      await _menu.buildFrom([
+        // Progress bar (displayed as text)
+        MenuItemLabel(
+          label: '$positionStr / $durationStr (${progressPercent.toInt()}%)',
+        ),
+        MenuSeparator(),
+        MenuItemLabel(
+          label: 'Show',
+          onClicked: (final menuItem) => _appWindow.show(),
+        ),
+        MenuItemLabel(
+          label: 'Hide',
+          onClicked: (final menuItem) => _appWindow.hide(),
+        ),
+        MenuSeparator(),
+        MenuItemLabel(
+          label: isPlaying ? 'Pause' : 'Play',
+          onClicked: (final menuItem) {
+            if (isPlaying) {
+              engineService.pause();
+            } else {
+              playlistService.play();
+            }
+          },
+        ),
+        MenuItemLabel(
+          label: 'Next',
+          onClicked: (final menuItem) => playlistService.next(),
+        ),
+        MenuItemLabel(
+          label: 'Previous',
+          onClicked: (final menuItem) => playlistService.previous(),
+        ),
+        MenuSeparator(),
+        MenuItemLabel(
+          label: 'Exit',
+          onClicked: (final menuItem) async {
+            await windowManager.destroy();
+          },
+        ),
+      ]);
 
-    await _systemTray!.setContextMenu(_menu);
+      // May throw if the tray was destroyed (dispose) while we were building.
+      try {
+        await _systemTray!.setContextMenu(_menu);
+      } catch (e) {
+        AppLogger.d('system_tray.service', 'setContextMenu failed', error: e);
+      }
+    } finally {
+      _isBuildingMenu = false;
+    }
   }
 
   /// Format Duration thành chuỗi mm:ss
-  String _formatDuration(Duration duration) {
+  String _formatDuration(final Duration duration) {
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  void _updateMenu() {
-    _scheduleMenuUpdate();
   }
 
   /// Starts live tooltip updates (every 2 seconds when playing).
@@ -296,18 +295,29 @@ class SystemTrayService {
   Future<void> _updateTooltip() async {
     if (_systemTray == null || _engine == null) return;
 
-    final engine = _engine!;
+    final engine = _engine;
     final isPlaying = engine.engineState.value == AudioEngineState.playing;
-    if (!isPlaying) return;
+    if (!isPlaying) {
+      // Show idle tooltip when paused
+      if (_lastTooltipText != 'G.A - Song - Paused') {
+        _lastTooltipText = 'G.A - Song - Paused';
+        try {
+          await _systemTray!.setToolTip(_lastTooltipText!);
+        } catch (e) {
+          AppLogger.d('system_tray.service', 'tooltip update failed', error: e);
+        }
+      }
+      return;
+    }
 
     final position = _formatDuration(engine.positionNotifier.value);
     final duration = _formatDuration(engine.durationNotifier.value);
     final song = _playlist?.currentSong;
-    
+
     String tooltip;
     if (song != null) {
       final artist = song.artist ?? 'Unknown Artist';
-      tooltip = '${song.name} - $artist\n$position / $duration';
+      tooltip = '🎵 ${song.name} - $artist\n⏱️ $position / $duration';
     } else {
       tooltip = 'G.A - Song\n$position / $duration';
     }
@@ -324,18 +334,20 @@ class SystemTrayService {
   }
 
   void dispose() {
-    // Cancel all subscriptions
-    _engineStateSubscription?.cancel();
-    _positionSubscription?.cancel();
-    _durationSubscription?.cancel();
-    _currentSongSubscription?.cancel();
+    // v0.9.5: Remove all listener references
+    for (final cb in _trayListeners) {
+      _engine?.engineState.removeListener(cb);
+      _engine?.positionNotifier.removeListener(cb);
+      _engine?.durationNotifier.removeListener(cb);
+      _playlist?.currentIndexNotifier.removeListener(cb);
+    }
+    _trayListeners.clear();
     _menuUpdateDebounce?.cancel();
     _tooltipUpdateTimer?.cancel();
 
     // Clear caches
     _cachedIconPath = null;
     _cachedIconBytes = null;
-    _iconCacheTimestamp = null;
     _lastTooltipText = null;
 
     try {

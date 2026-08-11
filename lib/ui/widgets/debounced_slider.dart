@@ -61,7 +61,7 @@ class _DebouncedSliderState extends State<DebouncedSlider> {
   }
 
   @override
-  void didUpdateWidget(covariant DebouncedSlider oldWidget) {
+  void didUpdateWidget(covariant final DebouncedSlider oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value && widget.value != _local) {
       _local = widget.value;
@@ -75,19 +75,19 @@ class _DebouncedSliderState extends State<DebouncedSlider> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final slider = Slider(
       value: _local.clamp(widget.min, widget.max),
       min: widget.min,
       max: widget.max,
       divisions: widget.divisions,
       label: widget.label,
-      onChanged: (v) {
+      onChanged: (final v) {
         setState(() => _local = v);
         _d.run(() => widget.onChanged(v));
       },
       onChangeStart: widget.onChangeStart,
-      onChangeEnd: (v) {
+      onChangeEnd: (final v) {
         // Flush immediately on release so final value is applied.
         _d.cancel();
         widget.onChanged(v);

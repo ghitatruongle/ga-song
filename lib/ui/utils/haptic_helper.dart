@@ -11,7 +11,7 @@ enum HapticType { light, medium }
 /// Wraps [HapticFeedback] so callers don't have to repeat the platform gate
 /// (Android-only haptics on this project). Failures on the platform channel
 /// are swallowed and logged — haptics are best-effort UX, never fatal.
-Future<void> safeHaptic(HapticType type) async {
+Future<void> safeHaptic(final HapticType type) async {
   if (!PlatformCapabilities.instance.isAndroid) return;
   try {
     switch (type) {

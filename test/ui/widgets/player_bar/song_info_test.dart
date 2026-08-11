@@ -7,13 +7,12 @@ import 'package:ga_song/providers/service_providers.dart';
 import 'package:ga_song/ui/widgets/player_bar/song_info.dart';
 
 void main() {
-  testWidgets('SongInfo displays song name and artist', (tester) async {
+  testWidgets('SongInfo displays song name and artist', (final tester) async {
     final song = Song(
       id: 1,
       name: 'Test Song',
       artist: 'Test Artist',
       sourcePath: 'test.mp3',
-      isBuiltIn: false,
     );
 
     await tester.pumpWidget(
@@ -32,14 +31,9 @@ void main() {
   });
 
   testWidgets('SongInfo shows Unknown Artist when artist is null', (
-    tester,
+    final tester,
   ) async {
-    final song = Song(
-      id: 2,
-      name: 'No Artist Song',
-      sourcePath: 'test2.mp3',
-      isBuiltIn: false,
-    );
+    final song = Song(id: 2, name: 'No Artist Song', sourcePath: 'test2.mp3');
 
     await tester.pumpWidget(
       ProviderScope(

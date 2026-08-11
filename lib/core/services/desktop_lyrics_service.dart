@@ -7,7 +7,7 @@ import '../audio/lyric_parser.dart';
 /// Shows a floating, semi-transparent lyrics display that syncs
 /// with the current playback position. Only available on desktop platforms.
 class DesktopLyricsService {
-  DesktopLyricsService({required SettingsManager settingsManager})
+  DesktopLyricsService({required final SettingsManager settingsManager})
     : _settingsManager = settingsManager;
 
   final SettingsManager _settingsManager;
@@ -15,7 +15,7 @@ class DesktopLyricsService {
   // ─── State ─────────────────────────────────────────────────────────────────
   final ValueNotifier<bool> isVisibleNotifier = ValueNotifier(false);
   final ValueNotifier<double> opacityNotifier = ValueNotifier(0.9);
-  final ValueNotifier<double> fontSizeNotifier = ValueNotifier(24.0);
+  final ValueNotifier<double> fontSizeNotifier = ValueNotifier(24);
   final ValueNotifier<bool> clickThroughNotifier = ValueNotifier(false);
 
   // Current lyrics data
@@ -96,14 +96,14 @@ class DesktopLyricsService {
   // ─── Public API ────────────────────────────────────────────────────────────
 
   /// Update lyrics for the current song
-  void updateLyrics(List<LyricLine> lyrics, String? songTitle) {
+  void updateLyrics(final List<LyricLine> lyrics, final String? songTitle) {
     lyricsNotifier.value = lyrics;
     currentSongTitleNotifier.value = songTitle;
     currentLineIndexNotifier.value = -1;
   }
 
   /// Update the current playback position to sync lyrics
-  void updatePosition(Duration position) {
+  void updatePosition(final Duration position) {
     final lyrics = lyricsNotifier.value;
     if (lyrics.isEmpty) {
       currentLineIndexNotifier.value = -1;
@@ -125,11 +125,11 @@ class DesktopLyricsService {
   }
 
   /// Show the lyrics overlay với fade-in animation
-  void show(BuildContext context) {
+  void show(final BuildContext context) {
     if (_overlayEntry != null) return;
 
     _overlayEntry = OverlayEntry(
-      builder: (context) => _DesktopLyricsOverlay(service: this),
+      builder: (final context) => _DesktopLyricsOverlay(service: this),
     );
 
     Overlay.of(context).insert(_overlayEntry!);
@@ -139,20 +139,23 @@ class DesktopLyricsService {
 
   /// Hide the lyrics overlay với fade-out animation
   void hide() {
-    if (_overlayEntry == null) return;
+    // Null the entry FIRST so a second hide() (e.g. toggle() + the settings
+    // listener both firing) is a no-op instead of double-removing the same
+    // OverlayEntry → assert/TypeError crash ~200ms later.
+    final entry = _overlayEntry;
+    if (entry == null) return;
+    _overlayEntry = null;
 
     // Fade-out animation trước khi remove
     isVisibleNotifier.value = false;
-    final entry = _overlayEntry!;
     // Remove sau một khoảng thời gian để animation hoàn thành
     Future.delayed(const Duration(milliseconds: 200), () {
-      entry.remove();
-      _overlayEntry = null;
+      if (entry.mounted) entry.remove();
     });
   }
 
   /// Toggle lyrics visibility
-  void toggle(BuildContext context) {
+  void toggle(final BuildContext context) {
     if (isVisibleNotifier.value) {
       hide();
       _settingsManager.setDesktopLyricsEnabled(false);
@@ -162,13 +165,13 @@ class DesktopLyricsService {
   }
 
   /// Set font size
-  void setFontSize(double size) {
+  void setFontSize(final double size) {
     fontSizeNotifier.value = size;
     _settingsManager.setDesktopLyricsFontSize(size);
   }
 
   /// Set opacity
-  void setOpacity(double opacity) {
+  void setOpacity(final double opacity) {
     opacityNotifier.value = opacity;
     _settingsManager.setDesktopLyricsOpacity(opacity);
   }
@@ -198,7 +201,7 @@ class _DesktopLyricsOverlayState extends State<_DesktopLyricsOverlay> {
   bool _showControls = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -213,10 +216,10 @@ class _DesktopLyricsOverlayState extends State<_DesktopLyricsOverlay> {
           }
         },
         child: GestureDetector(
-          onPanStart: (details) {
+          onPanStart: (final details) {
             setState(() => _isDragging = true);
           },
-          onPanUpdate: (details) {
+          onPanUpdate: (final details) {
             setState(() {
               _position += details.delta;
             });
@@ -226,49 +229,44 @@ class _DesktopLyricsOverlayState extends State<_DesktopLyricsOverlay> {
           },
           child: ValueListenableBuilder<bool>(
             valueListenable: widget.service.isVisibleNotifier,
-            builder: (context, isVisible, _) {
-              return AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                opacity: isVisible ? 1.0 : 0.0,
-                child: AnimatedBuilder(
-                  animation: widget.service.opacityNotifier,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: widget.service.opacityNotifier.value,
-                      child: Container(
-                        width: 400,
-                        constraints: const BoxConstraints(
-                          minHeight: 100,
-                          maxHeight: 300,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Controls bar (shown on hover)
-                            if (_showControls)
-                              _ControlsBar(service: widget.service),
-
-                            // Lyrics content
-                            Flexible(
-                              child: _LyricsContent(service: widget.service),
-                            ),
-                          ],
-                        ),
+            builder: (final context, final isVisible, _) => AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              opacity: isVisible ? 1.0 : 0.0,
+              child: AnimatedBuilder(
+                animation: widget.service.opacityNotifier,
+                builder: (final context, final child) => Opacity(
+                  opacity: widget.service.opacityNotifier.value,
+                  child: Container(
+                    width: 400,
+                    constraints: const BoxConstraints(
+                      minHeight: 100,
+                      maxHeight: 300,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.1),
                       ),
-                    );
-                  },
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Controls bar (shown on hover)
+                        if (_showControls)
+                          _ControlsBar(service: widget.service),
+
+                        // Lyrics content
+                        Flexible(
+                          child: _LyricsContent(service: widget.service),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ),
@@ -284,83 +282,76 @@ class _ControlsBar extends StatelessWidget {
   const _ControlsBar({required this.service});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
-            width: 1,
+  Widget build(final BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Font size controls
+        GestureDetector(
+          onTap: () {
+            final currentSize = service.fontSizeNotifier.value;
+            if (currentSize > 16) {
+              service.setFontSize(currentSize - 2);
+            }
+          },
+          child: Icon(
+            Icons.text_decrease_rounded,
+            size: 18,
+            color: Colors.white.withValues(alpha: 0.6),
           ),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Font size controls
-          GestureDetector(
-            onTap: () {
-              final currentSize = service.fontSizeNotifier.value;
-              if (currentSize > 16) {
-                service.setFontSize(currentSize - 2);
-              }
-            },
-            child: Icon(
-              Icons.text_decrease_rounded,
-              size: 18,
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: () {
+            final currentSize = service.fontSizeNotifier.value;
+            if (currentSize < 48) {
+              service.setFontSize(currentSize + 2);
+            }
+          },
+          child: Icon(
+            Icons.text_increase_rounded,
+            size: 18,
+            color: Colors.white.withValues(alpha: 0.6),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () {
-              final currentSize = service.fontSizeNotifier.value;
-              if (currentSize < 48) {
-                service.setFontSize(currentSize + 2);
-              }
-            },
-            child: Icon(
-              Icons.text_increase_rounded,
-              size: 18,
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(width: 16),
+        ),
+        const SizedBox(width: 16),
 
-          // Click-through toggle
-          ValueListenableBuilder<bool>(
-            valueListenable: service.clickThroughNotifier,
-            builder: (context, isClickThrough, _) {
-              return GestureDetector(
-                onTap: () => service.toggleClickThrough(),
-                child: Icon(
-                  isClickThrough
-                      ? Icons.do_not_touch_rounded
-                      : Icons.touch_app_rounded,
-                  size: 18,
-                  color: isClickThrough
-                      ? Colors.blue
-                      : Colors.white.withValues(alpha: 0.6),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 16),
-
-          // Close button
-          GestureDetector(
-            onTap: () => service.hide(),
+        // Click-through toggle
+        ValueListenableBuilder<bool>(
+          valueListenable: service.clickThroughNotifier,
+          builder: (final context, final isClickThrough, _) => GestureDetector(
+            onTap: () => service.toggleClickThrough(),
             child: Icon(
-              Icons.close_rounded,
+              isClickThrough
+                  ? Icons.do_not_touch_rounded
+                  : Icons.touch_app_rounded,
               size: 18,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: isClickThrough
+                  ? Colors.blue
+                  : Colors.white.withValues(alpha: 0.6),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(width: 16),
+
+        // Close button
+        GestureDetector(
+          onTap: () => service.hide(),
+          child: Icon(
+            Icons.close_rounded,
+            size: 18,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 // ─── Lyrics Content ──────────────────────────────────────────────────────────
@@ -371,70 +362,65 @@ class _LyricsContent extends StatelessWidget {
   const _LyricsContent({required this.service});
 
   @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<LyricLine>>(
-      valueListenable: service.lyricsNotifier,
-      builder: (context, lyrics, _) {
-        if (lyrics.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Không có lời bài hát',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.4),
-                  fontSize: 14,
-                ),
+  Widget build(
+    final BuildContext context,
+  ) => ValueListenableBuilder<List<LyricLine>>(
+    valueListenable: service.lyricsNotifier,
+    builder: (final context, final lyrics, _) {
+      if (lyrics.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Không có lời bài hát',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 14,
               ),
             ),
-          );
-        }
-
-        return ValueListenableBuilder<int>(
-          valueListenable: service.currentLineIndexNotifier,
-          builder: (context, currentIndex, _) {
-            return ValueListenableBuilder<double>(
-              valueListenable: service.fontSizeNotifier,
-              builder: (context, fontSize, _) {
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 20,
-                  ),
-                  itemCount: lyrics.length,
-                  itemBuilder: (context, index) {
-                    final line = lyrics[index];
-                    final isCurrent = index == currentIndex;
-                    final isPast = index < currentIndex;
-
-                    return AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: TextStyle(
-                        fontSize: isCurrent ? fontSize : fontSize * 0.65,
-                        fontWeight: isCurrent
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                        color: isCurrent
-                            ? Colors.white
-                            : isPast
-                            ? Colors.white.withValues(alpha: 0.25)
-                            : Colors.white.withValues(alpha: 0.4),
-                        height: 1.5,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: isCurrent ? 8 : 4,
-                        ),
-                        child: Text(line.text, textAlign: TextAlign.center),
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
+          ),
         );
-      },
-    );
-  }
+      }
+
+      return ValueListenableBuilder<int>(
+        valueListenable: service.currentLineIndexNotifier,
+        builder: (final context, final currentIndex, _) =>
+            ValueListenableBuilder<double>(
+              valueListenable: service.fontSizeNotifier,
+              builder: (final context, final fontSize, _) => ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
+                itemCount: lyrics.length,
+                itemBuilder: (final context, final index) {
+                  final line = lyrics[index];
+                  final isCurrent = index == currentIndex;
+                  final isPast = index < currentIndex;
+
+                  return AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      fontSize: isCurrent ? fontSize : fontSize * 0.65,
+                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
+                      color: isCurrent
+                          ? Colors.white
+                          : isPast
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.white.withValues(alpha: 0.4),
+                      height: 1.5,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: isCurrent ? 8 : 4,
+                      ),
+                      child: Text(line.text, textAlign: TextAlign.center),
+                    ),
+                  );
+                },
+              ),
+            ),
+      );
+    },
+  );
 }

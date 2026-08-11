@@ -5,12 +5,10 @@ import 'package:ga_song/l10n/app_localizations.dart';
 import 'package:ga_song/ui/widgets/album_grid_widget.dart';
 
 /// Helper to create a test-ready MaterialApp with AppLocalizations.
-Widget createTestApp(Widget child) {
-  return MaterialApp(
-    localizationsDelegates: const [AppLocalizations.delegate],
-    home: Builder(builder: (context) => child),
-  );
-}
+Widget createTestApp(final Widget child) => MaterialApp(
+  localizationsDelegates: const [AppLocalizations.delegate],
+  home: Builder(builder: (final context) => child),
+);
 
 void main() {
   // Phase 4 device-debug regression: on a 720-physical-px / DPR 1.75
@@ -29,7 +27,7 @@ void main() {
   group('AlbumGridWidget overflow regression', () {
     testWidgets(
       'no overflow exception at device-realistic narrow viewport (191 wide)',
-      (tester) async {
+      (final tester) async {
         await tester.binding.setSurfaceSize(const Size(191, 700));
         addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -62,7 +60,7 @@ void main() {
     );
 
     testWidgets('long album name renders on 2 lines (full title visible)', (
-      tester,
+      final tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(191, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -86,7 +84,7 @@ void main() {
       // Contract 2: the rendered title must be 2 lines tall.
       // fontSize 18 → line-height ~22 logical px → 2 lines ~44 px.
       // We assert >= 36 px to leave a small slack for font metrics.
-      final titleFinder = find.byWidgetPredicate((w) {
+      final titleFinder = find.byWidgetPredicate((final w) {
         if (w is! Text) return false;
         return w.data == 'Mắt Nhắm Mắt Mở';
       });

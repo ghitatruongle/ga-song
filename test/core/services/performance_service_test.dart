@@ -30,9 +30,7 @@ void main() {
     });
 
     test('measure records duration', () {
-      final result = service.measure('test', () {
-        return 42;
-      });
+      final result = service.measure('test', () => 42);
 
       expect(result, equals(42));
       expect(service.getMeasurementCount('test'), equals(1));

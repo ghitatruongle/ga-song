@@ -2,11 +2,10 @@
 ///
 /// Provides inline editing of lyrics with real-time preview,
 /// auto-fetch from LRCLIB API, and synchronization with playback.
+library;
 
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../core/audio/lyric_parser.dart';
 import '../../core/services/online_lyrics_service.dart';
@@ -56,8 +55,6 @@ class LyricsEditorState {
 
 /// Notifier for lyrics editor state
 class LyricsEditorNotifier extends Notifier<LyricsEditorState> {
-  final _uuid = Uuid();
-
   @override
   LyricsEditorState build() {
     return const LyricsEditorState();
@@ -149,10 +146,7 @@ class LyricsEditorNotifier extends Notifier<LyricsEditorState> {
 
   /// Clear search results
   void clearSearch() {
-    state = state.copyWith(
-      searchResults: [],
-      selectedResultIndex: null,
-    );
+    state = state.copyWith(searchResults: [], selectedResultIndex: null);
   }
 
   /// Save lyrics to database and update provider
@@ -173,9 +167,11 @@ class LyricsEditorNotifier extends Notifier<LyricsEditorState> {
     );
 
     // Update the lyric provider
-    final parsed = LyricParser.parse(state.syncedLyrics.isNotEmpty
-        ? state.syncedLyrics
-        : (state.plainLyrics.isNotEmpty ? state.plainLyrics : ''));
+    final parsed = LyricParser.parse(
+      state.syncedLyrics.isNotEmpty
+          ? state.syncedLyrics
+          : (state.plainLyrics.isNotEmpty ? state.plainLyrics : ''),
+    );
     ref.read(lyricProvider.notifier).state = parsed;
   }
 
@@ -198,9 +194,12 @@ class LyricsEditorNotifier extends Notifier<LyricsEditorState> {
     for (int i = 0; i < lines.length; i++) {
       final mm = currentTime.inMinutes.toString().padLeft(2, '0');
       final ss = (currentTime.inSeconds % 60).toString().padLeft(2, '0');
-      final ms = ((currentTime.inMilliseconds % 1000) ~/ 10).toString().padLeft(2, '0');
+      final ms = ((currentTime.inMilliseconds % 1000) ~/ 10).toString().padLeft(
+        2,
+        '0',
+      );
 
-      syncedLines.add('[${mm}:${ss}.${ms}]${lines[i]}');
+      syncedLines.add('[$mm:$ss.$ms]${lines[i]}');
       currentTime += estimatedLineDuration;
     }
 
@@ -219,10 +218,7 @@ class LyricsEditorNotifier extends Notifier<LyricsEditorState> {
   }
 
   /// Reset editor state for a new song
-  void resetForSong({
-    String? initialPlain,
-    String? initialSynced,
-  }) {
+  void resetForSong({String? initialPlain, String? initialSynced}) {
     state = LyricsEditorState(
       plainLyrics: initialPlain ?? '',
       syncedLyrics: initialSynced ?? '',
@@ -230,6 +226,7 @@ class LyricsEditorNotifier extends Notifier<LyricsEditorState> {
   }
 }
 
-final lyricsEditorProvider = NotifierProvider<LyricsEditorNotifier, LyricsEditorState>(
-  LyricsEditorNotifier.new,
-);
+final lyricsEditorProvider =
+    NotifierProvider<LyricsEditorNotifier, LyricsEditorState>(
+      LyricsEditorNotifier.new,
+    );

@@ -8,17 +8,17 @@ import '../../core/theme/tokens.dart';
 import '../screens/reorderable_playlist_view.dart';
 
 class PlaylistManagerWidget {
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => const _PlaylistManagerDialog(),
+      builder: (final context) => const _PlaylistManagerDialog(),
     );
   }
 
-  static void showAddToPlaylist(BuildContext context, Song song) {
+  static void showAddToPlaylist(final BuildContext context, final Song song) {
     showDialog(
       context: context,
-      builder: (context) => _AddToPlaylistDialog(song: song),
+      builder: (final context) => _AddToPlaylistDialog(song: song),
     );
   }
 }
@@ -49,25 +49,27 @@ class _PlaylistManagerDialogState
     }
   }
 
-  Future<void> _deletePlaylist(int id) async {
+  Future<void> _deletePlaylist(final int id) async {
     final db = ref.read(databaseServiceProvider);
     await db.deletePlaylist(id);
     if (mounted) setState(() {});
   }
 
-  void _openReorderablePlaylist(BuildContext context, int playlistId, String name) {
+  void _openReorderablePlaylist(
+    final BuildContext context,
+    final int playlistId,
+    final String name,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ReorderablePlaylistView(
-          playlistId: playlistId,
-          playlistName: name,
-        ),
+        builder: (_) =>
+            ReorderablePlaylistView(playlistId: playlistId, playlistName: name),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final db = ref.watch(databaseServiceProvider);
     final textColor = context.adaptive;
 
@@ -107,7 +109,7 @@ class _PlaylistManagerDialogState
             Expanded(
               child: FutureBuilder<List<Playlist>>(
                 future: db.getAllPlaylists(),
-                builder: (context, snapshot) {
+                builder: (final context, final snapshot) {
                   final playlists = snapshot.data ?? [];
                   if (playlists.isEmpty) {
                     return Center(
@@ -121,7 +123,7 @@ class _PlaylistManagerDialogState
                   }
                   return ListView.builder(
                     itemCount: playlists.length,
-                    itemBuilder: (context, index) {
+                    itemBuilder: (final context, final index) {
                       final pl = playlists[index];
                       return ListTile(
                         title: Text(
@@ -204,7 +206,7 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
     }
   }
 
-  Future<void> _toggleSongInPlaylist(Playlist playlist) async {
+  Future<void> _toggleSongInPlaylist(final Playlist playlist) async {
     final db = ref.read(databaseServiceProvider);
     final isAdded = _addedPlaylistIds.contains(playlist.id);
 
@@ -226,7 +228,7 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
 
     return AlertDialog(
@@ -253,7 +255,7 @@ class _AddToPlaylistDialogState extends ConsumerState<_AddToPlaylistDialog> {
               )
             : ListView.builder(
                 itemCount: _playlists.length,
-                itemBuilder: (context, index) {
+                itemBuilder: (final context, final index) {
                   final pl = _playlists[index];
                   final isAdded = _addedPlaylistIds.contains(pl.id);
 

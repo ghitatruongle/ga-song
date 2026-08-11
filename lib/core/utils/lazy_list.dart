@@ -17,7 +17,7 @@ class LazyList<T> {
 
   /// Creates a lazy list with the given [loader] and [pageSize].
   LazyList({
-    required Future<List<T>> Function(int offset, int limit) loader,
+    required final Future<List<T>> Function(int offset, int limit) loader,
     this.pageSize = 50,
   }) : _loader = loader;
 
@@ -40,7 +40,7 @@ class LazyList<T> {
   bool get isNotEmpty => _items.isNotEmpty;
 
   /// Access an item by index.
-  T operator [](int index) => _items[index];
+  T operator [](final int index) => _items[index];
 
   /// Loads the next page of items.
   ///
@@ -70,6 +70,11 @@ class LazyList<T> {
 
   /// Reloads all items from the beginning.
   Future<void> refresh() async {
+    // Wait out any in-flight page load — otherwise its stale results get
+    // appended AFTER the clear (duplicate/out-of-order pages).
+    while (_isLoading) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
     _items.clear();
     _currentPage = 0;
     _hasMore = true;
@@ -84,13 +89,13 @@ class LazyList<T> {
   }
 
   /// Returns the index of [item] in the list, or -1 if not found.
-  int indexOf(T item) => _items.indexOf(item);
+  int indexOf(final T item) => _items.indexOf(item);
 
   /// Returns true if the list contains [item].
-  bool contains(T item) => _items.contains(item);
+  bool contains(final T item) => _items.contains(item);
 
   /// Loads items until [predicate] is satisfied or all items are loaded.
-  Future<void> loadUntil(bool Function(T item) predicate) async {
+  Future<void> loadUntil(final bool Function(T item) predicate) async {
     while (_hasMore && !_isLoading) {
       await loadMore();
       if (_items.any(predicate)) break;

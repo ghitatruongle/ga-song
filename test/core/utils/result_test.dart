@@ -22,7 +22,7 @@ void main() {
 
       test('map transforms data', () {
         const result = Success(42);
-        final mapped = result.map((data) => 'Value: $data');
+        final mapped = result.map((final data) => 'Value: $data');
 
         expect(mapped, isA<Success<String>>());
         expect(mapped.data, equals('Value: 42'));
@@ -30,7 +30,7 @@ void main() {
 
       test('flatMap transforms data', () {
         const result = Success(42);
-        final mapped = result.flatMap((data) => Success('Value: $data'));
+        final mapped = result.flatMap((final data) => Success('Value: $data'));
 
         expect(mapped, isA<Success<String>>());
         expect(mapped.data, equals('Value: 42'));
@@ -49,7 +49,7 @@ void main() {
 
       test('map preserves error', () {
         const result = Failure<int>('Error message');
-        final mapped = result.map((data) => 'Value: $data');
+        final mapped = result.map((final data) => 'Value: $data');
 
         expect(mapped, isA<Failure<String>>());
         expect(mapped.error, equals('Error message'));
@@ -57,7 +57,7 @@ void main() {
 
       test('flatMap preserves error', () {
         const result = Failure<int>('Error message');
-        final mapped = result.flatMap((data) => Success('Value: $data'));
+        final mapped = result.flatMap((final data) => Success('Value: $data'));
 
         expect(mapped, isA<Failure<String>>());
         expect(mapped.error, equals('Error message'));
@@ -76,8 +76,8 @@ void main() {
       test('calls onSuccess for Success', () {
         const result = Success(42);
         final output = result.fold(
-          onSuccess: (data) => 'Got $data',
-          onFailure: (message, _) => 'Error: $message',
+          onSuccess: (final data) => 'Got $data',
+          onFailure: (final message, _) => 'Error: $message',
         );
 
         expect(output, equals('Got 42'));
@@ -86,8 +86,8 @@ void main() {
       test('calls onFailure for Failure', () {
         const result = Failure<int>('Error');
         final output = result.fold(
-          onSuccess: (data) => 'Got $data',
-          onFailure: (message, _) => 'Error: $message',
+          onSuccess: (final data) => 'Got $data',
+          onFailure: (final message, _) => 'Error: $message',
         );
 
         expect(output, equals('Error: Error'));

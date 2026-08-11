@@ -17,24 +17,24 @@ import 'cover_art_image.dart';
 class QueuePanel extends ConsumerWidget {
   const QueuePanel({super.key});
 
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => const QueuePanel(),
+      builder: (final context) => const QueuePanel(),
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final playlist = ref.watch(playlistServiceProvider);
     final currentIndex = ref.watch(currentPlayingIndexProvider);
     final songs = playlist.playlist;
     final isDark = context.isDark;
 
-    // Split into "now playing" + upcoming
-    final upcoming = currentIndex >= 0
+    // Split into "now playing" + upcoming (guard: stale index could exceed)
+    final upcoming = (currentIndex >= 0 && currentIndex < songs.length - 1)
         ? songs.sublist(currentIndex + 1)
         : const <Song>[];
 
@@ -108,7 +108,7 @@ class QueuePanel extends ConsumerWidget {
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: upcoming.length,
-              itemBuilder: (context, index) {
+              itemBuilder: (final context, final index) {
                 final song = upcoming[index];
                 final realIndex = currentIndex + 1 + index;
                 return _QueueItem(
@@ -146,7 +146,7 @@ class _QueueItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final textColor = context.adaptive;
 
@@ -197,7 +197,7 @@ class _QueueItem extends StatelessWidget {
                       song: song,
                       cacheWidth: 80,
                       cacheHeight: 80,
-                      fallbackBuilder: (context) => Container(
+                      fallbackBuilder: (final context) => ColoredBox(
                         color: isDark
                             ? AppColors.darkSurface2
                             : AppColors.lightSurface2,
@@ -222,7 +222,9 @@ class _QueueItem extends StatelessWidget {
                         song.name,
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: isFirst ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: isFirst
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                           color: isFirst
                               ? Theme.of(context).colorScheme.primary
                               : textColor,
@@ -261,7 +263,7 @@ class _QueueItem extends StatelessWidget {
     );
   }
 
-  String _formatDuration(int? durationMs) {
+  String _formatDuration(final int? durationMs) {
     if (durationMs == null) return '--:--';
     final duration = Duration(milliseconds: durationMs);
     final minutes = duration.inMinutes;

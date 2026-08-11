@@ -8,7 +8,7 @@ class EmptyLibraryState extends StatelessWidget {
   const EmptyLibraryState({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final accentColor = Theme.of(context).colorScheme.primary;
     return Center(
@@ -66,7 +66,7 @@ class ErrorLoadingState extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(

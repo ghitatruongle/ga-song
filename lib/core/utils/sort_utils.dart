@@ -20,10 +20,14 @@ class SongSortUtils {
   /// - Null [durationMs] is treated as 0 (sorts first when ascending).
   /// - Null [dateAdded] is treated as [DateTime.epoch] (sorts first when
   ///   ascending).
-  static void sort(List<Song> songs, SortMode mode, {bool ascending = true}) {
+  static void sort(
+    final List<Song> songs,
+    final SortMode mode, {
+    final bool ascending = true,
+  }) {
     final int dir = ascending ? 1 : -1;
 
-    songs.sort((a, b) {
+    songs.sort((final a, final b) {
       switch (mode) {
         case SortMode.name:
           return dir * a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -64,9 +68,9 @@ class SongSortUtils {
   ///
   /// The original list is not modified.
   static List<Song> sorted(
-    List<Song> songs,
-    SortMode mode, {
-    bool ascending = true,
+    final List<Song> songs,
+    final SortMode mode, {
+    final bool ascending = true,
   }) {
     final result = List<Song>.from(songs);
     sort(result, mode, ascending: ascending);
@@ -82,7 +86,7 @@ class SongSortUtils {
   /// - 2 → [SortMode.dateAdded]
   /// - 3 → [SortMode.duration]
   /// - Any other value → [SortMode.name] (safe fallback)
-  static SortMode sortModeFromInt(int mode) {
+  static SortMode sortModeFromInt(final int mode) {
     switch (mode) {
       case 0:
         return SortMode.name;

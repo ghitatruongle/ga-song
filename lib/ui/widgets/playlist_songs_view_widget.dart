@@ -34,7 +34,7 @@ class PlaylistSongsViewWidget extends StatelessWidget {
   final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final adaptiveColor = context.adaptive;
 
     return Column(

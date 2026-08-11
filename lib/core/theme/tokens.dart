@@ -92,12 +92,10 @@ class AppColors {
   ///
   /// Picks [dark] when [Theme.of].brightness is dark, otherwise [light].
   static Color adaptive(
-    BuildContext context, {
-    required Color dark,
-    required Color light,
-  }) {
-    return Theme.of(context).brightness == Brightness.dark ? dark : light;
-  }
+    final BuildContext context, {
+    required final Color dark,
+    required final Color light,
+  }) => Theme.of(context).brightness == Brightness.dark ? dark : light;
 
   /// Get a neutral surface color tuned for the current theme.
   ///
@@ -106,7 +104,7 @@ class AppColors {
   ///
   /// Renamed from the legacy `surface(...)` so it does not collide with
   /// the static const [surface] Material 3 seed field.
-  static Color surfaceFor(BuildContext context, {int level = 1}) {
+  static Color surfaceFor(final BuildContext context, {final int level = 1}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (level) {
       case 1:
@@ -121,7 +119,10 @@ class AppColors {
   }
 
   /// Get the theme-appropriate text color with the supplied opacity.
-  static Color textWithOpacity(BuildContext context, double opacity) {
+  static Color textWithOpacity(
+    final BuildContext context,
+    final double opacity,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark ? darkTextPrimary : lightTextPrimary;
     return baseColor.withValues(alpha: opacity);
@@ -135,31 +136,31 @@ class AppColors {
 class AppSpacing {
   AppSpacing._();
 
-  static const double xxs = 2.0;
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 16.0;
-  static const double lg = 24.0;
-  static const double xl = 32.0;
-  static const double xxl = 48.0;
+  static const double xxs = 2;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double xxl = 48;
 }
 
 /// Border radius scale.
 class AppRadius {
   AppRadius._();
 
-  static const double sm = 8.0; // Buttons, chips
-  static const double md = 12.0; // Cards
-  static const double lg = 16.0; // Bottom sheets
-  static const double xl = 28.0; // Player surfaces
+  static const double sm = 8; // Buttons, chips
+  static const double md = 12; // Cards
+  static const double lg = 16; // Bottom sheets
+  static const double xl = 28; // Player surfaces
 }
 
 /// Material 3 elevation levels.
 class AppElevation {
   AppElevation._();
 
-  static const double level0 = 0.0;
-  static const double level1 = 1.0;
-  static const double level2 = 3.0;
-  static const double level3 = 6.0;
+  static const double level0 = 0;
+  static const double level1 = 1;
+  static const double level2 = 3;
+  static const double level3 = 6;
 }

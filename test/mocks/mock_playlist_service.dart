@@ -1,5 +1,6 @@
 /// Mock implementation of [PlaylistService] for testing.
 /// Provides controlled playlist behavior without database/audio dependencies.
+library;
 
 import 'dart:async';
 
@@ -21,7 +22,6 @@ class MockPlaylistService implements PlaylistService {
 
   // Internal queue state (the real service exposes `playlist`).
   List<Song> _queue = [];
-  bool _shuffleEnabled = false;
 
   // Track calls for verification
   int playCallCount = 0;
@@ -58,18 +58,24 @@ class MockPlaylistService implements PlaylistService {
   // ─── Queue Management ───────────────────────────────────────────────
 
   @override
-  Future<void> setPlaylist(List<Song> songs, {int startIndex = 0}) async {
+  Future<void> setPlaylist(
+    final List<Song> songs, {
+    final int startIndex = 0,
+  }) async {
     _queue = List<Song>.from(songs);
-    currentIndexNotifier.value =
-        _queue.isEmpty ? -1 : startIndex.clamp(0, _queue.length - 1);
+    currentIndexNotifier.value = _queue.isEmpty
+        ? -1
+        : startIndex.clamp(0, _queue.length - 1);
   }
 
   @override
-  void reorderPlaylist(List<Song> songs) {
+  void reorderPlaylist(final List<Song> songs) {
     final currentFileName = currentSong?.fileName;
     _queue = List<Song>.from(songs);
     if (currentFileName != null) {
-      final newIndex = _queue.indexWhere((s) => s.fileName == currentFileName);
+      final newIndex = _queue.indexWhere(
+        (final s) => s.fileName == currentFileName,
+      );
       if (newIndex >= 0) {
         currentIndexNotifier.value = newIndex;
       }
@@ -77,7 +83,7 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+  Future<void> reorderQueue(final int oldIndex, int newIndex) async {
     reorderCallCount++;
     if (oldIndex < 0 || oldIndex >= _queue.length) return;
     if (newIndex < 0 || newIndex >= _queue.length) return;
@@ -100,13 +106,13 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  Future<void> add(Song song) async {
+  Future<void> add(final Song song) async {
     addCallCount++;
     _queue.add(song);
   }
 
   @override
-  Future<void> remove(int index) async {
+  Future<void> remove(final int index) async {
     removeCallCount++;
     if (index < 0 || index >= _queue.length) return;
 
@@ -119,8 +125,10 @@ class MockPlaylistService implements PlaylistService {
       if (_queue.isEmpty) {
         currentIndexNotifier.value = -1;
       } else {
-        currentIndexNotifier.value =
-            currentIndexNotifier.value.clamp(0, _queue.length - 1);
+        currentIndexNotifier.value = currentIndexNotifier.value.clamp(
+          0,
+          _queue.length - 1,
+        );
       }
     }
   }
@@ -144,7 +152,10 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  Future<void> playSongAt(int index, {bool isHistoryNavigation = false}) async {
+  Future<void> playSongAt(
+    final int index, {
+    final bool isHistoryNavigation = false,
+  }) async {
     playCallCount++;
     if (index < 0 || index >= _queue.length) return;
     lastPlayedIndex = index;
@@ -152,8 +163,8 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  Future<void> playSongByFileName(String fileName) async {
-    final index = _queue.indexWhere((s) => s.fileName == fileName);
+  Future<void> playSongByFileName(final String fileName) async {
+    final index = _queue.indexWhere((final s) => s.fileName == fileName);
     if (index != -1) {
       await playSongAt(index);
     }
@@ -164,8 +175,7 @@ class MockPlaylistService implements PlaylistService {
     nextCallCount++;
     if (_queue.isEmpty) return;
     final nextIdx = currentIndexNotifier.value + 1;
-    currentIndexNotifier.value =
-        nextIdx < _queue.length ? nextIdx : 0;
+    currentIndexNotifier.value = nextIdx < _queue.length ? nextIdx : 0;
   }
 
   @override
@@ -179,18 +189,13 @@ class MockPlaylistService implements PlaylistService {
   // ─── Play Mode / Sort ───────────────────────────────────────────────
 
   @override
-  void setPlayMode(PlayMode mode) {
+  void setPlayMode(final PlayMode mode) {
     playModeNotifier.value = mode;
-    if (mode == PlayMode.shuffle) {
-      _shuffleEnabled = true;
-    } else {
-      _shuffleEnabled = false;
-    }
   }
 
   @override
   Future<void> nextPlayMode() async {
-    final modes = PlayMode.values;
+    const modes = PlayMode.values;
     final next = (playModeNotifier.value.index + 1) % modes.length;
     setPlayMode(modes[next]);
   }
@@ -205,15 +210,16 @@ class MockPlaylistService implements PlaylistService {
   bool get sortAscending => true;
 
   @override
-  void setSortMode(SortMode mode) {}
+  void setSortMode(final SortMode mode) {}
 
   @override
-  List<Song> getSortedPlaylist(List<Song> songs) => List<Song>.from(songs);
+  List<Song> getSortedPlaylist(final List<Song> songs) =>
+      List<Song>.from(songs);
 
   // ─── Sleep Timer ────────────────────────────────────────────────────
 
   @override
-  void startSleepTimer(Duration duration) {
+  void startSleepTimer(final Duration duration) {
     sleepTimerRemainingNotifier.value = duration;
   }
 

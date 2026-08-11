@@ -9,7 +9,7 @@ void main() {
   });
 
   testWidgets('buildTransitions returns child when disableAnimations is true', (
-    tester,
+    final tester,
   ) async {
     const builder = MotionPageTransitionsBuilder();
     const child = Text('child');
@@ -18,7 +18,7 @@ void main() {
         home: MediaQuery(
           data: const MediaQueryData(disableAnimations: true),
           child: Builder(
-            builder: (context) {
+            builder: (final context) {
               final route = PageRouteBuilder(
                 pageBuilder: (_, _, _) => const SizedBox(),
               );
@@ -39,7 +39,7 @@ void main() {
   });
 
   testWidgets('buildTransitions returns a Widget when animations enabled', (
-    tester,
+    final tester,
   ) async {
     const builder = MotionPageTransitionsBuilder();
     const child = Text('child');
@@ -47,7 +47,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
-          builder: (context) {
+          builder: (final context) {
             final route = PageRouteBuilder(
               pageBuilder: (_, _, _) => const SizedBox(),
             );

@@ -3,13 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('addPostFrameCallback fires after a frame is pumped', (
-    tester,
+    final tester,
   ) async {
     var fired = false;
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
-          builder: (context) {
+          builder: (final context) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               fired = true;
             });
@@ -22,14 +22,14 @@ void main() {
   });
 
   testWidgets('addPostFrameCallback runs after first frame, not before', (
-    tester,
+    final tester,
   ) async {
     final order = <String>[];
     order.add('before-pump');
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
-          builder: (context) {
+          builder: (final context) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               order.add('post-frame');
             });

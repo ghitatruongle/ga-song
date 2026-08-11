@@ -8,12 +8,11 @@
 /// - services_init_ms: Service initialization (settings, DB, audio)
 /// - first_frame_ms: Time to first frame
 /// - interactive_ms: Time to interactive (user can interact)
+library;
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:ga_song/main.dart' as app;
@@ -22,7 +21,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Startup Benchmark', () {
-    testWidgets('measure cold start time', (WidgetTester tester) async {
+    testWidgets('measure cold start time', (final WidgetTester tester) async {
       final stopwatch = Stopwatch()..start();
 
       // Measure engine initialization
@@ -59,7 +58,7 @@ void main() {
         resultsDir.createSync(recursive: true);
       }
       final resultsFile = File('benchmark/results/startup_benchmark_${DateTime.now().millisecondsSinceEpoch}.json');
-      resultsFile.writeAsStringSync(JsonEncoder.withIndent('  ').convert(results));
+      resultsFile.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(results));
 
       print('=== STARTUP BENCHMARK RESULTS ===');
       print('Total: ${results['total_ms']}ms');

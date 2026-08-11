@@ -15,13 +15,15 @@ class SettingsWidget extends ConsumerWidget {
   const SettingsWidget({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final settings = ref.read(settingsManagerProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
 
     return ColoredBox(
-      color: Colors.transparent,
+      // Solid background — transparent here lets wallpaper/acrylic show through
+      // and makes text/icons hard to read on all devices.
+      color: isDark ? AppColors.darkBackground : AppColors.lightSurface2,
       child: Column(
         children: <Widget>[
           // Q-3 fix: Use shared DesktopTitleBar widget
@@ -45,54 +47,52 @@ class SettingsWidget extends ConsumerWidget {
                   isDark: isDark,
                   child: ValueListenableBuilder<ThemeMode>(
                     valueListenable: settings.themeModeNotifier,
-                    builder: (context, currentTheme, _) {
-                      return Column(
-                        children: <Widget>[
-                          ListTile(
-                            title: Text(
-                              'Theo hệ thống (System Default)',
-                              style: TextStyle(color: textColor),
-                            ),
-                            leading: Radio<ThemeMode>(
-                              value: ThemeMode.system,
-                              groupValue: currentTheme,
-                              onChanged: (value) {
-                                if (value != null) settings.setThemeMode(value);
-                              },
-                              activeColor: Theme.of(context).primaryColor,
-                            ),
+                    builder: (final context, final currentTheme, _) => Column(
+                      children: <Widget>[
+                        ListTile(
+                          title: Text(
+                            'Theo hệ thống (System Default)',
+                            style: TextStyle(color: textColor),
                           ),
-                          ListTile(
-                            title: Text(
-                              'Sáng (Light Mode)',
-                              style: TextStyle(color: textColor),
-                            ),
-                            leading: Radio<ThemeMode>(
-                              value: ThemeMode.light,
-                              groupValue: currentTheme,
-                              onChanged: (value) {
-                                if (value != null) settings.setThemeMode(value);
-                              },
-                              activeColor: Theme.of(context).primaryColor,
-                            ),
+                          leading: Radio<ThemeMode>(
+                            value: ThemeMode.system,
+                            groupValue: currentTheme,
+                            onChanged: (final value) {
+                              if (value != null) settings.setThemeMode(value);
+                            },
+                            activeColor: Theme.of(context).primaryColor,
                           ),
-                          ListTile(
-                            title: Text(
-                              'Tối (Dark Mode)',
-                              style: TextStyle(color: textColor),
-                            ),
-                            leading: Radio<ThemeMode>(
-                              value: ThemeMode.dark,
-                              groupValue: currentTheme,
-                              onChanged: (value) {
-                                if (value != null) settings.setThemeMode(value);
-                              },
-                              activeColor: Theme.of(context).primaryColor,
-                            ),
+                        ),
+                        ListTile(
+                          title: Text(
+                            'Sáng (Light Mode)',
+                            style: TextStyle(color: textColor),
                           ),
-                        ],
-                      );
-                    },
+                          leading: Radio<ThemeMode>(
+                            value: ThemeMode.light,
+                            groupValue: currentTheme,
+                            onChanged: (final value) {
+                              if (value != null) settings.setThemeMode(value);
+                            },
+                            activeColor: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        ListTile(
+                          title: Text(
+                            'Tối (Dark Mode)',
+                            style: TextStyle(color: textColor),
+                          ),
+                          leading: Radio<ThemeMode>(
+                            value: ThemeMode.dark,
+                            groupValue: currentTheme,
+                            onChanged: (final value) {
+                              if (value != null) settings.setThemeMode(value);
+                            },
+                            activeColor: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -100,7 +100,7 @@ class SettingsWidget extends ConsumerWidget {
                   isDark: isDark,
                   child: ValueListenableBuilder<Locale>(
                     valueListenable: settings.localeNotifier,
-                    builder: (context, currentLocale, _) {
+                    builder: (final context, final currentLocale, _) {
                       final l10n = AppLocalizations.of(context)!;
                       return ListTile(
                         leading: Icon(Icons.language, color: textColor),
@@ -124,7 +124,7 @@ class SettingsWidget extends ConsumerWidget {
                               child: Text(l10n.languageEnglish),
                             ),
                           ],
-                          onChanged: (value) {
+                          onChanged: (final value) {
                             if (value != null) {
                               settings.setLocale(Locale(value));
                             }
@@ -143,36 +143,34 @@ class SettingsWidget extends ConsumerWidget {
                     isDark: isDark,
                     child: ValueListenableBuilder<bool>(
                       valueListenable: settings.useNativeWindowEffectNotifier,
-                      builder: (context, useNative, _) {
-                        return Column(
-                          children: [
-                            SwitchListTile(
-                              title: Text(
-                                'Hiệu ứng cửa sổ hệ thống (Xuyên màn hình)',
-                                style: TextStyle(color: textColor),
-                              ),
-                              subtitle: Text(
-                                'Sử dụng hiệu ứng trong suốt nguyên bản của hệ điều hành. Sẽ tắt hình nền mờ của ứng dụng.',
-                                style: TextStyle(
-                                  color: textColor.withValues(alpha: 0.6),
-                                  fontSize: 13,
-                                ),
-                              ),
-                              value: useNative,
-                              activeThumbColor: Theme.of(context).primaryColor,
-                              onChanged: settings.setUseNativeWindowEffect,
+                      builder: (final context, final useNative, _) => Column(
+                        children: [
+                          SwitchListTile(
+                            title: Text(
+                              'Hiệu ứng cửa sổ hệ thống (Xuyên màn hình)',
+                              style: TextStyle(color: textColor),
                             ),
-                            if (useNative)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                child: ValueListenableBuilder<double>(
-                                  valueListenable:
-                                      settings.windowOpacityNotifier,
-                                  builder: (context, opacity, _) {
-                                    return Column(
+                            subtitle: Text(
+                              'Sử dụng hiệu ứng trong suốt nguyên bản của hệ điều hành. Sẽ tắt hình nền mờ của ứng dụng.',
+                              style: TextStyle(
+                                color: textColor.withValues(alpha: 0.6),
+                                fontSize: 13,
+                              ),
+                            ),
+                            value: useNative,
+                            activeThumbColor: Theme.of(context).primaryColor,
+                            onChanged: settings.setUseNativeWindowEffect,
+                          ),
+                          if (useNative)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: ValueListenableBuilder<double>(
+                                valueListenable: settings.windowOpacityNotifier,
+                                builder: (final context, final opacity, _) =>
+                                    Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
@@ -188,7 +186,6 @@ class SettingsWidget extends ConsumerWidget {
                                         Slider(
                                           value: opacity,
                                           min: 0.1,
-                                          max: 1.0,
                                           divisions: 90,
                                           activeColor: Theme.of(
                                             context,
@@ -196,13 +193,11 @@ class SettingsWidget extends ConsumerWidget {
                                           onChanged: settings.setWindowOpacity,
                                         ),
                                       ],
-                                    );
-                                  },
-                                ),
+                                    ),
                               ),
-                          ],
-                        );
-                      },
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 // Phím tắt: chỉ hiện trên Desktop (không có phím tắt trên Android)
@@ -247,24 +242,23 @@ class SettingsWidget extends ConsumerWidget {
                     isDark: isDark,
                     child: ValueListenableBuilder<bool>(
                       valueListenable: settings.minimizeToTrayNotifier,
-                      builder: (context, minimizeToTray, _) {
-                        return SwitchListTile(
-                          title: Text(
-                            'Thu nhỏ xuống khay hệ thống khi đóng (Minimize to Tray)',
-                            style: TextStyle(color: textColor),
-                          ),
-                          subtitle: Text(
-                            'Ngăn ứng dụng bị tắt hoàn toàn khi ấn nút X',
-                            style: TextStyle(
-                              color: textColor.withValues(alpha: 0.6),
-                              fontSize: 13,
+                      builder: (final context, final minimizeToTray, _) =>
+                          SwitchListTile(
+                            title: Text(
+                              'Thu nhỏ xuống khay hệ thống khi đóng (Minimize to Tray)',
+                              style: TextStyle(color: textColor),
                             ),
+                            subtitle: Text(
+                              'Ngăn ứng dụng bị tắt hoàn toàn khi ấn nút X',
+                              style: TextStyle(
+                                color: textColor.withValues(alpha: 0.6),
+                                fontSize: 13,
+                              ),
+                            ),
+                            value: minimizeToTray,
+                            activeThumbColor: Theme.of(context).primaryColor,
+                            onChanged: settings.setMinimizeToTray,
                           ),
-                          value: minimizeToTray,
-                          activeThumbColor: Theme.of(context).primaryColor,
-                          onChanged: settings.setMinimizeToTray,
-                        );
-                      },
                     ),
                   ),
                 ],
@@ -273,7 +267,7 @@ class SettingsWidget extends ConsumerWidget {
                   isDark: isDark,
                   child: ValueListenableBuilder<int>(
                     valueListenable: settings.visualizerShapeNotifier,
-                    builder: (context, shape, _) {
+                    builder: (final context, final shape, _) {
                       const shapeNames = <String>[
                         'Vòng tròn xoáy (Circular)',
                         'Cột đứng (Bars)',
@@ -319,7 +313,7 @@ class SettingsWidget extends ConsumerWidget {
                               child: Text('Radial Burst'),
                             ),
                           ],
-                          onChanged: (value) {
+                          onChanged: (final value) {
                             if (value != null) {
                               settings.setVisualizerShape(value);
                             }
@@ -334,24 +328,23 @@ class SettingsWidget extends ConsumerWidget {
                   isDark: isDark,
                   child: ValueListenableBuilder<bool>(
                     valueListenable: settings.visualizerEnabledNotifier,
-                    builder: (context, visualizerEnabled, _) {
-                      return SwitchListTile(
-                        title: Text(
-                          'Hiệu ứng Phân tích âm thanh (Visualizer)',
-                          style: TextStyle(color: textColor),
-                        ),
-                        subtitle: Text(
-                          'Bật để xem sóng nhạc chuyển động theo beat',
-                          style: TextStyle(
-                            color: textColor.withValues(alpha: 0.6),
-                            fontSize: 13,
+                    builder: (final context, final visualizerEnabled, _) =>
+                        SwitchListTile(
+                          title: Text(
+                            'Hiệu ứng Phân tích âm thanh (Visualizer)',
+                            style: TextStyle(color: textColor),
                           ),
+                          subtitle: Text(
+                            'Bật để xem sóng nhạc chuyển động theo beat',
+                            style: TextStyle(
+                              color: textColor.withValues(alpha: 0.6),
+                              fontSize: 13,
+                            ),
+                          ),
+                          value: visualizerEnabled,
+                          activeThumbColor: Theme.of(context).primaryColor,
+                          onChanged: settings.setVisualizerEnabled,
                         ),
-                        value: visualizerEnabled,
-                        activeThumbColor: Theme.of(context).primaryColor,
-                        onChanged: settings.setVisualizerEnabled,
-                      );
-                    },
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -407,7 +400,7 @@ class SettingsWidget extends ConsumerWidget {
                   isDark: isDark,
                   child: ValueListenableBuilder<int>(
                     valueListenable: settings.sortModeNotifier,
-                    builder: (context, sortMode, _) {
+                    builder: (final context, final sortMode, _) {
                       const sortNames = [
                         'Tên bài hát',
                         'Nghệ sĩ',
@@ -427,25 +420,30 @@ class SettingsWidget extends ConsumerWidget {
                             fontSize: 13,
                           ),
                         ),
+                        // Compact trailing controls — full-size IconButtons
+                        // overflow on narrow (mobile) screens.
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             ValueListenableBuilder<bool>(
                               valueListenable: settings.sortAscendingNotifier,
-                              builder: (context, ascending, _) {
-                                return IconButton(
-                                  icon: Icon(
-                                    ascending
-                                        ? Icons.arrow_upward
-                                        : Icons.arrow_downward,
-                                    color: textColor,
+                              builder: (final context, final ascending, _) =>
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    iconSize: 20,
+                                    icon: Icon(
+                                      ascending
+                                          ? Icons.arrow_upward
+                                          : Icons.arrow_downward,
+                                      color: textColor,
+                                    ),
+                                    onPressed: () =>
+                                        settings.setSortAscending(!ascending),
                                   ),
-                                  onPressed: () =>
-                                      settings.setSortAscending(!ascending),
-                                );
-                              },
                             ),
                             IconButton(
+                              visualDensity: VisualDensity.compact,
+                              iconSize: 20,
                               icon: Icon(Icons.tune, color: textColor),
                               onPressed: () => SortFilterDialog.show(context),
                             ),
@@ -467,52 +465,57 @@ class SettingsWidget extends ConsumerWidget {
                       children: [
                         ValueListenableBuilder<bool>(
                           valueListenable: settings.mediaKeyEnabledNotifier,
-                          builder: (context, mediaKeyEnabled, _) {
-                            return SwitchListTile(
-                              secondary: Icon(Icons.keyboard, color: textColor),
-                              title: Text(
-                                'Hỗ trợ Phím Media (Media Keys)',
-                                style: TextStyle(color: textColor),
-                              ),
-                              subtitle: Text(
-                                'Play/Pause, Next, Previous trên bàn phím',
-                                style: TextStyle(
-                                  color: textColor.withValues(alpha: 0.6),
-                                  fontSize: 13,
+                          builder: (final context, final mediaKeyEnabled, _) =>
+                              SwitchListTile(
+                                secondary: Icon(
+                                  Icons.keyboard,
+                                  color: textColor,
                                 ),
+                                title: Text(
+                                  'Hỗ trợ Phím Media (Media Keys)',
+                                  style: TextStyle(color: textColor),
+                                ),
+                                subtitle: Text(
+                                  'Play/Pause, Next, Previous trên bàn phím',
+                                  style: TextStyle(
+                                    color: textColor.withValues(alpha: 0.6),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                value: mediaKeyEnabled,
+                                activeThumbColor: Theme.of(
+                                  context,
+                                ).primaryColor,
+                                onChanged: settings.setMediaKeyEnabled,
                               ),
-                              value: mediaKeyEnabled,
-                              activeThumbColor: Theme.of(context).primaryColor,
-                              onChanged: settings.setMediaKeyEnabled,
-                            );
-                          },
                         ),
                         const Divider(height: 1),
                         ValueListenableBuilder<bool>(
                           valueListenable:
                               settings.soundFeedbackEnabledNotifier,
-                          builder: (context, soundEnabled, _) {
-                            return SwitchListTile(
-                              secondary: Icon(
-                                Icons.volume_up_rounded,
-                                color: textColor,
-                              ),
-                              title: Text(
-                                'Phát âm thanh khi chuyển bài',
-                                style: TextStyle(color: textColor),
-                              ),
-                              subtitle: Text(
-                                'Chỉ áp dụng trên điện thoại (Android)',
-                                style: TextStyle(
-                                  color: textColor.withValues(alpha: 0.6),
-                                  fontSize: 13,
+                          builder: (final context, final soundEnabled, _) =>
+                              SwitchListTile(
+                                secondary: Icon(
+                                  Icons.volume_up_rounded,
+                                  color: textColor,
                                 ),
+                                title: Text(
+                                  'Phát âm thanh khi chuyển bài',
+                                  style: TextStyle(color: textColor),
+                                ),
+                                subtitle: Text(
+                                  'Chỉ áp dụng trên điện thoại (Android)',
+                                  style: TextStyle(
+                                    color: textColor.withValues(alpha: 0.6),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                value: soundEnabled,
+                                activeThumbColor: Theme.of(
+                                  context,
+                                ).primaryColor,
+                                onChanged: settings.setSoundFeedbackEnabled,
                               ),
-                              value: soundEnabled,
-                              activeThumbColor: Theme.of(context).primaryColor,
-                              onChanged: settings.setSoundFeedbackEnabled,
-                            );
-                          },
                         ),
                         const Divider(height: 1),
                         ListTile(
@@ -549,40 +552,43 @@ class SettingsWidget extends ConsumerWidget {
                     children: [
                       ValueListenableBuilder<bool>(
                         valueListenable: settings.enableBlurNotifier,
-                        builder: (context, enableBlur, _) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ListTile(
-                                title: Text(
-                                  'Hiệu ứng mờ (Blur)',
-                                  style: TextStyle(color: textColor),
-                                ),
-                                subtitle: Text(
-                                  enableBlur ? 'Đang bật' : 'Đang tắt',
-                                  style: TextStyle(
-                                    color: textColor.withValues(alpha: 0.6),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                trailing: Switch(
-                                  value: enableBlur,
-                                  onChanged: settings.setEnableBlur,
-                                  activeThumbColor: Theme.of(
-                                    context,
-                                  ).primaryColor,
+                        builder: (final context, final enableBlur, _) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ListTile(
+                              title: Text(
+                                'Hiệu ứng mờ (Blur)',
+                                style: TextStyle(color: textColor),
+                              ),
+                              subtitle: Text(
+                                enableBlur ? 'Đang bật' : 'Đang tắt',
+                                style: TextStyle(
+                                  color: textColor.withValues(alpha: 0.6),
+                                  fontSize: 13,
                                 ),
                               ),
-                              if (enableBlur)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  child: ValueListenableBuilder<double>(
-                                    valueListenable: settings.blurLevelNotifier,
-                                    builder: (context, blurLevel, _) {
-                                      return Column(
+                              trailing: Switch(
+                                value: enableBlur,
+                                onChanged: settings.setEnableBlur,
+                                activeThumbColor: Theme.of(
+                                  context,
+                                ).primaryColor,
+                              ),
+                            ),
+                            if (enableBlur)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: ValueListenableBuilder<double>(
+                                  valueListenable: settings.blurLevelNotifier,
+                                  builder:
+                                      (
+                                        final context,
+                                        final blurLevel,
+                                        _,
+                                      ) => Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
@@ -597,7 +603,6 @@ class SettingsWidget extends ConsumerWidget {
                                           ),
                                           Slider(
                                             value: blurLevel,
-                                            min: 0,
                                             max: 100,
                                             divisions: 100,
                                             activeColor: Theme.of(
@@ -606,13 +611,11 @@ class SettingsWidget extends ConsumerWidget {
                                             onChanged: settings.setBlurLevel,
                                           ),
                                         ],
-                                      );
-                                    },
-                                  ),
+                                      ),
                                 ),
-                            ],
-                          );
-                        },
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -625,38 +628,47 @@ class SettingsWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+  Widget _buildSectionHeader(final String title, final Color textColor) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _buildSettingCard({required bool isDark, required Widget child}) {
-    return RepaintBoundary(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _buildSettingCard({
+    required final bool isDark,
+    required final Widget child,
+  }) => RepaintBoundary(
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(12),
+        // Border so cards stay visible against the page background
+        // (surface colors are close to the background in both themes).
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.black.withValues(alpha: 0.10),
         ),
-        child: Material(type: MaterialType.transparency, child: child),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-    );
-  }
+      child: Material(type: MaterialType.transparency, child: child),
+    ),
+  );
 }

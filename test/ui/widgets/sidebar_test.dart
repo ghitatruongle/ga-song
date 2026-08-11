@@ -24,9 +24,9 @@ void main() {
   });
 
   Future<void> pumpSidebar(
-    WidgetTester tester, {
-    TabItem currentTab = TabItem.home,
-    ValueChanged<TabItem>? onTabChanged,
+    final WidgetTester tester, {
+    final TabItem currentTab = TabItem.home,
+    final ValueChanged<TabItem>? onTabChanged,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -57,16 +57,18 @@ void main() {
   }
 
   group('SidebarWidget', () {
-    testWidgets('renders main navigation items when expanded', (tester) async {
+    testWidgets('renders main navigation items when expanded', (
+      final tester,
+    ) async {
       await pumpSidebar(tester);
 
       expect(find.text('Trang chủ'), findsOneWidget);
       expect(find.text('Thư viện'), findsOneWidget);
     });
 
-    testWidgets('tapping a nav item fires onTabChanged', (tester) async {
+    testWidgets('tapping a nav item fires onTabChanged', (final tester) async {
       TabItem? selected;
-      await pumpSidebar(tester, onTabChanged: (tab) => selected = tab);
+      await pumpSidebar(tester, onTabChanged: (final tab) => selected = tab);
 
       await tester.tap(find.text('Thư viện'));
       await tester.pump(const Duration(milliseconds: 300));
@@ -75,7 +77,7 @@ void main() {
     });
 
     testWidgets('collapse state from settings shrinks the sidebar width', (
-      tester,
+      final tester,
     ) async {
       await settings.setSidebarCollapsed(true);
       await pumpSidebar(tester);

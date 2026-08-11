@@ -5,6 +5,7 @@ import '../utils/animation_utils.dart';
 import '../widgets/desktop_title_bar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/song.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Grid hiển thị danh sách album/playlist.
 ///
@@ -24,7 +25,7 @@ class AlbumGridWidget extends StatelessWidget {
   final List<Song> songs;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final adaptiveColor = context.adaptive;
 
     return Column(
@@ -49,7 +50,7 @@ class AlbumGridWidget extends StatelessWidget {
                           mainAxisSpacing: 24,
                         ),
                     itemCount: albums.length,
-                    itemBuilder: (context, index) {
+                    itemBuilder: (final context, final index) {
                       final albumName = albums[index];
                       final count = albumSongCount[albumName] ?? 0;
                       return _AlbumTile(
@@ -58,7 +59,7 @@ class AlbumGridWidget extends StatelessWidget {
                         onTap: () {
                           final playlistSongs = songs
                               .where(
-                                (s) => albumName == 'Chưa phân loại'
+                                (final s) => albumName == 'Chưa phân loại'
                                     ? (s.album == null || s.album!.isEmpty)
                                     : s.album == albumName,
                               )
@@ -74,37 +75,38 @@ class AlbumGridWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(Color adaptiveColor, BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.album_rounded,
-            size: 64,
-            color: adaptiveColor.withValues(alpha: 0.3),
+  Widget _buildEmptyState(
+    final Color adaptiveColor,
+    final BuildContext context,
+  ) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.album_rounded,
+          size: 64,
+          color: adaptiveColor.withValues(alpha: 0.3),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          AppLocalizations.of(context)!.noPlaylist,
+          style: TextStyle(
+            fontSize: 18,
+            color: adaptiveColor.withValues(alpha: 0.6),
           ),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.noPlaylist,
-            style: TextStyle(
-              fontSize: 18,
-              color: adaptiveColor.withValues(alpha: 0.6),
-            ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          AppLocalizations.of(context)!.addAlbumField,
+          style: TextStyle(
+            fontSize: 13,
+            color: adaptiveColor.withValues(alpha: 0.4),
           ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.addAlbumField,
-            style: TextStyle(
-              fontSize: 13,
-              color: adaptiveColor.withValues(alpha: 0.4),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 }
 
 class _AlbumTile extends StatefulWidget {
@@ -127,6 +129,7 @@ class _AlbumTileState extends State<_AlbumTile> {
   bool _isPressed = false;
 
   void _onTap() {
+    AppLogger.i('AlbumGridWidget', '_AlbumTile tapped: ${widget.albumName}');
     // Phase 4 Task 7: tap also gets a tiny scale-down echo (released on press).
     if (animationsEnabled(context) && _isPressed) {
       setState(() => _isPressed = false);
@@ -135,7 +138,7 @@ class _AlbumTileState extends State<_AlbumTile> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final adaptiveColor = context.adaptive;
     final isSpecialAlbum = widget.albumName == 'Mắt Nhắm Mắt Mở';
     final animations = animationsEnabled(context);
@@ -147,11 +150,12 @@ class _AlbumTileState extends State<_AlbumTile> {
         ..scaleByDouble(
           _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
           _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
-          1.0,
-          1.0,
+          1,
+          1,
         ),
       transformAlignment: Alignment.center,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: _onTap,
         onTapDown: (_) {
           if (animations) setState(() => _isPressed = true);
@@ -162,33 +166,33 @@ class _AlbumTileState extends State<_AlbumTile> {
         onTapCancel: () {
           if (animations) setState(() => _isPressed = false);
         },
-          child: MouseRegion(
-            onEnter: (_) {
-              if (animations) setState(() => _isHovered = true);
-            },
-            onExit: (_) {
-              if (animations) setState(() => _isHovered = false);
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: adaptiveColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: _isHovered
-                      ? adaptiveColor.withValues(alpha: 0.3)
-                      : adaptiveColor.withValues(alpha: 0.15),
-                  width: _isHovered ? 1.5 : 1,
-                ),
-                boxShadow: _isHovered
-                    ? [
-                        BoxShadow(
-                          color: adaptiveColor.withValues(alpha: 0.15),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
-                        ),
-                      ]
-                    : null,
+        child: MouseRegion(
+          onEnter: (_) {
+            if (animations) setState(() => _isHovered = true);
+          },
+          onExit: (_) {
+            if (animations) setState(() => _isHovered = false);
+          },
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: adaptiveColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _isHovered
+                    ? adaptiveColor.withValues(alpha: 0.3)
+                    : adaptiveColor.withValues(alpha: 0.15),
+                width: _isHovered ? 1.5 : 1,
               ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: adaptiveColor.withValues(alpha: 0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -229,9 +233,7 @@ class _AlbumTileState extends State<_AlbumTile> {
                 const SizedBox(height: 4),
                 Flexible(
                   child: Text(
-                    AppLocalizations.of(context)!.songCount(
-                      widget.songCount,
-                    ),
+                    AppLocalizations.of(context)!.songCount(widget.songCount),
                     style: TextStyle(
                       fontSize: 13,
                       color: adaptiveColor.withValues(alpha: 0.6),

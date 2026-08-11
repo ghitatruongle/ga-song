@@ -21,7 +21,7 @@ class MockAudioEngineService
   @override
   ValueNotifier<Duration> durationNotifier = ValueNotifier(Duration.zero);
   @override
-  ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
+  ValueNotifier<double> volumeNotifier = ValueNotifier(1);
 
   final StreamController<void> _songCompletedController =
       StreamController<void>.broadcast();
@@ -35,59 +35,65 @@ class MockAudioEngineService
   @override
   Future<void> stop() async {}
   @override
-  Future<void> playAsset(String assetPath, {double? normalizationGain}) async {}
+  Future<void> playAsset(
+    final String assetPath, {
+    final double? normalizationGain,
+  }) async {}
   @override
   Future<void> resume() async {}
   @override
   Future<void> pause() async {}
   @override
-  Future<void> seek(Duration position) async {}
+  Future<void> seek(final Duration position) async {}
   @override
-  void setVolume(double volume) {}
+  void setVolume(final double volume) {}
   @override
-  void setNormalizationGain(double gain) {}
+  void setNormalizationGain(final double gain) {}
   @override
   Future<void> crossfadeTo(
-    String nextAssetPath,
-    double crossfadeDuration, {
-    double? nextNormalizationGain,
-    CrossfadeCurve curve = CrossfadeCurve.linear,
+    final String nextAssetPath,
+    final double crossfadeDuration, {
+    final double? nextNormalizationGain,
+    final CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {}
   @override
-  Future<void> preload(String assetPath) async {}
+  Future<void> preload(final String assetPath) async {}
   @override
-  Future<void> evictSources(Set<String> keepAssetPaths) async {}
+  Future<void> evictSources(final Set<String> keepAssetPaths) async {}
   @override
   Future<void> dispose() async {}
 
   // P3.4: Lifecycle observer — mock is a no-op.
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {}
+  void didChangeAppLifecycleState(final AppLifecycleState state) {}
 
   // Missing methods from AudioEngineService
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }
 
 class MockAudioEffectService implements AudioEffectService {
   @override
-  ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(0.0);
+  ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(0);
   @override
   ValueNotifier<int> bassLevelNotifier = ValueNotifier(0);
 
   @override
-  double calculateNormalizationGain(double? peakDb) => 1.0;
+  double calculateNormalizationGain(final double? peakDb) => 1;
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }
 
 class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   @override
-  Future<void> incrementPlayCount(int songId) async {}
+  Future<void> incrementPlayCount(final int songId) async {}
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }
 
 void main() {
@@ -223,11 +229,7 @@ void main() {
 
     test('Sorting by dateAdded works correctly', () async {
       final songsWithDates = [
-        Song(
-          name: 'Old',
-          sourcePath: 'old.mp3',
-          dateAdded: DateTime(2026, 1, 1),
-        ),
+        Song(name: 'Old', sourcePath: 'old.mp3', dateAdded: DateTime(2026)),
         Song(
           name: 'New',
           sourcePath: 'new.mp3',
@@ -252,10 +254,10 @@ void main() {
         Song(
           name: 'Has Date',
           sourcePath: 'a.mp3',
-          dateAdded: DateTime(2026, 5, 1),
+          dateAdded: DateTime(2026, 5),
         ),
         Song(name: 'No Date', sourcePath: 'b.mp3'), // dateAdded is null
-        Song(name: 'Old', sourcePath: 'c.mp3', dateAdded: DateTime(2026, 1, 1)),
+        Song(name: 'Old', sourcePath: 'c.mp3', dateAdded: DateTime(2026)),
       ];
 
       playlistService.setSortMode(SortMode.dateAdded);

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:path_provider/path_provider.dart';
 import '../logging/app_logger.dart';
 import '../performance_probe.dart';
 import '../platform_capabilities.dart';
@@ -66,6 +67,7 @@ class AudioEngineService with WidgetsBindingObserver {
 
   SoundHandle? _currentHandle;
   SoundHandle? _crossfadeHandle;
+  AudioSource? _currentSource;
   StreamSubscription<void>? _songEndSub;
 
   final ValueNotifier<AudioEngineState> engineState = ValueNotifier(
@@ -73,7 +75,7 @@ class AudioEngineService with WidgetsBindingObserver {
   );
   final ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> durationNotifier = ValueNotifier(Duration.zero);
-  final ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
+  final ValueNotifier<double> volumeNotifier = ValueNotifier(1);
 
   // Stream for when a song ends naturally
   final _songCompletedController = StreamController<void>.broadcast();
@@ -85,8 +87,8 @@ class AudioEngineService with WidgetsBindingObserver {
   bool _isCrossfading = false;
   bool _isPlayingNext = false;
 
-  double _volume = 1.0;
-  double _normalizationGain = 1.0;
+  double _volume = 1;
+  double _normalizationGain = 1;
 
   AudioEngineService() {
     // P3.4: Register for app lifecycle events so the position timer can be
@@ -97,10 +99,10 @@ class AudioEngineService with WidgetsBindingObserver {
   }
 
   // ─── Async Warmup ──────────────────────────────────────────────────────────
-  
+
   bool _isWarmedUp = false;
   Completer<void>? _warmupCompleter;
-  
+
   /// Initializes SoLoud and warms up the audio engine asynchronously.
   /// This should be called early during app startup (before first paint)
   /// to avoid blocking the UI thread when the user first plays a song.
@@ -109,32 +111,40 @@ class AudioEngineService with WidgetsBindingObserver {
     // Prevent multiple concurrent warmups
     if (_isWarmedUp) return;
     if (_warmupCompleter != null) return _warmupCompleter!.future;
-    
+
     _warmupCompleter = Completer<void>();
-    
+
     try {
       AppLogger.i('audio.engine_service', 'Starting async warmup...');
-      
-      // Initialize SoLoud if not already done
+
+      // Initialize SoLoud if not already done.
+      // Bounded: on some low-end Android devices the native (miniaudio)
+      // init can block for a long time; surface a timeout instead of
+      // hanging startup/playback forever.
       if (!_soloud.isInitialized) {
-        await _soloud.init();
+        await _soloud.init().timeout(const Duration(seconds: 12));
       }
-      
+
       _isWarmedUp = true;
       _warmupCompleter!.complete();
-      
+
       AppLogger.i('audio.engine_service', 'Async warmup completed');
     } catch (e, stack) {
-      AppLogger.e('audio.engine_service', 'Async warmup failed', error: e, stack: stack);
+      AppLogger.e(
+        'audio.engine_service',
+        'Async warmup failed',
+        error: e,
+        stack: stack,
+      );
       _warmupCompleter!.completeError(e, stack);
     } finally {
       _warmupCompleter = null;
     }
   }
-  
+
   /// Checks if the engine has been warmed up.
   bool get isWarmedUp => _isWarmedUp;
-  
+
   /// Ensures the engine is warmed up before playback.
   /// Call this before playAsset if you want to guarantee warmup is done.
   Future<void> ensureWarmedUp() async {
@@ -152,14 +162,31 @@ class AudioEngineService with WidgetsBindingObserver {
   /// wires the existing `_isTimerPaused` flag to the real OS signal without
   /// introducing new state.
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(final AppLifecycleState state) {
     if (_isDisposed) return;
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
         _pausePositionTimer();
+        // Android: aggressive cache cleanup on background to save memory
+        if (PlatformCapabilities.instance.aggressiveMemoryCleanup) {
+          _aggressiveCacheCleanup();
+        }
+        // BUG FIX (v0.9.5): Must break here — without it, execution falls
+        // through to detached and calls _soloud.deinit() while the app is
+        // merely backgrounded (still alive, just not visible). That kills
+        // the audio engine mid-playback and requires a full restart on resume.
+        break;
+      case AppLifecycleState.detached:
+        // v0.9.5: Release SoLoud resources when process is about to be killed
+        if (PlatformCapabilities.instance.isAndroid) {
+          _pausePositionTimer();
+          _soloud.deinit();
+        }
+        // Must break — falling through to `resumed` would restart the
+        // position timer after deinit and call getPosition() on a dead engine.
+        break;
       case AppLifecycleState.resumed:
         // Only restart the position timer if we were actively playing
         // before backgrounding. If the user had paused, the engineState
@@ -168,6 +195,53 @@ class AudioEngineService with WidgetsBindingObserver {
           _startPositionTimer();
         }
     }
+  }
+
+  /// Aggressive cache cleanup for low-end Android devices.
+  /// Evicts 50% of cache to free memory when app goes to background.
+  /// Protects the currently-playing source and properly disposes native handles.
+  void _aggressiveCacheCleanup() {
+    if (_sourceCache.isEmpty) return;
+
+    final targetSize = (_sourceCache.length * 0.5).ceil();
+    final entries = _sourceCache.entries.toList()
+      ..sort(
+        (final a, final b) =>
+            a.value.accessOrder.compareTo(b.value.accessOrder),
+      );
+
+    // Find the currently-playing source path to protect it
+    String? currentSourcePath;
+    if (_currentSource != null) {
+      for (final entry in _sourceCache.entries) {
+        if (entry.value.source == _currentSource) {
+          currentSourcePath = entry.key;
+          break;
+        }
+      }
+    }
+
+    int evictedCount = 0;
+    for (final entry in entries) {
+      if (evictedCount >= targetSize) break;
+      // Skip the currently-playing source
+      if (entry.key == currentSourcePath) continue;
+
+      _sourceCache.remove(entry.key);
+      // Dispose native SoLoud handle to prevent memory leak
+      try {
+        _soloud.disposeSource(entry.value.source);
+      } catch (e) {
+        // Source may already be disposed; ignore
+      }
+      PerformanceProbe.instance.recordEviction();
+      evictedCount++;
+    }
+
+    AppLogger.d(
+      'audio.engine_service',
+      'Aggressive cache cleanup: evicted $evictedCount entries',
+    );
   }
 
   // ─── Position Timer ────────────────────────────────────────────────────────
@@ -226,8 +300,8 @@ class AudioEngineService with WidgetsBindingObserver {
 
   // ─── Source Management & Caching ───────────────────────────────────────────
 
-  Future<AudioSource?> ensureSource(String assetPath) {
-    final normalizedPath = assetPath.replaceAll('\\', '/');
+  Future<AudioSource?> ensureSource(final String assetPath) {
+    final normalizedPath = assetPath.replaceAll(r'\', '/');
     final cached = _sourceCache[normalizedPath];
     if (cached != null) {
       _totalCacheHits++;
@@ -249,7 +323,21 @@ class AudioEngineService with WidgetsBindingObserver {
           );
         } else {
           // Load local file bytes
-          final file = File(normalizedPath);
+          var file = File(normalizedPath);
+          if (!await file.exists() && normalizedPath.contains('local_songs')) {
+            final fileName = normalizedPath.split('/').last;
+            final appDir = await getApplicationDocumentsDirectory();
+            final resolvedPath = '${appDir.path}/local_songs/$fileName';
+            final resolvedFile = File(resolvedPath);
+            if (await resolvedFile.exists()) {
+              file = resolvedFile;
+              AppLogger.i(
+                'audio.engine_service',
+                'Resolved local song sandbox path to: $resolvedPath',
+              );
+            }
+          }
+
           if (!await file.exists()) {
             throw Exception('Local file not found at $normalizedPath');
           }
@@ -290,7 +378,10 @@ class AudioEngineService with WidgetsBindingObserver {
 
     // Sort by access order (oldest first) and remove excess
     final entries = _sourceCache.entries.toList()
-      ..sort((a, b) => a.value.accessOrder.compareTo(b.value.accessOrder));
+      ..sort(
+        (final a, final b) =>
+            a.value.accessOrder.compareTo(b.value.accessOrder),
+      );
 
     final toRemove = entries.take(_sourceCache.length - maxEntries);
     for (final entry in toRemove) {
@@ -311,19 +402,19 @@ class AudioEngineService with WidgetsBindingObserver {
     }
   }
 
-  Future<void> preload(String assetPath) async {
+  Future<void> preload(final String assetPath) async {
     // Defer to next microtask to avoid blocking UI frames during batch preloads.
     await Future<void>.delayed(Duration.zero);
     PerformanceProbe.instance.recordPreload();
     await ensureSource(assetPath);
   }
 
-  Future<void> evictSources(Set<String> keepAssetPaths) async {
+  Future<void> evictSources(final Set<String> keepAssetPaths) async {
     final normalizedKeepPaths = keepAssetPaths
-        .map((path) => path.replaceAll('\\', '/'))
+        .map((final path) => path.replaceAll(r'\', '/'))
         .toSet();
     final toRemove = _sourceCache.keys
-        .where((path) => !normalizedKeepPaths.contains(path))
+        .where((final path) => !normalizedKeepPaths.contains(path))
         .toList();
     for (final path in toRemove) {
       final entry = _sourceCache.remove(path);
@@ -347,10 +438,26 @@ class AudioEngineService with WidgetsBindingObserver {
   // C1 fix: Completer lock to prevent overlapping cleanup/play.
   Completer<void>? _cleanupLock;
 
-  Future<void> playAsset(String assetPath, {double? normalizationGain}) async {
-    // Guard against re-entrant calls
-    if (_isPlayingNext) return;
+  /// In-flight playAsset marker. `_isPlayingNext` alone was a silent DROP:
+  /// on slow devices a previous load can take >10s, and any play request
+  /// arriving meanwhile (deep link, next-song, user tap) returned instantly
+  /// without playing anything and without any log. Now we WAIT for the
+  /// in-flight play to finish, then proceed (latest request wins).
+  Completer<void>? _playInFlightCompleter;
+
+  Future<void> playAsset(
+    final String assetPath, {
+    final double? normalizationGain,
+  }) async {
+    // Re-entrancy guard: wait (bounded by the in-flight play itself) instead
+    // of silently dropping concurrent play requests.
+    while (_playInFlightCompleter != null) {
+      await _playInFlightCompleter!.future;
+    }
     _isPlayingNext = true;
+    final inFlight = Completer<void>();
+    _playInFlightCompleter = inFlight;
+    final playSw = Stopwatch()..start();
 
     engineState.value = AudioEngineState.loading;
     if (normalizationGain != null) {
@@ -364,6 +471,13 @@ class AudioEngineService with WidgetsBindingObserver {
       }
 
       await _cleanupCurrent();
+
+      // Ensure the audio engine is initialized before loading/playing.
+      // Startup is deferred (main.dart) so init may still be in flight;
+      // ensureWarmedUp waits for it (bounded) or throws → error state.
+      if (!_soloud.isInitialized) {
+        await ensureWarmedUp();
+      }
 
       final source = await ensureSource(assetPath);
       if (source == null) {
@@ -379,9 +493,15 @@ class AudioEngineService with WidgetsBindingObserver {
         source,
         volume: _volume * _normalizationGain,
       );
+      _currentSource = source;
 
       engineState.value = AudioEngineState.playing;
       _startPositionTimer();
+
+      AppLogger.i(
+        'audio.engine_service',
+        'playAsset OK in ${playSw.elapsedMilliseconds}ms: $assetPath',
+      );
 
       // Subscribe to song-end event — cancel any prior subscription first
       await _songEndSub?.cancel();
@@ -404,6 +524,8 @@ class AudioEngineService with WidgetsBindingObserver {
       engineState.value = AudioEngineState.error;
     } finally {
       _isPlayingNext = false;
+      _playInFlightCompleter = null;
+      inFlight.complete();
     }
   }
 
@@ -484,7 +606,7 @@ class AudioEngineService with WidgetsBindingObserver {
     _pausePositionTimer();
   }
 
-  Future<void> seek(Duration position) async {
+  Future<void> seek(final Duration position) async {
     final handle = _currentHandle;
     if (handle == null) return;
     try {
@@ -502,13 +624,13 @@ class AudioEngineService with WidgetsBindingObserver {
 
   // ─── Volume & Crossfade ────────────────────────────────────────────────────
 
-  void setVolume(double volume) {
+  void setVolume(final double volume) {
     _volume = volume.clamp(0.0, 1.0);
     volumeNotifier.value = _volume;
     _applyVolume();
   }
 
-  void setNormalizationGain(double gain) {
+  void setNormalizationGain(final double gain) {
     _normalizationGain = gain;
     _applyVolume();
   }
@@ -531,10 +653,10 @@ class AudioEngineService with WidgetsBindingObserver {
   Timer? _crossfadeTimer;
 
   Future<void> crossfadeTo(
-    String nextAssetPath,
-    double crossfadeDuration, {
-    double? nextNormalizationGain,
-    CrossfadeCurve curve = CrossfadeCurve.linear,
+    final String nextAssetPath,
+    final double crossfadeDuration, {
+    final double? nextNormalizationGain,
+    final CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {
     if (_isCrossfading) return;
     if (crossfadeDuration <= 0) {
@@ -550,20 +672,25 @@ class AudioEngineService with WidgetsBindingObserver {
     final currentFullVolume = _volume * _normalizationGain;
 
     try {
+      // Same deferred-init guard as playAsset.
+      if (!_soloud.isInitialized) {
+        await ensureWarmedUp();
+      }
+
       final nextSource = await ensureSource(nextAssetPath);
       if (nextSource == null) {
         _isCrossfading = false;
         return;
       }
 
-      _crossfadeHandle = _soloud.play(nextSource, volume: 0.0);
+      _crossfadeHandle = _soloud.play(nextSource, volume: 0);
 
       // Use a Completer so the caller can await crossfade completion
       final completer = Completer<void>();
       int currentStep = 0;
 
       _crossfadeTimer?.cancel();
-      _crossfadeTimer = Timer.periodic(stepDuration, (timer) {
+      _crossfadeTimer = Timer.periodic(stepDuration, (final timer) {
         // Pause-aware: skip step if paused
         if (engineState.value == AudioEngineState.paused) return;
 
@@ -614,6 +741,7 @@ class AudioEngineService with WidgetsBindingObserver {
         await _cleanupCurrent();
         _currentHandle = _crossfadeHandle;
         _crossfadeHandle = null;
+        _currentSource = nextSource;
         if (nextNormalizationGain != null) {
           _normalizationGain = nextNormalizationGain;
         }
@@ -667,6 +795,7 @@ class AudioEngineService with WidgetsBindingObserver {
 
       final handle = _currentHandle;
       _currentHandle = null;
+      _currentSource = null;
 
       if (handle != null) {
         try {
@@ -726,7 +855,10 @@ class AudioEngineService with WidgetsBindingObserver {
   ///
   /// Input: progress (0.0 → 1.0, linear)
   /// Output: curved value (0.0 → 1.0)
-  double _applyCrossfadeCurve(double progress, CrossfadeCurve curve) {
+  double _applyCrossfadeCurve(
+    final double progress,
+    final CrossfadeCurve curve,
+  ) {
     switch (curve) {
       case CrossfadeCurve.linear:
         return progress;
@@ -779,5 +911,43 @@ class AudioEngineService with WidgetsBindingObserver {
     positionNotifier.dispose();
     durationNotifier.dispose();
     volumeNotifier.dispose();
+  }
+
+  // ─── Memory relief when window hidden (tray/minimize) ────────────────────
+
+  /// Releases decoded audio buffers except the currently-playing source.
+  /// Called when the window is hidden to tray / minimized so background
+  /// playback stops accumulating RAM (each decoded track ≈ 30-40MB).
+  Future<void> releaseMemoryWhenHidden() async {
+    if (_isDisposed) return;
+    try {
+      final currentSource = _currentSource;
+      final toRemove = _sourceCache.entries
+          .where((final e) => e.value.source != currentSource)
+          .map((final e) => e.key)
+          .toList();
+      for (final key in toRemove) {
+        final entry = _sourceCache.remove(key);
+        if (entry == null) continue;
+        try {
+          await _soloud.disposeSource(entry.source);
+        } catch (_) {
+          // Source may already be disposed; ignore
+        }
+        PerformanceProbe.instance.recordEviction();
+      }
+      _sourceLoadFutures.clear();
+      AppLogger.d(
+        'audio.engine_service',
+        'Hidden-window memory relief: evicted ${toRemove.length} sources',
+      );
+    } catch (e, stack) {
+      AppLogger.e(
+        'audio.engine_service',
+        'hidden-window memory relief failed',
+        error: e,
+        stack: stack,
+      );
+    }
   }
 }

@@ -41,7 +41,7 @@ class NowPlayingScreen extends ConsumerStatefulWidget {
 class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _rotationController;
-  double _dragOffset = 0.0;
+  double _dragOffset = 0;
 
   @override
   void initState() {
@@ -60,15 +60,14 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
   }
 
   void _startRotationIfPlaying() {
-    final isPlaying =
-        ref.read(engineStateProvider) == AudioEngineState.playing;
+    final isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
     if (isPlaying) {
       _rotationController.repeat();
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final playlist = ref.watch(playlistServiceProvider);
     final index = ref.watch(currentPlayingIndexProvider);
     final song = (index >= 0 && index < playlist.playlist.length)
@@ -85,7 +84,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     final isFavorite = song?.isFavorite ?? false;
 
     // Listen for playback state changes to control rotation
-    ref.listen<AudioEngineState>(engineStateProvider, (_, next) {
+    ref.listen<AudioEngineState>(engineStateProvider, (_, final next) {
       if (next == AudioEngineState.playing) {
         _rotationController.repeat();
       } else {
@@ -95,7 +94,9 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
 
     if (song == null) {
       return Scaffold(
-        backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+        backgroundColor: isDark
+            ? AppColors.darkBackground
+            : AppColors.lightBackground,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -130,8 +131,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                 song: song,
                 cacheWidth: 400,
                 cacheHeight: 400,
-                fallbackBuilder: (context) => Container(
-                  color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+                fallbackBuilder: (final context) => Container(
+                  color: isDark
+                      ? AppColors.darkBackground
+                      : AppColors.lightBackground,
                 ),
               ),
             ),
@@ -159,12 +162,12 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
             right: 0,
             height: 80,
             child: GestureDetector(
-              onVerticalDragUpdate: (details) {
+              onVerticalDragUpdate: (final details) {
                 if (details.delta.dy > 0) {
                   setState(() => _dragOffset += details.delta.dy);
                 }
               },
-              onVerticalDragEnd: (details) {
+              onVerticalDragEnd: (final details) {
                 if (_dragOffset > 80 ||
                     (details.primaryVelocity != null &&
                         details.primaryVelocity! > 400)) {
@@ -256,7 +259,7 @@ class _TopBar extends StatelessWidget {
   const _TopBar({required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -287,11 +290,7 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(
-              Icons.more_vert_rounded,
-              color: textColor,
-              size: 24,
-            ),
+            icon: Icon(Icons.more_vert_rounded, color: textColor, size: 24),
             onPressed: () {
               // TODO: Show options menu (add to playlist, view album, etc.)
             },
@@ -318,47 +317,48 @@ class _CoverArtWithRotation extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AnimatedBuilder(
-      animation: rotationController,
-      builder: (context, child) {
-        final rotation = rotationController.value * 2 * pi;
-        return Transform.rotate(
-          angle: rotation,
-          child: Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: CoverArtImage(
-                song: song,
-                cacheWidth: 560,
-                cacheHeight: 560,
-                fallbackBuilder: (context) => Container(
-                  color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
-                  child: Icon(
-                    Icons.music_note_rounded,
-                    size: 64,
-                    color: context.adaptive.withValues(alpha: 0.3),
+  Widget build(final BuildContext context, final WidgetRef ref) =>
+      AnimatedBuilder(
+        animation: rotationController,
+        builder: (final context, final child) {
+          final rotation = rotationController.value * 2 * pi;
+          return Transform.rotate(
+            angle: rotation,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: CoverArtImage(
+                  song: song,
+                  cacheWidth: 560,
+                  cacheHeight: 560,
+                  fallbackBuilder: (final context) => ColoredBox(
+                    color: isDark
+                        ? AppColors.darkSurface2
+                        : AppColors.lightSurface2,
+                    child: Icon(
+                      Icons.music_note_rounded,
+                      size: 64,
+                      color: context.adaptive.withValues(alpha: 0.3),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
 }
 
 // ─── Song Info ──────────────────────────────────────────────────────────────
@@ -369,7 +369,7 @@ class _SongInfo extends StatelessWidget {
   const _SongInfo({required this.song, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
     final accentColor = Theme.of(context).colorScheme.primary;
 
@@ -379,12 +379,10 @@ class _SongInfo extends StatelessWidget {
         children: [
           // Song title with gradient accent
           ShaderMask(
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                colors: [accentColor, textColor],
-                stops: const [0.0, 0.7],
-              ).createShader(bounds);
-            },
+            shaderCallback: (final bounds) => LinearGradient(
+              colors: [accentColor, textColor],
+              stops: const [0.0, 0.7],
+            ).createShader(bounds),
             blendMode: BlendMode.srcIn,
             child: Text(
               song.name,
@@ -430,7 +428,7 @@ class _ProgressBar extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final accentColor = Theme.of(context).colorScheme.primary;
     final progress = duration.inMilliseconds > 0
         ? position.inMilliseconds / duration.inMilliseconds
@@ -453,14 +451,16 @@ class _ProgressBar extends ConsumerWidget {
             ),
             child: Slider(
               value: progress.clamp(0.0, 1.0),
-              onChanged: (value) {
+              onChanged: (final value) {
                 final seekPosition = duration * value;
                 ref.read(audioEngineServiceProvider).seek(seekPosition);
               },
             ),
           ),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: ThemeSpacing.of(context).md),
+            padding: EdgeInsets.symmetric(
+              horizontal: ThemeSpacing.of(context).md,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -488,7 +488,7 @@ class _ProgressBar extends ConsumerWidget {
     );
   }
 
-  String _formatTime(Duration d) {
+  String _formatTime(final Duration d) {
     final minutes = d.inMinutes;
     final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
@@ -515,7 +515,7 @@ class _PlaybackControls extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final accentColor = Theme.of(context).colorScheme.primary;
     final playlist = ref.read(playlistServiceProvider);
 
@@ -546,11 +546,17 @@ class _PlaybackControls extends ConsumerWidget {
           isDark: isDark,
         ),
 
-        // Play/Pause
+        // Play/Pause — toggling: playing → pause, paused → resume/play.
+        // Calling playlist.play() while playing RESTARTS the song instead.
         GestureDetector(
           onTap: () {
             safeHaptic(HapticType.medium);
-            playlist.play();
+            final engine = ref.read(audioEngineServiceProvider);
+            if (engine.engineState.value == AudioEngineState.playing) {
+              engine.pause();
+            } else {
+              playlist.play();
+            }
           },
           child: Container(
             width: 72,
@@ -613,12 +619,12 @@ class _PlaybackControls extends ConsumerWidget {
     );
   }
 
-  void _showQueueSheet(BuildContext context) {
+  void _showQueueSheet(final BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const QueueManagementSheet(),
+      builder: (final context) => const QueueManagementSheet(),
     );
   }
 }
@@ -639,7 +645,7 @@ class _ControlIcon extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
     return GestureDetector(
       onTap: onTap,
@@ -671,7 +677,7 @@ class _VolumeSlider extends ConsumerWidget {
   const _VolumeSlider({required this.isDark});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final volume = ref.watch(volumeProvider);
     final textColor = context.adaptive.withValues(alpha: 0.5);
     final accentColor = Theme.of(context).colorScheme.primary;
@@ -698,7 +704,7 @@ class _VolumeSlider extends ConsumerWidget {
               ),
               child: Slider(
                 value: volume,
-                onChanged: (value) {
+                onChanged: (final value) {
                   ref.read(audioEngineServiceProvider).setVolume(value);
                 },
               ),
@@ -730,7 +736,7 @@ class _LyricsToggle extends ConsumerWidget {
   const _LyricsToggle({required this.isDark});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final showLyrics = ref.watch(lyricVisibilityProvider);
     final textColor = context.adaptive.withValues(alpha: 0.5);
     final accentColor = Theme.of(context).colorScheme.primary;
@@ -745,13 +751,12 @@ class _LyricsToggle extends ConsumerWidget {
           vertical: ThemeSpacing.of(context).sm,
         ),
         decoration: BoxDecoration(
-          color: showLyrics ? accentColor.withValues(alpha: 0.15) : Colors.transparent,
+          color: showLyrics
+              ? accentColor.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(ThemeRadius.of(context).xl),
           border: Border.all(
-            color: showLyrics
-                ? accentColor.withValues(alpha: 0.3)
-                : textColor,
-            width: 1,
+            color: showLyrics ? accentColor.withValues(alpha: 0.3) : textColor,
           ),
         ),
         child: Row(

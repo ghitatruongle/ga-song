@@ -4,12 +4,14 @@ import 'package:ga_song/core/theme_utils.dart';
 
 void main() {
   group('AdaptiveColors extension', () {
-    testWidgets('light mode returns black87 for adaptive', (tester) async {
+    testWidgets('light mode returns black87 for adaptive', (
+      final tester,
+    ) async {
       late Color captured;
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               captured = context.adaptive;
               return const SizedBox();
             },
@@ -21,12 +23,12 @@ void main() {
       expect(captured, Colors.black87);
     });
 
-    testWidgets('dark mode returns white for adaptive', (tester) async {
+    testWidgets('dark mode returns white for adaptive', (final tester) async {
       late Color captured;
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               captured = context.adaptive;
               return const SizedBox();
             },
@@ -38,13 +40,13 @@ void main() {
       expect(captured, Colors.white);
     });
 
-    testWidgets('onAdaptive inverts adaptive', (tester) async {
+    testWidgets('onAdaptive inverts adaptive', (final tester) async {
       late Color adaptiveLight;
       late Color onAdaptiveLight;
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               adaptiveLight = context.adaptive;
               onAdaptiveLight = context.onAdaptive;
               return const SizedBox();
@@ -58,13 +60,13 @@ void main() {
     });
 
     testWidgets('adaptiveSecondary in dark mode returns white70', (
-      tester,
+      final tester,
     ) async {
       late Color captured;
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               captured = context.adaptiveSecondary;
               return const SizedBox();
             },

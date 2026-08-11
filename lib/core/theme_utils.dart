@@ -14,7 +14,7 @@ extension AdaptiveColors on BuildContext {
   Color get onAdaptive => isDark ? Colors.black : Colors.white;
 
   /// Adaptive color with custom alpha
-  Color adaptiveAlpha(double alpha) => adaptive.withValues(alpha: alpha);
+  Color adaptiveAlpha(final double alpha) => adaptive.withValues(alpha: alpha);
 
   /// Secondary adaptive: white70/black54 — for less prominent icons/text
   Color get adaptiveSecondary => isDark ? Colors.white70 : Colors.black54;

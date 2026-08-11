@@ -111,7 +111,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionMic => 'Microphone permission is required for KTV!';
 
   @override
-  String get permissionDenied => 'Microphone permission denied. Please grant it in Settings.';
+  String get permissionDenied =>
+      'Microphone permission denied. Please grant it in Settings.';
 
   @override
   String get greetingMorning => 'Good morning,';
@@ -135,7 +136,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noPlaylist => 'No playlists yet';
 
   @override
-  String get addAlbumField => 'Add \"album\" field to songs.json to create playlists';
+  String get addAlbumField =>
+      'Add \"album\" field to songs.json to create playlists';
 
   @override
   String get noSongPlaying => 'No song is currently playing';
@@ -159,7 +161,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guide => 'Guide';
 
   @override
-  String get guideContent => 'Help you listen to any song from YouTube.\n\nPaste a YouTube link in the search box and press Search.';
+  String get guideContent =>
+      'Help you listen to any song from YouTube.\n\nPaste a YouTube link in the search box and press Search.';
 
   @override
   String get playing => 'Playing';
@@ -237,7 +240,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noSongsYet => 'No songs yet';
 
   @override
-  String get addSongsHint => 'Add music files to assets/song/\nand update songs.json';
+  String get addSongsHint =>
+      'Add music files to assets/song/\nand update songs.json';
 
   @override
   String get cannotLoadLibrary => 'Cannot load music library';
@@ -262,7 +266,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get androidOnlyFeature => 'This feature is only available on Android devices.';
+  String get androidOnlyFeature =>
+      'This feature is only available on Android devices.';
 
   @override
   String get cannotLoadLibraryDb => 'Cannot load song list from Database.';
@@ -484,7 +489,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyLibraryTitle => 'Your library is empty';
 
   @override
-  String get emptyLibraryMessage => 'Import local music files, scan for music, or create a playlist to get started.';
+  String get emptyLibraryMessage =>
+      'Import local music files, scan for music, or create a playlist to get started.';
 
   @override
   String get importMusic => 'Import Music';

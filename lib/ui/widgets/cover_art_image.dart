@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -42,7 +43,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
   }
 
   @override
-  void didUpdateWidget(covariant CoverArtImage oldWidget) {
+  void didUpdateWidget(covariant final CoverArtImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.song.fileName != widget.song.fileName ||
         oldWidget.cacheWidth != widget.cacheWidth ||
@@ -93,7 +94,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final entry = _entry ?? _repository.getCachedEntry(widget.song.fileName);
     final provider = _repository.getCachedProvider(
       widget.song.fileName,
@@ -102,6 +103,10 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
     );
 
     if (entry == null || !entry.hasCover || provider == null) {
+      // v0.9.5: Show shimmer placeholder on Android while loading
+      if (Platform.isAndroid && _entry == null) {
+        return const ShimmerLoadingPlaceholder();
+      }
       return widget.fallbackBuilder(context);
     }
 
@@ -111,7 +116,7 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
         fit: widget.fit,
         filterQuality: widget.filterQuality,
         gaplessPlayback: true,
-        errorBuilder: (context, error, stackTrace) {
+        errorBuilder: (final context, final error, final stackTrace) {
           AppLogger.w(
             'ui.cover_art_image',
             'rendering failed for ${widget.song.fileName}',
@@ -122,4 +127,32 @@ class _CoverArtImageState extends ConsumerState<CoverArtImage> {
       ),
     );
   }
+}
+
+/// v0.9.5: Shimmer placeholder shown on Android while cover art loads.
+/// Uses the same dimensions as the fallback to maintain layout stability.
+class ShimmerLoadingPlaceholder extends StatelessWidget {
+  const ShimmerLoadingPlaceholder({super.key});
+
+  @override
+  Widget build(final BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(8),
+    child: SizedBox(
+      width: 48,
+      height: 48,
+      child: ShaderMask(
+        shaderCallback: (final bounds) => LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.grey.shade700,
+            Colors.grey.shade500,
+            Colors.grey.shade700,
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(bounds),
+        child: Container(color: Colors.white),
+      ),
+    ),
+  );
 }

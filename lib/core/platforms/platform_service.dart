@@ -52,12 +52,12 @@ class PlatformService {
 
   /// Updates Now Playing info for supported platforms.
   Future<void> updateNowPlaying({
-    required String title,
-    required String artist,
-    String? album,
-    required Duration position,
-    required Duration duration,
-    required bool isPlaying,
+    required final String title,
+    required final String artist,
+    final String? album,
+    required final Duration position,
+    required final Duration duration,
+    required final bool isPlaying,
   }) async {
     switch (_platformType) {
       case PlatformType.macos:
@@ -92,9 +92,9 @@ class PlatformService {
 
   /// Shows a platform notification.
   Future<void> showNotification({
-    required String title,
-    required String body,
-    String? subtitle,
+    required final String title,
+    required final String body,
+    final String? subtitle,
   }) async {
     switch (_platformType) {
       case PlatformType.macos:
@@ -115,10 +115,10 @@ class PlatformService {
 
   /// Updates widget data for supported platforms.
   Future<void> updateWidget({
-    required String songName,
-    required String artist,
-    required bool isPlaying,
-    String? coverArtBase64,
+    required final String songName,
+    required final String artist,
+    required final bool isPlaying,
+    final String? coverArtBase64,
   }) async {
     switch (_platformType) {
       case PlatformType.ios:

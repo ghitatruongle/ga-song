@@ -10,6 +10,7 @@
 /// - Listeners not removed
 ///
 /// Note: Services are mocked so the tests run without native audio plugins.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,7 +33,9 @@ void main() {
       mockServices.disposeAll();
     });
 
-    testWidgets('no leaks after home screen navigation', (WidgetTester tester) async {
+    testWidgets('no leaks after home screen navigation', (
+      final WidgetTester tester,
+    ) async {
       maybeSetupLeakTrackingForTest(LeakTesting.settings, 'home navigation');
       await tester.pumpWidget(
         ProviderScope(
@@ -41,10 +44,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle(const Duration(seconds: 5));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
       maybeTearDownLeakTrackingForTest();
     });
 
-    testWidgets('no leaks after tab navigation cycle', (WidgetTester tester) async {
+    testWidgets('no leaks after tab navigation cycle', (
+      final WidgetTester tester,
+    ) async {
       maybeSetupLeakTrackingForTest(LeakTesting.settings, 'tab navigation');
       await tester.pumpWidget(
         ProviderScope(
@@ -66,10 +73,14 @@ void main() {
           }
         }
       }
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
       maybeTearDownLeakTrackingForTest();
     });
 
-    testWidgets('no leaks after mini player open/close', (WidgetTester tester) async {
+    testWidgets('no leaks after mini player open/close', (
+      final WidgetTester tester,
+    ) async {
       maybeSetupLeakTrackingForTest(LeakTesting.settings, 'mini player');
       await tester.pumpWidget(
         ProviderScope(
@@ -90,6 +101,8 @@ void main() {
       } catch (e) {
         // Mini player might not be available in test
       }
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
       maybeTearDownLeakTrackingForTest();
     });
   });

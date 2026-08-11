@@ -1,6 +1,7 @@
 /// Tests for PlaylistImportExportService
 ///
 /// Tests cover M3U, PLS, XSPF, and JSON import/export with round-trip validation.
+library;
 
 import 'dart:io';
 import 'dart:convert';
@@ -13,12 +14,6 @@ import 'package:ga_song/models/song.dart';
 
 void main() {
   group('PlaylistImportExportService', () {
-    late PlaylistImportExportService service;
-
-    setUp(() {
-      service = PlaylistImportExportService();
-    });
-
     // ─── M3U Tests ────────────────────────────────────────────────────────────
 
     group('M3U Import/Export', () {
@@ -35,7 +30,10 @@ assets/song/third.mp3
 
       test('imports basic M3U playlist', () async {
         final service = PlaylistImportExportService();
-        final result = await service.importFromString(m3uContent, format: PlaylistFormat.m3u);
+        final result = await service.importFromString(
+          m3uContent,
+          format: PlaylistFormat.m3u,
+        );
 
         expect(result.success, isTrue);
         expect(result.playlistName, 'Test Playlist');
@@ -52,7 +50,10 @@ assets/song/test.mp3
 ''';
 
         final service = PlaylistImportExportService();
-        final result = await service.importFromString(m3uNoExtinf, format: PlaylistFormat.m3u);
+        final result = await service.importFromString(
+          m3uNoExtinf,
+          format: PlaylistFormat.m3u,
+        );
 
         expect(result.success, isTrue);
         expect(result.entries.length, 1);
@@ -81,7 +82,11 @@ assets/song/test.mp3
         ];
 
         final service = PlaylistImportExportService();
-        final result = await service.exportToString(songs, 'Test Playlist', format: PlaylistFormat.m3u);
+        final result = await service.exportToString(
+          songs,
+          'Test Playlist',
+          format: PlaylistFormat.m3u,
+        );
 
         expect(result.success, isTrue);
         expect(result.content, contains('#EXTM3U'));
@@ -103,21 +108,45 @@ assets/song/two.mp3
         final service = PlaylistImportExportService();
 
         // Import
-        final importResult = await service.importFromString(originalM3U, format: PlaylistFormat.m3u);
+        final importResult = await service.importFromString(
+          originalM3U,
+          format: PlaylistFormat.m3u,
+        );
         expect(importResult.success, isTrue);
         expect(importResult.entries.length, 2);
 
         // Export back
         final songs = [
-          Song(id: 1, name: 'Song One', artist: 'Artist One', durationMs: 180000, sourcePath: 'assets/song/one.mp3', isBuiltIn: true),
-          Song(id: 2, name: 'Song Two', artist: 'Artist Two', durationMs: 240000, sourcePath: 'assets/song/two.mp3', isBuiltIn: true),
+          Song(
+            id: 1,
+            name: 'Song One',
+            artist: 'Artist One',
+            durationMs: 180000,
+            sourcePath: 'assets/song/one.mp3',
+            isBuiltIn: true,
+          ),
+          Song(
+            id: 2,
+            name: 'Song Two',
+            artist: 'Artist Two',
+            durationMs: 240000,
+            sourcePath: 'assets/song/two.mp3',
+            isBuiltIn: true,
+          ),
         ];
 
-        final exportResult = await service.exportToString(songs, 'Round Trip Test', format: PlaylistFormat.m3u);
+        final exportResult = await service.exportToString(
+          songs,
+          'Round Trip Test',
+          format: PlaylistFormat.m3u,
+        );
         expect(exportResult.success, isTrue);
 
         // Re-import
-        final reimportResult = await service.importFromString(exportResult.content!, format: PlaylistFormat.m3u);
+        final reimportResult = await service.importFromString(
+          exportResult.content!,
+          format: PlaylistFormat.m3u,
+        );
         expect(reimportResult.success, isTrue);
         expect(reimportResult.entries.length, 2);
       });
@@ -142,7 +171,10 @@ Version=2
 
       test('imports PLS playlist', () async {
         final service = PlaylistImportExportService();
-        final result = await service.importFromString(plsContent, format: PlaylistFormat.pls);
+        final result = await service.importFromString(
+          plsContent,
+          format: PlaylistFormat.pls,
+        );
 
         expect(result.success, isTrue);
         expect(result.playlistName, 'PLS Test Playlist');
@@ -155,14 +187,32 @@ Version=2
 
       test('exports PLS with correct format', () async {
         final songs = [
-          Song(id: 1, name: 'Song One', artist: 'Artist One', durationMs: 180000, sourcePath: 'assets/song/one.mp3', isBuiltIn: true),
-          Song(id: 2, name: 'Song Two', artist: 'Artist Two', durationMs: 240000, sourcePath: 'assets/song/two.mp3', isBuiltIn: true),
+          Song(
+            id: 1,
+            name: 'Song One',
+            artist: 'Artist One',
+            durationMs: 180000,
+            sourcePath: 'assets/song/one.mp3',
+            isBuiltIn: true,
+          ),
+          Song(
+            id: 2,
+            name: 'Song Two',
+            artist: 'Artist Two',
+            durationMs: 240000,
+            sourcePath: 'assets/song/two.mp3',
+            isBuiltIn: true,
+          ),
         ];
 
         final service = PlaylistImportExportService();
         const playlistName = 'PLS Export Test';
 
-        final result = await service.exportToString(songs, playlistName, format: PlaylistFormat.pls);
+        final result = await service.exportToString(
+          songs,
+          playlistName,
+          format: PlaylistFormat.pls,
+        );
 
         expect(result.success, isTrue);
         expect(result.content, contains('[playlist]'));
@@ -202,7 +252,10 @@ Version=2
 
       test('imports XSPF playlist', () async {
         final service = PlaylistImportExportService();
-        final result = await service.importFromString(xspfContent, format: PlaylistFormat.xspf);
+        final result = await service.importFromString(
+          xspfContent,
+          format: PlaylistFormat.xspf,
+        );
 
         expect(result.success, isTrue);
         expect(result.playlistName, 'XSPF Test Playlist');
@@ -216,23 +269,44 @@ Version=2
 
       test('exports XSPF with correct XML format', () async {
         final songs = [
-          Song(id: 1, name: 'XSPF Song', artist: 'XSPF Artist', album: 'XSPF Album', durationMs: 180000, sourcePath: 'assets/song/xspf.mp3', isBuiltIn: true),
+          Song(
+            id: 1,
+            name: 'XSPF Song',
+            artist: 'XSPF Artist',
+            album: 'XSPF Album',
+            durationMs: 180000,
+            sourcePath: 'assets/song/xspf.mp3',
+            isBuiltIn: true,
+          ),
         ];
 
         final service = PlaylistImportExportService();
         const playlistName = 'XSPF Export Test';
 
-        final result = await service.exportToString(songs, playlistName, format: PlaylistFormat.xspf);
+        final result = await service.exportToString(
+          songs,
+          playlistName,
+          format: PlaylistFormat.xspf,
+        );
 
         expect(result.success, isTrue);
-        expect(result.content, contains('<?xml version="1.0" encoding="UTF-8"?>'));
-        expect(result.content, contains('<playlist version="1" xmlns="http://xspf.org/ns/0/">'));
+        expect(
+          result.content,
+          contains('<?xml version="1.0" encoding="UTF-8"?>'),
+        );
+        expect(
+          result.content,
+          contains('<playlist version="1" xmlns="http://xspf.org/ns/0/">'),
+        );
         expect(result.content, contains('<title>XSPF Export Test</title>'));
         expect(result.content, contains('<track>'));
         expect(result.content, contains('<title>XSPF Song</title>'));
         expect(result.content, contains('<creator>XSPF Artist</creator>'));
         expect(result.content, contains('<album>XSPF Album</album>'));
-        expect(result.content, contains('<location>assets/song/xspf.mp3</location>'));
+        expect(
+          result.content,
+          contains('<location>assets/song/xspf.mp3</location>'),
+        );
         expect(result.content, contains('<duration>180000</duration>'));
         expect(result.content, contains('</track>'));
         expect(result.content, contains('</trackList>'));
@@ -241,13 +315,25 @@ Version=2
 
       test('handles special XML characters in export', () async {
         final songs = [
-          Song(id: 1, name: 'Song & "Test"', artist: 'Artist <Test>', album: 'Album >Test', durationMs: 180000, sourcePath: 'assets/song/test.mp3', isBuiltIn: true),
+          Song(
+            id: 1,
+            name: 'Song & "Test"',
+            artist: 'Artist <Test>',
+            album: 'Album >Test',
+            durationMs: 180000,
+            sourcePath: 'assets/song/test.mp3',
+            isBuiltIn: true,
+          ),
         ];
 
         final service = PlaylistImportExportService();
         const playlistName = 'Special Chars Test';
 
-        final result = await service.exportToString(songs, playlistName, format: PlaylistFormat.xspf);
+        final result = await service.exportToString(
+          songs,
+          playlistName,
+          format: PlaylistFormat.xspf,
+        );
 
         expect(result.success, isTrue);
         expect(result.content, contains('Song & "Test"'));
@@ -273,7 +359,10 @@ Version=2
 }''';
 
         final service = PlaylistImportExportService();
-        final result = await service.importFromString(jsonContent, format: PlaylistFormat.json);
+        final result = await service.importFromString(
+          jsonContent,
+          format: PlaylistFormat.json,
+        );
 
         expect(result.success, isTrue);
         expect(result.playlistName, 'JSON Playlist');
@@ -282,13 +371,28 @@ Version=2
 
       test('exports full JSON with all song data', () async {
         final songs = [
-          Song(id: 1, name: 'JSON Song', artist: 'JSON Artist', album: 'JSON Album', durationMs: 180000, sourcePath: 'assets/song/json.mp3', isBuiltIn: true, playCount: 5, genre: 'Pop', year: 2024),
+          Song(
+            id: 1,
+            name: 'JSON Song',
+            artist: 'JSON Artist',
+            album: 'JSON Album',
+            durationMs: 180000,
+            sourcePath: 'assets/song/json.mp3',
+            isBuiltIn: true,
+            playCount: 5,
+            genre: 'Pop',
+            year: 2024,
+          ),
         ];
 
         final service = PlaylistImportExportService();
         const playlistName = 'JSON Export Test';
 
-        final result = await service.exportToString(songs, playlistName, format: PlaylistFormat.json);
+        final result = await service.exportToString(
+          songs,
+          playlistName,
+          format: PlaylistFormat.json,
+        );
 
         expect(result.success, isTrue);
         final json = jsonDecode(result.content!);
@@ -326,26 +430,42 @@ Version=2
 
       test('detects M3U from content', () {
         const m3uContent = '#EXTM3U\n#EXTINF:180,Song\nfile.mp3';
-        expect(detectPlaylistFormat('unknown.txt', content: m3uContent), PlaylistFormat.m3u);
+        expect(
+          detectPlaylistFormat('unknown.txt', content: m3uContent),
+          PlaylistFormat.m3u,
+        );
       });
 
       test('detects PLS from content', () {
         const plsContent = '[playlist]\nFile1=file.mp3\nTitle1=Song';
-        expect(detectPlaylistFormat('unknown.txt', content: plsContent), PlaylistFormat.pls);
+        expect(
+          detectPlaylistFormat('unknown.txt', content: plsContent),
+          PlaylistFormat.pls,
+        );
       });
 
       test('detects XSPF from content', () {
-        const xspfContent = '<?xml version="1.0"?><playlist xmlns="http://xspf.org/ns/0/"><trackList/></playlist>';
-        expect(detectPlaylistFormat('unknown.txt', content: xspfContent), PlaylistFormat.xspf);
+        const xspfContent =
+            '<?xml version="1.0"?><playlist xmlns="http://xspf.org/ns/0/"><trackList/></playlist>';
+        expect(
+          detectPlaylistFormat('unknown.txt', content: xspfContent),
+          PlaylistFormat.xspf,
+        );
       });
 
       test('detects JSON from content', () {
         const jsonContent = '{"name":"Test","songIds":[1,2]}';
-        expect(detectPlaylistFormat('unknown.txt', content: jsonContent), PlaylistFormat.json);
+        expect(
+          detectPlaylistFormat('unknown.txt', content: jsonContent),
+          PlaylistFormat.json,
+        );
       });
 
       test('returns unknown for unrecognized', () {
-        expect(detectPlaylistFormat('playlist.txt', content: 'random content'), PlaylistFormat.unknown);
+        expect(
+          detectPlaylistFormat('playlist.txt', content: 'random content'),
+          PlaylistFormat.unknown,
+        );
       });
     });
 
@@ -354,7 +474,11 @@ Version=2
     group('Edge Cases', () {
       test('handles empty playlist', () async {
         final service = PlaylistImportExportService();
-        final result = await service.exportToString([], 'Empty Playlist', format: PlaylistFormat.m3u);
+        final result = await service.exportToString(
+          [],
+          'Empty Playlist',
+          format: PlaylistFormat.m3u,
+        );
 
         expect(result.success, isTrue);
         expect(result.content, contains('#EXTM3U'));
@@ -362,14 +486,27 @@ Version=2
 
       test('handles songs without duration', () async {
         final songs = [
-          Song(id: 1, name: 'No Duration Song', artist: 'Artist', sourcePath: 'file.mp3', isBuiltIn: true),
+          Song(
+            id: 1,
+            name: 'No Duration Song',
+            artist: 'Artist',
+            sourcePath: 'file.mp3',
+            isBuiltIn: true,
+          ),
         ];
 
         final service = PlaylistImportExportService();
-        final result = await service.exportToString(songs, 'Test', format: PlaylistFormat.m3u);
+        final result = await service.exportToString(
+          songs,
+          'Test',
+          format: PlaylistFormat.m3u,
+        );
 
         expect(result.success, isTrue);
-        expect(result.content, contains('#EXTINF:-1,No Duration Song - Artist'));
+        expect(
+          result.content,
+          contains('#EXTINF:-1,No Duration Song - Artist'),
+        );
       });
 
       test('handles special characters in song metadata', () async {
@@ -388,19 +525,35 @@ Version=2
         final service = PlaylistImportExportService();
 
         // Test M3U
-        final m3uResult = await service.exportToString(songs, 'Test', format: PlaylistFormat.m3u);
+        final m3uResult = await service.exportToString(
+          songs,
+          'Test',
+          format: PlaylistFormat.m3u,
+        );
         expect(m3uResult.success, isTrue);
 
         // Test PLS
-        final plsResult = await service.exportToString(songs, 'Test', format: PlaylistFormat.pls);
+        final plsResult = await service.exportToString(
+          songs,
+          'Test',
+          format: PlaylistFormat.pls,
+        );
         expect(plsResult.success, isTrue);
 
         // Test XSPF
-        final xspfResult = await service.exportToString(songs, 'Test', format: PlaylistFormat.xspf);
+        final xspfResult = await service.exportToString(
+          songs,
+          'Test',
+          format: PlaylistFormat.xspf,
+        );
         expect(xspfResult.success, isTrue);
 
         // Test JSON
-        final jsonResult = await service.exportToString(songs, 'Test', format: PlaylistFormat.json);
+        final jsonResult = await service.exportToString(
+          songs,
+          'Test',
+          format: PlaylistFormat.json,
+        );
         expect(jsonResult.success, isTrue);
       });
     });
@@ -432,14 +585,27 @@ file.mp3
 
       test('exports to file', () async {
         final songs = [
-          Song(id: 1, name: 'File Song', artist: 'File Artist', durationMs: 180000, sourcePath: 'file.mp3', isBuiltIn: true),
+          Song(
+            id: 1,
+            name: 'File Song',
+            artist: 'File Artist',
+            durationMs: 180000,
+            sourcePath: 'file.mp3',
+            isBuiltIn: true,
+          ),
         ];
 
-        final tempDir = await Directory.systemTemp.createTemp('playlist_export_');
+        final tempDir = await Directory.systemTemp.createTemp(
+          'playlist_export_',
+        );
         final filePath = p.join(tempDir.path, 'export.m3u');
 
         final service = PlaylistImportExportService();
-        final result = await service.exportToFile(songs, filePath, format: PlaylistFormat.m3u);
+        final result = await service.exportToFile(
+          songs,
+          filePath,
+          format: PlaylistFormat.m3u,
+        );
 
         expect(result.success, isTrue);
         expect(await File(filePath).exists(), isTrue);

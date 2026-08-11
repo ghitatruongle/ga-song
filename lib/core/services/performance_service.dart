@@ -17,14 +17,14 @@ class PerformanceService {
   static const int _maxEntriesPerMetric = 100;
 
   /// Starts a timer with the given [name].
-  void startTimer(String name) {
+  void startTimer(final String name) {
     _timers[name] = Stopwatch()..start();
   }
 
   /// Stops the timer with [name] and records the duration.
   ///
   /// Returns the elapsed duration.
-  Duration stopTimer(String name) {
+  Duration stopTimer(final String name) {
     final timer = _timers.remove(name);
     if (timer == null) {
       throw StateError('Timer $name not found');
@@ -49,7 +49,7 @@ class PerformanceService {
   }
 
   /// Measures the duration of [operation] and records it.
-  T measure<T>(String name, T Function() operation) {
+  T measure<T>(final String name, final T Function() operation) {
     startTimer(name);
     try {
       return operation();
@@ -59,7 +59,10 @@ class PerformanceService {
   }
 
   /// Measures the duration of an async [operation] and records it.
-  Future<T> measureAsync<T>(String name, Future<T> Function() operation) async {
+  Future<T> measureAsync<T>(
+    final String name,
+    final Future<T> Function() operation,
+  ) async {
     startTimer(name);
     try {
       return await operation();
@@ -69,64 +72,59 @@ class PerformanceService {
   }
 
   /// Gets the average duration for [name].
-  Duration? getAverageTime(String name) {
+  Duration? getAverageTime(final String name) {
     final times = _metrics[name];
     if (times == null || times.isEmpty) return null;
 
     final totalMicros = times.fold<int>(
       0,
-      (sum, duration) => sum + duration.inMicroseconds,
+      (final sum, final duration) => sum + duration.inMicroseconds,
     );
 
     return Duration(microseconds: totalMicros ~/ times.length);
   }
 
   /// Gets the minimum duration for [name].
-  Duration? getMinTime(String name) {
+  Duration? getMinTime(final String name) {
     final times = _metrics[name];
     if (times == null || times.isEmpty) return null;
 
-    return times.reduce((a, b) => a < b ? a : b);
+    return times.reduce((final a, final b) => a < b ? a : b);
   }
 
   /// Gets the maximum duration for [name].
-  Duration? getMaxTime(String name) {
+  Duration? getMaxTime(final String name) {
     final times = _metrics[name];
     if (times == null || times.isEmpty) return null;
 
-    return times.reduce((a, b) => a > b ? a : b);
+    return times.reduce((final a, final b) => a > b ? a : b);
   }
 
   /// Gets the number of measurements for [name].
-  int getMeasurementCount(String name) {
-    return _metrics[name]?.length ?? 0;
-  }
+  int getMeasurementCount(final String name) => _metrics[name]?.length ?? 0;
 
   /// Gets all metrics as a map.
-  Map<String, Duration> getAllAverages() {
-    return Map.fromEntries(
-      _metrics.keys.map((name) {
-        final avg = getAverageTime(name);
-        return avg != null ? MapEntry(name, avg) : null;
-      }).whereType<MapEntry<String, Duration>>(),
-    );
-  }
+  Map<String, Duration> getAllAverages() => Map.fromEntries(
+    _metrics.keys.map((final name) {
+      final avg = getAverageTime(name);
+      return avg != null ? MapEntry(name, avg) : null;
+    }).whereType<MapEntry<String, Duration>>(),
+  );
 
   /// Gets a summary of all metrics.
-  Map<String, Map<String, dynamic>> getSummary() {
-    return _metrics.map((name, times) {
-      final avg = getAverageTime(name);
-      final min = getMinTime(name);
-      final max = getMaxTime(name);
+  Map<String, Map<String, dynamic>> getSummary() =>
+      _metrics.map((final name, final times) {
+        final avg = getAverageTime(name);
+        final min = getMinTime(name);
+        final max = getMaxTime(name);
 
-      return MapEntry(name, {
-        'count': times.length,
-        'average': avg?.inMilliseconds,
-        'min': min?.inMilliseconds,
-        'max': max?.inMilliseconds,
+        return MapEntry(name, {
+          'count': times.length,
+          'average': avg?.inMilliseconds,
+          'min': min?.inMilliseconds,
+          'max': max?.inMilliseconds,
+        });
       });
-    });
-  }
 
   /// Clears all metrics.
   void clear() {

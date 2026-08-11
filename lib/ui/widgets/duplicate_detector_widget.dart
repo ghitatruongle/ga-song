@@ -16,10 +16,11 @@ import '../utils/theme_helpers.dart';
 class DuplicateDetectorWidget extends ConsumerStatefulWidget {
   const DuplicateDetectorWidget({super.key});
 
-  static Future<void> show(BuildContext context) async {
+  static Future<void> show(final BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => const Dialog(child: DuplicateDetectorWidget()),
+      builder: (final context) =>
+          const Dialog(child: DuplicateDetectorWidget()),
     );
   }
 
@@ -55,16 +56,18 @@ class _DuplicateDetectorWidgetState
     }
 
     // Filter to only groups with duplicates
-    final duplicates = groups.values.where((g) => g.length > 1).toList();
+    final duplicates = groups.values.where((final g) => g.length > 1).toList();
 
     // Sort each group by dateAdded (newest first) so we can recommend keeping the first
     for (final group in duplicates) {
-      group.sort((a, b) {
+      group.sort((final a, final b) {
         final aDate = a.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0);
         final bDate = b.dateAdded ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate); // Newest first
       });
     }
+
+    if (!mounted) return; // dialog may have been closed while scanning
 
     setState(() {
       _duplicateGroups = duplicates;
@@ -79,14 +82,26 @@ class _DuplicateDetectorWidgetState
 
     final db = ref.read(databaseServiceProvider);
 
-    for (final id in _selectedForDeletion) {
-      final song = _duplicateGroups
-          .expand((g) => g)
-          .where((s) => s.id == id)
-          .firstOrNull;
-      if (song?.id != null) {
-        await db.deleteSong(song!.id!);
+    try {
+      for (final id in _selectedForDeletion) {
+        final song = _duplicateGroups
+            .expand((final g) => g)
+            .where((final s) => s.id == id)
+            .firstOrNull;
+        if (song?.id != null) {
+          await db.deleteSong(song!.id!);
+        }
       }
+    } catch (e) {
+      // Keep the dialog open so the user sees the failure instead of a
+      // stuck spinner + unhandled exception.
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi khi xóa bài trùng: $e')));
+      }
+      if (mounted) setState(() => _isDeleting = false);
+      return;
     }
 
     if (mounted) {
@@ -100,7 +115,7 @@ class _DuplicateDetectorWidgetState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final spacing = ThemeSpacing.of(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
@@ -147,12 +162,12 @@ class _DuplicateDetectorWidgetState
                     )
                   : ListView.builder(
                       itemCount: _duplicateGroups.length,
-                      itemBuilder: (context, groupIndex) {
+                      itemBuilder: (final context, final groupIndex) {
                         final group = _duplicateGroups[groupIndex];
                         return _DuplicateGroup(
                           songs: group,
                           selectedIds: _selectedForDeletion,
-                          onToggle: (id, selected) {
+                          onToggle: (final id, final selected) {
                             setState(() {
                               if (selected) {
                                 _selectedForDeletion.add(id);
@@ -224,7 +239,7 @@ class _DuplicateGroupState extends State<_DuplicateGroup> {
   bool _isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final spacing = ThemeSpacing.of(context);
     final radius = ThemeRadius.of(context);
@@ -248,19 +263,14 @@ class _DuplicateGroupState extends State<_DuplicateGroup> {
       duration: animations ? AppDurations.short : Duration.zero,
       curve: AppCurves.decelerate,
       transform: Matrix4.identity()
-        ..scaleByDouble(
-          _isHovered ? 1.01 : 1.0,
-          _isHovered ? 1.01 : 1.0,
-          1.0,
-          1.0,
-        ),
+        ..scaleByDouble(_isHovered ? 1.01 : 1.0, _isHovered ? 1.01 : 1.0, 1, 1),
       margin: EdgeInsets.only(bottom: spacing.sm + spacing.xxs),
       decoration: BoxDecoration(
         color: groupBg,
         borderRadius: radius.circular(),
         border: Border.all(
           color: _isHovered
-              ? groupBorder.withValues(alpha: 1.0)
+              ? groupBorder.withValues(alpha: 1)
               : groupBorder.withValues(alpha: 0.7),
           width: _isHovered ? 1.5 : 1.0,
         ),
@@ -299,7 +309,7 @@ class _DuplicateGroupState extends State<_DuplicateGroup> {
             ),
 
             // Songs in group
-            ...widget.songs.asMap().entries.map((entry) {
+            ...widget.songs.asMap().entries.map((final entry) {
               final index = entry.key;
               final song = entry.value;
               final isSelected = widget.selectedIds.contains(song.id);
@@ -320,7 +330,7 @@ class _DuplicateGroupState extends State<_DuplicateGroup> {
                     if (!isRecommended)
                       Checkbox(
                         value: isSelected,
-                        onChanged: (value) {
+                        onChanged: (final value) {
                           if (song.id != null) {
                             widget.onToggle(song.id!, value ?? false);
                           }

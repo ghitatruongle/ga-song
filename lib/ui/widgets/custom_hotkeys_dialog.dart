@@ -6,11 +6,11 @@ import '../../providers/service_providers.dart';
 import '../utils/theme_helpers.dart';
 
 class CustomHotkeysDialog {
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (context) => const _CustomHotkeysDialog(),
+      builder: (final context) => const _CustomHotkeysDialog(),
     );
   }
 }
@@ -71,7 +71,7 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.white
         : Colors.black87;
@@ -130,93 +130,85 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
               SizedBox(height: spacing.lg - spacing.xs),
               ValueListenableBuilder<Map<String, String>>(
                 valueListenable: _settings.customHotkeysNotifier,
-                builder: (context, hotkeys, _) {
-                  return Column(
-                    children: _hotkeyActions.map((action) {
-                      final actionKey = action['action'] as String;
-                      final currentKey =
-                          hotkeys[actionKey] ?? action['defaultKey'] as String;
-                      final isEditing = _editingAction == actionKey;
+                builder: (final context, final hotkeys, _) => Column(
+                  children: _hotkeyActions.map((final action) {
+                    final actionKey = action['action'] as String;
+                    final currentKey =
+                        hotkeys[actionKey] ?? action['defaultKey'] as String;
+                    final isEditing = _editingAction == actionKey;
 
-                      return Container(
-                        margin: EdgeInsets.only(
-                          bottom: spacing.sm + spacing.xxs,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: spacing.md,
-                          vertical: spacing.sm + spacing.xs,
-                        ),
-                        decoration: BoxDecoration(
+                    return Container(
+                      margin: EdgeInsets.only(bottom: spacing.sm + spacing.xxs),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: spacing.md,
+                        vertical: spacing.sm + spacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isEditing
+                            ? Theme.of(
+                                context,
+                              ).primaryColor.withValues(alpha: 0.1)
+                            : textColor.withValues(alpha: 0.05),
+                        borderRadius: radius.circular(),
+                        border: Border.all(
                           color: isEditing
-                              ? Theme.of(
-                                  context,
-                                ).primaryColor.withValues(alpha: 0.1)
-                              : textColor.withValues(alpha: 0.05),
-                          borderRadius: radius.circular(),
-                          border: Border.all(
-                            color: isEditing
-                                ? Theme.of(context).primaryColor
-                                : textColor.withValues(alpha: 0.1),
-                          ),
+                              ? Theme.of(context).primaryColor
+                              : textColor.withValues(alpha: 0.1),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                action['label'] as String,
-                                style: TextStyle(color: textColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              action['label'] as String,
+                              style: TextStyle(color: textColor),
+                            ),
+                          ),
+                          if (isEditing)
+                            _buildKeyCaptureField(textColor)
+                          else
+                            InkWell(
+                              onTap: () =>
+                                  setState(() => _editingAction = actionKey),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: spacing.sm + spacing.xxs,
+                                  vertical: AppSpacing.sm,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: textColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.sm,
+                                  ),
+                                ),
+                                child: Text(
+                                  currentKey,
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontFamily: 'monospace',
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ),
                             ),
-                            if (isEditing)
-                              _buildKeyCaptureField(textColor)
-                            else
-                              InkWell(
-                                onTap: () =>
-                                    setState(() => _editingAction = actionKey),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.sm,
-                                ),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: spacing.sm + spacing.xxs,
-                                    vertical: AppSpacing.sm,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: textColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.sm,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    currentKey,
-                                    style: TextStyle(
-                                      color: textColor,
-                                      fontFamily: 'monospace',
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
+                          if (hotkeys.containsKey(actionKey))
+                            IconButton(
+                              icon: Icon(
+                                Icons.close,
+                                color: AppColors.danger.withValues(alpha: 0.7),
+                                size: 18,
                               ),
-                            if (hotkeys.containsKey(actionKey))
-                              IconButton(
-                                icon: Icon(
-                                  Icons.close,
-                                  color: AppColors.danger.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                  size: 18,
-                                ),
-                                onPressed: () =>
-                                    _settings.removeCustomHotkey(actionKey),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
+                              onPressed: () =>
+                                  _settings.removeCustomHotkey(actionKey),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -272,80 +264,84 @@ class _CustomHotkeysDialogState extends ConsumerState<_CustomHotkeysDialog> {
     );
   }
 
-  Widget _buildKeyCaptureField(Color textColor) {
-    return KeyboardListener(
-      focusNode: _focusNode..requestFocus(),
-      onKeyEvent: (event) {
-        if (event is KeyDownEvent) {
-          final key = event.logicalKey;
-          if (key == LogicalKeyboardKey.escape) {
-            setState(() {
-              _editingAction = null;
-              _capturedKeys = '';
-            });
-            return;
-          }
-
-          final modifiers = <String>[];
-          if (HardwareKeyboard.instance.isAltPressed) modifiers.add('Alt');
-          if (HardwareKeyboard.instance.isControlPressed) modifiers.add('Ctrl');
-          if (HardwareKeyboard.instance.isShiftPressed) modifiers.add('Shift');
-
-          final keyLabel = event.logicalKey.keyLabel;
-          if (keyLabel.isNotEmpty &&
-              !['Alt', 'Control', 'Shift'].contains(keyLabel)) {
-            final keys = [...modifiers, keyLabel].join(' + ');
-
-            // Check for conflicts with other actions
-            final currentHotkeys = _settings.customHotkeysNotifier.value;
-            for (final entry in currentHotkeys.entries) {
-              if (entry.key != _editingAction && entry.value == keys) {
-                // Conflict detected
-                setState(() {
-                  _capturedKeys = '';
-                  _editingAction = null;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Phím tắt "$keys" đã được gán cho hành động khác',
-                    ),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-                return;
-              }
-            }
-
-            setState(() {
-              _capturedKeys = keys;
-              if (_editingAction != null) {
-                _settings.setCustomHotkey(_editingAction!, keys);
-                _editingAction = null;
-              }
-            });
-          }
+  Widget _buildKeyCaptureField(final Color textColor) => KeyboardListener(
+    focusNode: _focusNode..requestFocus(),
+    onKeyEvent: (final event) {
+      if (event is KeyDownEvent) {
+        final key = event.logicalKey;
+        if (key == LogicalKeyboardKey.escape) {
+          setState(() {
+            _editingAction = null;
+            _capturedKeys = '';
+          });
+          return;
         }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: Theme.of(context).primaryColor),
-        ),
-        child: Text(
-          _capturedKeys.isEmpty ? 'Nhấn phím...' : _capturedKeys,
-          style: TextStyle(
-            color: Theme.of(context).primaryColor,
-            fontFamily: 'monospace',
-            fontSize: 13,
-          ),
+
+        final modifiers = <String>[];
+        if (HardwareKeyboard.instance.isAltPressed) modifiers.add('Alt');
+        if (HardwareKeyboard.instance.isControlPressed) modifiers.add('Ctrl');
+        if (HardwareKeyboard.instance.isShiftPressed) modifiers.add('Shift');
+
+        final keyLabel = event.logicalKey.keyLabel;
+        // Space's keyLabel is a single ' ' — treat it as a real key so
+        // "Alt + Space" is stored (previously it saved "Alt +  " which the
+        // hotkey parser never matched).
+        final normalizedKeyLabel = event.logicalKey == LogicalKeyboardKey.space
+            ? 'Space'
+            : keyLabel;
+        if (normalizedKeyLabel.isNotEmpty &&
+            !['Alt', 'Control', 'Shift'].contains(normalizedKeyLabel)) {
+          final keys = [...modifiers, normalizedKeyLabel].join(' + ');
+
+          // Check for conflicts with other actions
+          final currentHotkeys = _settings.customHotkeysNotifier.value;
+          for (final entry in currentHotkeys.entries) {
+            if (entry.key != _editingAction && entry.value == keys) {
+              // Conflict detected
+              setState(() {
+                _capturedKeys = '';
+                _editingAction = null;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Phím tắt "$keys" đã được gán cho hành động khác',
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+          }
+
+          setState(() {
+            _capturedKeys = keys;
+            if (_editingAction != null) {
+              _settings.setCustomHotkey(_editingAction!, keys);
+              _editingAction = null;
+            }
+          });
+        }
+      }
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: Theme.of(context).primaryColor),
+      ),
+      child: Text(
+        _capturedKeys.isEmpty ? 'Nhấn phím...' : _capturedKeys,
+        style: TextStyle(
+          color: Theme.of(context).primaryColor,
+          fontFamily: 'monospace',
+          fontSize: 13,
         ),
       ),
-    );
-  }
+    ),
+  );
 }

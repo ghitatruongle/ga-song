@@ -43,13 +43,13 @@ class AppSpacingExtension extends ThemeExtension<AppSpacingExtension> {
 
   @override
   AppSpacingExtension copyWith({
-    double? xxs,
-    double? xs,
-    double? sm,
-    double? md,
-    double? lg,
-    double? xl,
-    double? xxl,
+    final double? xxs,
+    final double? xs,
+    final double? sm,
+    final double? md,
+    final double? lg,
+    final double? xl,
+    final double? xxl,
   }) => AppSpacingExtension(
     xxs: xxs ?? this.xxs,
     xs: xs ?? this.xs,
@@ -62,8 +62,8 @@ class AppSpacingExtension extends ThemeExtension<AppSpacingExtension> {
 
   @override
   AppSpacingExtension lerp(
-    ThemeExtension<AppSpacingExtension>? other,
-    double t,
+    final ThemeExtension<AppSpacingExtension>? other,
+    final double t,
   ) {
     if (other is! AppSpacingExtension) return this;
     return AppSpacingExtension(
@@ -101,10 +101,10 @@ class AppRadiusExtension extends ThemeExtension<AppRadiusExtension> {
 
   @override
   AppRadiusExtension copyWith({
-    double? sm,
-    double? md,
-    double? lg,
-    double? xl,
+    final double? sm,
+    final double? md,
+    final double? lg,
+    final double? xl,
   }) => AppRadiusExtension(
     sm: sm ?? this.sm,
     md: md ?? this.md,
@@ -113,7 +113,10 @@ class AppRadiusExtension extends ThemeExtension<AppRadiusExtension> {
   );
 
   @override
-  AppRadiusExtension lerp(ThemeExtension<AppRadiusExtension>? other, double t) {
+  AppRadiusExtension lerp(
+    final ThemeExtension<AppRadiusExtension>? other,
+    final double t,
+  ) {
     if (other is! AppRadiusExtension) return this;
     return AppRadiusExtension(
       sm: lerpDouble(sm, other.sm, t)!,
@@ -147,10 +150,10 @@ class AppElevationExtension extends ThemeExtension<AppElevationExtension> {
 
   @override
   AppElevationExtension copyWith({
-    double? level0,
-    double? level1,
-    double? level2,
-    double? level3,
+    final double? level0,
+    final double? level1,
+    final double? level2,
+    final double? level3,
   }) => AppElevationExtension(
     level0: level0 ?? this.level0,
     level1: level1 ?? this.level1,
@@ -160,8 +163,8 @@ class AppElevationExtension extends ThemeExtension<AppElevationExtension> {
 
   @override
   AppElevationExtension lerp(
-    ThemeExtension<AppElevationExtension>? other,
-    double t,
+    final ThemeExtension<AppElevationExtension>? other,
+    final double t,
   ) {
     if (other is! AppElevationExtension) return this;
     return AppElevationExtension(

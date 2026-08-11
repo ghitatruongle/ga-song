@@ -6,6 +6,7 @@
 /// - LRCLIB search and auto-fetch
 /// - Synced lyrics generation from plain text
 /// - Save to database
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,10 +15,7 @@ import '../../core/audio/lyric_parser.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 import '../../models/song.dart';
-import '../../providers/lyric_provider.dart';
 import '../../providers/lyrics_editor_provider.dart';
-import '../../providers/service_providers.dart';
-import '../utils/haptic_helper.dart';
 import '../widgets/cover_art_image.dart';
 
 /// Main Lyrics Editor Screen
@@ -44,6 +42,14 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
   late final ScrollController _syncedScrollController;
   bool _syncedScrollSync = true;
 
+  /// Syncs the editor text fields with the lyrics editor provider state
+  /// after apply/generate/search actions.
+  void _syncControllersFromState() {
+    final s = ref.read(lyricsEditorProvider);
+    _plainController.text = s.plainLyrics;
+    _syncedController.text = s.syncedLyrics;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -62,18 +68,22 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
 
     // Initialize editor state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(lyricsEditorProvider.notifier).resetForSong(
-        initialPlain: widget.initialPlainLyrics,
-        initialSynced: widget.initialSyncedLyrics,
-      );
+      ref
+          .read(lyricsEditorProvider.notifier)
+          .resetForSong(
+            initialPlain: widget.initialPlainLyrics,
+            initialSynced: widget.initialSyncedLyrics,
+          );
 
       // Auto-search if song info available
       if (widget.song != null) {
-        ref.read(lyricsEditorProvider.notifier).searchLyrics(
-          title: widget.song!.name,
-          artist: widget.song!.artist,
-          album: widget.song!.album,
-        );
+        ref
+            .read(lyricsEditorProvider.notifier)
+            .searchLyrics(
+              title: widget.song!.name,
+              artist: widget.song!.artist,
+              album: widget.song!.album,
+            );
       }
     });
   }
@@ -90,7 +100,8 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
   void _syncScroll() {
     if (!_syncedScrollSync) return;
 
-    if (_plainScrollController.hasClients && _syncedScrollController.hasClients) {
+    if (_plainScrollController.hasClients &&
+        _syncedScrollController.hasClients) {
       final plainOffset = _plainScrollController.offset;
       final plainMax = _plainScrollController.position.maxScrollExtent;
       final syncedMax = _syncedScrollController.position.maxScrollExtent;
@@ -102,17 +113,13 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
     }
   }
 
-  void _toggleSyncScroll(bool value) {
+  void _toggleSyncScroll(final bool value) {
     setState(() => _syncedScrollSync = value);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final editorState = ref.watch(lyricsEditorProvider);
-    final editorNotifier = ref.read(lyricsEditorProvider.notifier);
-    final isDark = context.isDark;
-    final accentColor = Theme.of(context).colorScheme.primary;
-    final textColor = context.adaptive;
 
     return Scaffold(
       appBar: AppBar(
@@ -132,7 +139,12 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.auto_fix_high),
-            onPressed: () => ref.read(lyricsEditorProvider.notifier).generateSyncedFromPlain(),
+            onPressed: () {
+              ref.read(lyricsEditorProvider.notifier).generateSyncedFromPlain();
+              // Keep the editor fields in sync with provider state —
+              // otherwise the generated LRC never appears in the text box.
+              _syncControllersFromState();
+            },
             tooltip: 'Tạo lời bài hát có thời gian từ văn bản thuần',
           ),
           if (widget.song != null)
@@ -164,7 +176,8 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => ref.read(lyricsEditorProvider.notifier).clearError(),
+                    onPressed: () =>
+                        ref.read(lyricsEditorProvider.notifier).clearError(),
                   ),
                 ],
               ),
@@ -184,7 +197,9 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                     controller: _plainController,
                     scrollController: _plainScrollController,
                     isEditing: editorState.isEditing,
-                    onChanged: (text) => ref.read(lyricsEditorProvider.notifier).updatePlainLyrics(text),
+                    onChanged: (final text) => ref
+                        .read(lyricsEditorProvider.notifier)
+                        .updatePlainLyrics(text),
                     hintText: 'Nhập lời bài hát ở đây...\nMỗi dòng một câu',
                   ),
                 ),
@@ -203,8 +218,11 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                     controller: _syncedController,
                     scrollController: _syncedScrollController,
                     isEditing: editorState.isEditing,
-                    onChanged: (text) => ref.read(lyricsEditorProvider.notifier).updateSyncedLyrics(text),
-                    hintText: '[mm:ss.xx]Dòng lời bài hát\n[mm:ss.xx]Dòng tiếp theo',
+                    onChanged: (final text) => ref
+                        .read(lyricsEditorProvider.notifier)
+                        .updateSyncedLyrics(text),
+                    hintText:
+                        '[mm:ss.xx]Dòng lời bài hát\n[mm:ss.xx]Dòng tiếp theo',
                     showFormatHelp: true,
                   ),
                 ),
@@ -222,16 +240,13 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
   Widget _buildSongHeader() {
     final song = widget.song!;
     final isDark = context.isDark;
-    final textColor = context.adaptive;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
         border: Border(
-          bottom: BorderSide(
-            color: context.adaptive.withValues(alpha: 0.1),
-          ),
+          bottom: BorderSide(color: context.adaptive.withValues(alpha: 0.1)),
         ),
       ),
       child: Row(
@@ -242,7 +257,7 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
               song: widget.song!,
               cacheWidth: 64,
               cacheHeight: 64,
-              fallbackBuilder: (context) => Container(
+              fallbackBuilder: (final context) => Container(
                 width: 56,
                 height: 56,
                 color: Theme.of(context).cardColor.withValues(alpha: 0.2),
@@ -285,10 +300,7 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
           Row(
             children: [
               const Text('Đồng bộ cuộn'),
-              Switch(
-                value: _syncedScrollSync,
-                onChanged: _toggleSyncScroll,
-              ),
+              Switch(value: _syncedScrollSync, onChanged: _toggleSyncScroll),
             ],
           ),
         ],
@@ -297,18 +309,17 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
   }
 
   Widget _buildEditorPane({
-    required String label,
-    required TextEditingController controller,
-    required ScrollController scrollController,
-    required bool isEditing,
-    required ValueChanged<String> onChanged,
-    required String hintText,
-    bool showFormatHelp = false,
+    required final String label,
+    required final TextEditingController controller,
+    required final ScrollController scrollController,
+    required final bool isEditing,
+    required final ValueChanged<String> onChanged,
+    required final String hintText,
+    final bool showFormatHelp = false,
   }) {
     final isDark = context.isDark;
-    final textColor = context.adaptive;
 
-    return Container(
+    return ColoredBox(
       color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,7 +350,7 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                 if (showFormatHelp)
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.help_outline, size: 20),
-                    itemBuilder: (context) => [
+                    itemBuilder: (final context) => [
                       const PopupMenuItem(
                         value: 'format',
                         child: Text('Định dạng LRC: [mm:ss.xx]Dòng lời'),
@@ -350,10 +361,12 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                       ),
                       const PopupMenuItem(
                         value: 'shortcuts',
-                        child: Text('Ctrl+S: Lưu | Ctrl+G: Tạo LRC | Ctrl+F: Tìm kiếm'),
+                        child: Text(
+                          'Ctrl+S: Lưu | Ctrl+G: Tạo LRC | Ctrl+F: Tìm kiếm',
+                        ),
                       ),
                     ],
-                    onSelected: (value) {
+                    onSelected: (final value) {
                       if (value == 'format') {
                         _showFormatHelp();
                       }
@@ -420,7 +433,7 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                   ),
                 ],
               ),
-          ),
+            ),
         ],
       ),
     );
@@ -430,16 +443,13 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
     final editorState = ref.watch(lyricsEditorProvider);
     final notifier = ref.read(lyricsEditorProvider.notifier);
     final isDark = context.isDark;
-    final accentColor = Theme.of(context).colorScheme.primary;
 
     return Container(
       height: 180,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
         border: Border(
-          bottom: BorderSide(
-            color: context.adaptive.withValues(alpha: 0.1),
-          ),
+          bottom: BorderSide(color: context.adaptive.withValues(alpha: 0.1)),
         ),
       ),
       child: Column(
@@ -449,7 +459,11 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                Icon(Icons.search, size: 18, color: context.adaptive.withValues(alpha: 0.6)),
+                Icon(
+                  Icons.search,
+                  size: 18,
+                  color: context.adaptive.withValues(alpha: 0.6),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Kết quả tìm kiếm (${editorState.searchResults.length})',
@@ -471,24 +485,32 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               itemCount: editorState.searchResults.length,
-              itemBuilder: (context, index) {
+              itemBuilder: (final context, final index) {
                 final result = editorState.searchResults[index];
                 final isSelected = editorState.selectedResultIndex == index;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   color: isSelected
-                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1)
                       : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: isSelected
-                        ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
+                        ? BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          )
                         : BorderSide.none,
                   ),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () => notifier.selectResult(index),
+                    onTap: () {
+                      notifier.selectResult(index);
+                      _syncControllersFromState();
+                    },
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
@@ -498,9 +520,13 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                             children: [
                               if (result.hasSyncedLyrics)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -508,19 +534,24 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                                   ),
                                 ),
                               if (result.hasPlainLyrics) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.orange.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(
+                                  child: const Text(
                                     'Văn bản',
                                     style: TextStyle(
                                       fontSize: 10,
@@ -529,7 +560,7 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                                     ),
                                   ),
                                 ),
-                            ],
+                              ],
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -574,7 +605,10 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                 child: FilledButton.icon(
                   icon: const Icon(Icons.check),
                   label: const Text('Áp dụng kết quả này'),
-                  onPressed: () => notifier.applySelectedResult(),
+                  onPressed: () {
+                    notifier.applySelectedResult();
+                    _syncControllersFromState();
+                  },
                 ),
               ),
             ),
@@ -587,16 +621,13 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
     final editorState = ref.watch(lyricsEditorProvider);
     final notifier = ref.read(lyricsEditorProvider.notifier);
     final isDark = context.isDark;
-    final accentColor = Theme.of(context).colorScheme.primary;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
         border: Border(
-          top: BorderSide(
-            color: context.adaptive.withValues(alpha: 0.1),
-          ),
+          top: BorderSide(color: context.adaptive.withValues(alpha: 0.1)),
         ),
       ),
       child: Wrap(
@@ -608,7 +639,10 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
             OutlinedButton.icon(
               icon: const Icon(Icons.auto_fix_high),
               label: const Text('Tạo LRC từ văn bản'),
-              onPressed: () => notifier.generateSyncedFromPlain(),
+              onPressed: () {
+                notifier.generateSyncedFromPlain();
+                _syncControllersFromState();
+              },
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.format_align_left),
@@ -618,7 +652,9 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      valid ? 'Định dạng LRC hợp lệ' : 'Định dạng LRC không hợp lệ',
+                      valid
+                          ? 'Định dạng LRC hợp lệ'
+                          : 'Định dạng LRC không hợp lệ',
                     ),
                     backgroundColor: valid ? Colors.green : Colors.red,
                   ),
@@ -656,13 +692,19 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
 
   void _showSearchDialog() {
     final notifier = ref.read(lyricsEditorProvider.notifier);
-    final titleController = TextEditingController(text: widget.song?.name ?? '');
-    final artistController = TextEditingController(text: widget.song?.artist ?? '');
-    final albumController = TextEditingController(text: widget.song?.album ?? '');
+    final titleController = TextEditingController(
+      text: widget.song?.name ?? '',
+    );
+    final artistController = TextEditingController(
+      text: widget.song?.artist ?? '',
+    );
+    final albumController = TextEditingController(
+      text: widget.song?.album ?? '',
+    );
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (final context) => AlertDialog(
         title: const Text('Tìm lời bài hát (LRCLIB)'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -702,8 +744,12 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
               if (titleController.text.trim().isEmpty) return;
               notifier.searchLyrics(
                 title: titleController.text.trim(),
-                artist: artistController.text.trim().isEmpty ? null : artistController.text.trim(),
-                album: albumController.text.trim().isEmpty ? null : albumController.text.trim(),
+                artist: artistController.text.trim().isEmpty
+                    ? null
+                    : artistController.text.trim(),
+                album: albumController.text.trim().isEmpty
+                    ? null
+                    : albumController.text.trim(),
               );
               Navigator.pop(context);
             },
@@ -717,44 +763,41 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
   void _showFormatHelp() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (final context) => AlertDialog(
         title: const Text('Định dạng LRC'),
-        content: SingleChildScrollView(
+        content: const SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Định dạng LRC cơ bản:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              const SelectableText(
+              SizedBox(height: 8),
+              SelectableText(
                 '[00:12.34]Dòng lời thứ nhất\n'
                 '[00:15.67]Dòng lời thứ hai\n'
                 '[00:18.90]Dòng lời thứ ba',
                 style: TextStyle(fontFamily: 'monospace'),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Định dạng LRC nâng cao (karaoke từng từ):',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              const SelectableText(
+              SizedBox(height: 8),
+              SelectableText(
                 '[00:12.34]Xin [00:12.50]chào [00:12.70]các [00:13.00]bạn\n'
                 '[00:15.67]Hôm [00:15.80]nay [00:16.00]thời [00:16.20]tiết [00:16.40]đẹp',
                 style: TextStyle(fontFamily: 'monospace'),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Lưu ý:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text('• Thời gian: [phút:giây.số_ms] (số_ms có 2 hoặc 3 chữ số)'),
-              const Text('• Mỗi timestamp phải ở đầu dòng hoặc giữa các từ'),
-              const Text('• Dòng không có timestamp sẽ được bỏ qua'),
+              SizedBox(height: 16),
+              Text('Lưu ý:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('• Thời gian: [phút:giây.số_ms] (số_ms có 2 hoặc 3 chữ số)'),
+              Text('• Mỗi timestamp phải ở đầu dòng hoặc giữa các từ'),
+              Text('• Dòng không có timestamp sẽ được bỏ qua'),
             ],
           ),
         ),
@@ -774,22 +817,19 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (final context) => AlertDialog(
         title: const Text('Xem trước lời bài hát'),
         content: SizedBox(
           width: 400,
           height: 400,
           child: ListView.builder(
             itemCount: lyrics.length,
-            itemBuilder: (context, index) {
+            itemBuilder: (final context, final index) {
               final line = lyrics[index];
               return ListTile(
                 title: Text(
                   line.text,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: context.adaptive,
-                  ),
+                  style: TextStyle(fontSize: 14, color: context.adaptive),
                 ),
                 subtitle: Text(
                   _formatTime(line.startTime),
@@ -846,7 +886,7 @@ class _LyricsEditorScreenState extends ConsumerState<LyricsEditorScreen> {
     }
   }
 
-  String _formatTime(Duration d) {
+  String _formatTime(final Duration d) {
     final mm = d.inMinutes.toString().padLeft(2, '0');
     final ss = (d.inSeconds % 60).toString().padLeft(2, '0');
     final ms = ((d.inMilliseconds % 1000) ~/ 10).toString().padLeft(2, '0');

@@ -20,7 +20,7 @@ class _FakeVisualizerController extends ChangeNotifier
   // The painter only reads `snapshot`, so all other members are stubs
   // that throw if accidentally invoked.
   @override
-  dynamic noSuchMethod(Invocation invocation) {
+  dynamic noSuchMethod(final Invocation invocation) {
     throw UnimplementedError(
       'Unexpected access: ${invocation.memberName}. '
       'The painter under test should only read `snapshot`.',
@@ -29,25 +29,23 @@ class _FakeVisualizerController extends ChangeNotifier
 }
 
 VisualizerFrameSnapshot _frameWith({
-  StarFieldSnapshot? typedSnapshot,
-  UnmodifiableListView<Star>? legacyStars,
-  UnmodifiableListView<double>? fft,
-}) {
-  return VisualizerFrameSnapshot(
-    fftData: fft ?? UnmodifiableListView<double>(const []),
-    particles: UnmodifiableListView<Particle>(const []),
-    stars: legacyStars ?? UnmodifiableListView<Star>(const []),
-    smoothEnergy: 0.0,
-    time: 0.0,
-    size: const Size(800, 600),
-    isBeat: false,
-    starFieldSnapshot: typedSnapshot,
-  );
-}
+  final StarFieldSnapshot? typedSnapshot,
+  final UnmodifiableListView<Star>? legacyStars,
+  final UnmodifiableListView<double>? fft,
+}) => VisualizerFrameSnapshot(
+  fftData: fft ?? UnmodifiableListView<double>(const []),
+  particles: UnmodifiableListView<Particle>(const []),
+  stars: legacyStars ?? UnmodifiableListView<Star>(const []),
+  smoothEnergy: 0,
+  time: 0,
+  size: const Size(800, 600),
+  isBeat: false,
+  starFieldSnapshot: typedSnapshot,
+);
 
 Future<void> _pumpWithPainter(
-  WidgetTester tester,
-  VisualizerController controller,
+  final WidgetTester tester,
+  final VisualizerController controller,
 ) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -72,7 +70,7 @@ Future<void> _pumpWithPainter(
 void main() {
   testWidgets(
     'StarfieldPainter renders without error when starFieldSnapshot is set',
-    (tester) async {
+    (final tester) async {
       final typed = StarFieldSnapshot(
         positions: Float32List.fromList(const [
           100,
@@ -104,13 +102,13 @@ void main() {
 
   testWidgets(
     'StarfieldPainter falls back to legacy Star list when typed snapshot is null',
-    (tester) async {
+    (final tester) async {
       final legacyStars = UnmodifiableListView<Star>([
         Star(
           x: 50,
           y: 50,
           z: 0.5,
-          speed: 1.0,
+          speed: 1,
           baseAngle: 0,
           color: const Color(0xFFFFFFFF),
         ),
@@ -124,7 +122,7 @@ void main() {
 
   testWidgets(
     'StarfieldPainter prefers typed snapshot over legacy list when both are set',
-    (tester) async {
+    (final tester) async {
       final typed = StarFieldSnapshot(
         positions: Float32List.fromList(const [10, 10]),
         colors: Int32List.fromList(const [0xFFFFFFFF]),
@@ -137,7 +135,7 @@ void main() {
           x: 9999, // intentionally far off-screen
           y: 9999,
           z: 0.5,
-          speed: 1.0,
+          speed: 1,
           baseAngle: 0,
           color: const Color(0xFFFFFFFF),
         ),
@@ -154,9 +152,9 @@ void main() {
 
   testWidgets(
     'StarfieldPainter still draws the bottom wave when fftData is present',
-    (tester) async {
+    (final tester) async {
       final fft = UnmodifiableListView<double>(
-        List<double>.generate(256, (i) => i / 255.0),
+        List<double>.generate(256, (final i) => i / 255.0),
       );
       final controller = _FakeVisualizerController(_frameWith(fft: fft));
       await _pumpWithPainter(tester, controller);

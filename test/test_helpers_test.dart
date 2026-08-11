@@ -1,12 +1,11 @@
 /// Unit Tests for Mock Services
 ///
 /// Tests the mock implementations to ensure they behave correctly.
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_helpers.dart';
-import 'package:ga_song/models/song.dart';
-import 'package:ga_song/models/playlist.dart';
 
 void main() {
   group('Test Helpers', () {
@@ -102,7 +101,7 @@ void main() {
           expect(playlists[i].songIds.length, 3);
           // All song IDs should be valid
           for (final songId in playlists[i].songIds) {
-            expect(songs.any((s) => s.id == songId), isTrue);
+            expect(songs.any((final s) => s.id == songId), isTrue);
           }
         }
       });
@@ -110,7 +109,7 @@ void main() {
 
     group('createTestImageBytes', () {
       test('creates valid PNG header', () {
-        final bytes = createTestImageBytes(width: 100, height: 100);
+        final bytes = createTestImageBytes();
 
         expect(bytes.length, greaterThan(8));
         // PNG signature
@@ -143,13 +142,21 @@ void main() {
       final overrides = mockServices.overrides;
 
       expect(overrides.length, greaterThan(5));
-      
+
       // Check key providers are overridden
-      final providerTypes = overrides.map((o) => o.origin?.runtimeType.toString()).toList();
-      expect(providerTypes.any((t) => t?.contains('SettingsManager') ?? false), isTrue);
-      expect(providerTypes.any((t) => t?.contains('DatabaseService') ?? false), isTrue);
-      expect(providerTypes.any((t) => t?.contains('AudioEngine') ?? false), isTrue);
-      expect(providerTypes.any((t) => t?.contains('Playlist') ?? false), isTrue);
+      final providerTypes = overrides
+          .map((final o) => o.origin.runtimeType.toString())
+          .toList();
+      expect(
+        providerTypes.any((final t) => t.contains('SettingsManager')),
+        isTrue,
+      );
+      expect(
+        providerTypes.any((final t) => t.contains('DatabaseService')),
+        isTrue,
+      );
+      expect(providerTypes.any((final t) => t.contains('AudioEngine')), isTrue);
+      expect(providerTypes.any((final t) => t.contains('Playlist')), isTrue);
     });
 
     test('disposes all services without error', () {
@@ -161,16 +168,29 @@ void main() {
 
   group('SongMatcher', () {
     test('matches song with correct properties', () {
-      final song = createTestSong(name: 'Test', artist: 'Artist', album: 'Album', durationMs: 200000);
-      
-      expect(song, isSong(name: 'Test', artist: 'Artist', album: 'Album', durationMs: 200000));
+      final song = createTestSong(
+        name: 'Test',
+        artist: 'Artist',
+        album: 'Album',
+        durationMs: 200000,
+      );
+
+      expect(
+        song,
+        isSong(
+          name: 'Test',
+          artist: 'Artist',
+          album: 'Album',
+          durationMs: 200000,
+        ),
+      );
       expect(song, isNot(isSong(name: 'Wrong')));
       expect(song, isNot(isSong(artist: 'Wrong')));
     });
 
     test('matches with partial properties', () {
       final song = createTestSong(name: 'Test', artist: 'Artist');
-      
+
       expect(song, isSong(name: 'Test'));
       expect(song, isSong(artist: 'Artist'));
       expect(song, isNot(isSong(name: 'Other')));
@@ -180,7 +200,7 @@ void main() {
   group('PlaylistMatcher', () {
     test('matches playlist with correct properties', () {
       final playlist = createTestPlaylist(name: 'Test', songIds: [1, 2, 3]);
-      
+
       expect(playlist, isPlaylist(name: 'Test', songCount: 3));
       expect(playlist, isNot(isPlaylist(name: 'Wrong')));
       expect(playlist, isNot(isPlaylist(songCount: 5)));
@@ -188,7 +208,7 @@ void main() {
 
     test('matches with partial properties', () {
       final playlist = createTestPlaylist(name: 'Test', songIds: [1, 2]);
-      
+
       expect(playlist, isPlaylist(name: 'Test'));
       expect(playlist, isPlaylist(songCount: 2));
     });

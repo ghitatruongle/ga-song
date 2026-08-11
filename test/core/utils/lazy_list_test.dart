@@ -7,9 +7,9 @@ void main() {
     late LazyList<int> lazyList;
 
     setUp(() {
-      sourceData = List.generate(100, (i) => i);
+      sourceData = List.generate(100, (final i) => i);
       lazyList = LazyList<int>(
-        loader: (offset, limit) async {
+        loader: (final offset, final limit) async {
           await Future<void>.delayed(const Duration(milliseconds: 10));
           final end = (offset + limit).clamp(0, sourceData.length);
           return sourceData.sublist(offset, end);

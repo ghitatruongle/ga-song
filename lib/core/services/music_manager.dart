@@ -18,7 +18,8 @@ class MusicManager {
       final result = await FilePicker.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: ['mp3', 'flac', 'wav', 'm4a'],
+        allowedExtensions: ['mp3', 'flac', 'wav', 'm4a', 'aac', 'ogg'],
+        withData: true,
       );
 
       if (result == null || result.files.isEmpty) return;
@@ -30,16 +31,36 @@ class MusicManager {
       }
 
       for (final file in result.files) {
-        if (file.path == null) continue;
-        final sourceFile = File(file.path!);
-
         final newPath = '${localSongsDir.path}/${file.name}';
         final targetFile = File(newPath);
 
         // Bo qua neu da ton tai file cung ten trong thu muc app
         if (await targetFile.exists()) continue;
 
-        await sourceFile.copy(newPath);
+        bool copySuccess = false;
+        if (file.path != null && file.path!.isNotEmpty) {
+          try {
+            final sourceFile = File(file.path!);
+            if (await sourceFile.exists()) {
+              await sourceFile.copy(newPath);
+              copySuccess = true;
+            }
+          } catch (e) {
+            AppLogger.w(
+              'music_manager.service',
+              'File.copy failed, falling back to bytes write',
+              error: e,
+            );
+          }
+        }
+
+        if (!copySuccess) {
+          if (file.bytes != null && file.bytes!.isNotEmpty) {
+            await targetFile.writeAsBytes(file.bytes!);
+          } else {
+            continue;
+          }
+        }
 
         // Trich xuat metadata
         String name = p.basenameWithoutExtension(file.name);
@@ -72,7 +93,6 @@ class MusicManager {
           artist: artist,
           album: album,
           sourcePath: newPath,
-          isBuiltIn: false,
           dateAdded: DateTime.now(),
         );
 
@@ -88,7 +108,7 @@ class MusicManager {
     }
   }
 
-  Future<void> deleteSong(Song song) async {
+  Future<void> deleteSong(final Song song) async {
     try {
       if (song.id != null) {
         await _db.deleteSong(song.id!);

@@ -37,6 +37,7 @@ class MigrationService {
       await _migrateSongs(oldDb);
       await _migratePlaylists(oldDb);
       await _migrateCoverArtCache(oldDb);
+      await _migrateLyricsCache(oldDb);
       AppLogger.i('Migration', 'Migration to Drift completed successfully.');
 
       // We will not delete the old DB right away to be safe, just rename it
@@ -63,7 +64,7 @@ class MigrationService {
     }
   }
 
-  Future<void> _migrateSongs(sqflite.Database oldDb) async {
+  Future<void> _migrateSongs(final sqflite.Database oldDb) async {
     final List<Map<String, dynamic>> maps = await oldDb.query('songs');
     if (maps.isEmpty) return;
 
@@ -81,7 +82,7 @@ class MigrationService {
       }
     }
 
-    await newDb.batch((batch) {
+    await newDb.batch((final batch) {
       for (final song in songs) {
         batch.insert(
           newDb.songs,
@@ -108,13 +109,13 @@ class MigrationService {
     AppLogger.i('Migration', 'Migrated ${songs.length} songs.');
   }
 
-  Future<void> _migratePlaylists(sqflite.Database oldDb) async {
+  Future<void> _migratePlaylists(final sqflite.Database oldDb) async {
     // Migrate playlists
     final List<Map<String, dynamic>> playlistMaps = await oldDb.query(
       'playlists',
     );
 
-    await newDb.batch((batch) {
+    await newDb.batch((final batch) {
       for (final map in playlistMaps) {
         batch.insert(
           newDb.playlists,
@@ -139,7 +140,7 @@ class MigrationService {
     final List<Map<String, dynamic>> junctionMaps = await oldDb.query(
       'playlist_songs',
     );
-    await newDb.batch((batch) {
+    await newDb.batch((final batch) {
       for (final map in junctionMaps) {
         batch.insert(
           newDb.playlistSongs,
@@ -158,7 +159,7 @@ class MigrationService {
     );
   }
 
-  Future<void> _migrateCoverArtCache(sqflite.Database oldDb) async {
+  Future<void> _migrateCoverArtCache(final sqflite.Database oldDb) async {
     final List<Map<String, dynamic>> maps = await oldDb.query(
       'cover_art_cache',
     );
@@ -178,7 +179,7 @@ class MigrationService {
       }
     }
 
-    await newDb.batch((batch) {
+    await newDb.batch((final batch) {
       for (final cache in caches) {
         batch.insert(
           newDb.coverArtCache,
@@ -195,5 +196,47 @@ class MigrationService {
       'Migration',
       'Migrated ${caches.length} cover art cache entries.',
     );
+  }
+
+  /// Migrates the legacy `lyrics_cache` table so offline-cached lyrics
+  /// survive the sqflite → Drift upgrade (previously they were dropped).
+  Future<void> _migrateLyricsCache(final sqflite.Database oldDb) async {
+    final List<Map<String, dynamic>> maps;
+    try {
+      maps = await oldDb.query('lyrics_cache');
+    } catch (_) {
+      // Table may not exist in very old builds — nothing to migrate.
+      return;
+    }
+    if (maps.isEmpty) return;
+
+    int migrated = 0;
+    await newDb.batch((final batch) {
+      for (final map in maps) {
+        final songId = (map['song_id'] ?? map['songId']) as int?;
+        if (songId == null) continue;
+        final synced = (map['synced_lyrics'] ?? map['syncedLyrics']) as String?;
+        final plain = (map['plain_lyrics'] ?? map['plainLyrics']) as String?;
+        final source = (map['source'] as String?) ?? 'lrclib';
+        final fetchedRaw = map['fetched_at'] ?? map['fetchedAt'];
+        final fetched = fetchedRaw is DateTime
+            ? fetchedRaw
+            : DateTime.tryParse(fetchedRaw?.toString() ?? '') ?? DateTime.now();
+
+        batch.insert(
+          newDb.lyricsCache,
+          LyricsCacheCompanion.insert(
+            songId: songId,
+            syncedLyrics: Value(synced),
+            plainLyrics: Value(plain),
+            source: Value(source),
+            fetchedAt: fetched,
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+        migrated++;
+      }
+    });
+    AppLogger.i('Migration', 'Migrated $migrated lyrics cache entries.');
   }
 }

@@ -8,26 +8,26 @@ void main() {
     // Helper: build an AppSpacingExtension with the given md and zero for
     // all other fields. The lerp tests only assert on `md`, so other
     // field values are arbitrary — they just need to compile.
-    AppSpacingExtension withMd(double md) =>
+    AppSpacingExtension withMd(final double md) =>
         AppSpacingExtension(xxs: 0, xs: 0, sm: 0, md: md, lg: 0, xl: 0, xxl: 0);
 
     test('lerp returns interpolated value at t=0.5', () {
-      final a = withMd(8.0);
-      final b = withMd(24.0);
+      final a = withMd(8);
+      final b = withMd(24);
       final lerped = a.lerp(b, 0.5);
       expect(lerped.md, 16.0);
     });
 
     test('lerp at t=0 returns source', () {
-      final a = withMd(12.0);
-      final b = withMd(24.0);
-      expect(a.lerp(b, 0.0).md, 12.0);
+      final a = withMd(12);
+      final b = withMd(24);
+      expect(a.lerp(b, 0).md, 12.0);
     });
 
     test('lerp at t=1 returns target', () {
-      final a = withMd(12.0);
-      final b = withMd(24.0);
-      expect(a.lerp(b, 1.0).md, 24.0);
+      final a = withMd(12);
+      final b = withMd(24);
+      expect(a.lerp(b, 1).md, 24.0);
     });
 
     test('default constructor uses AppSpacing tokens', () {
@@ -47,8 +47,8 @@ void main() {
     });
 
     test('lerp interpolates sm to md', () {
-      const a = AppRadiusExtension(sm: 4.0, md: 8.0, lg: 12.0, xl: 16.0);
-      const b = AppRadiusExtension(sm: 8.0, md: 16.0, lg: 24.0, xl: 32.0);
+      const a = AppRadiusExtension(sm: 4, md: 8, lg: 12, xl: 16);
+      const b = AppRadiusExtension(sm: 8, md: 16, lg: 24, xl: 32);
       final lerped = a.lerp(b, 0.5);
       expect(lerped.sm, 6.0);
       expect(lerped.md, 12.0);
@@ -82,14 +82,14 @@ void main() {
 
   group('ThemeData integration', () {
     testWidgets('extensions are retrievable via Theme.of(context)', (
-      tester,
+      final tester,
     ) async {
       const ext = AppSpacingExtension.defaults();
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [ext]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               final spacing = Theme.of(
                 context,
               ).extension<AppSpacingExtension>()!;

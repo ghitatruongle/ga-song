@@ -37,53 +37,49 @@ class AppShortcuts extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: {
-        LogicalKeySet(LogicalKeyboardKey.space): const _PlayPauseIntent(),
-        LogicalKeySet(LogicalKeyboardKey.mediaPlayPause):
-            const _PlayPauseIntent(),
-        LogicalKeySet(
-          LogicalKeyboardKey.arrowRight,
-          LogicalKeyboardKey.control,
-        ): const _NextIntent(),
-        LogicalKeySet(LogicalKeyboardKey.mediaTrackNext): const _NextIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.control):
-            const _PreviousIntent(),
-        LogicalKeySet(LogicalKeyboardKey.mediaTrackPrevious):
-            const _PreviousIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.control):
-            const _VolumeUpIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.control):
-            const _VolumeDownIntent(),
-        LogicalKeySet(LogicalKeyboardKey.keyM, LogicalKeyboardKey.control):
-            const _MuteIntent(),
+  Widget build(final BuildContext context) => Shortcuts(
+    shortcuts: {
+      LogicalKeySet(LogicalKeyboardKey.space): const _PlayPauseIntent(),
+      LogicalKeySet(LogicalKeyboardKey.mediaPlayPause):
+          const _PlayPauseIntent(),
+      LogicalKeySet(LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.control):
+          const _NextIntent(),
+      LogicalKeySet(LogicalKeyboardKey.mediaTrackNext): const _NextIntent(),
+      LogicalKeySet(LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.control):
+          const _PreviousIntent(),
+      LogicalKeySet(LogicalKeyboardKey.mediaTrackPrevious):
+          const _PreviousIntent(),
+      LogicalKeySet(LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.control):
+          const _VolumeUpIntent(),
+      LogicalKeySet(LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.control):
+          const _VolumeDownIntent(),
+      LogicalKeySet(LogicalKeyboardKey.keyM, LogicalKeyboardKey.control):
+          const _MuteIntent(),
+    },
+    child: Actions(
+      actions: {
+        _PlayPauseIntent: CallbackAction<_PlayPauseIntent>(
+          onInvoke: (_) => onPlayPause?.call(),
+        ),
+        _NextIntent: CallbackAction<_NextIntent>(
+          onInvoke: (_) => onNext?.call(),
+        ),
+        _PreviousIntent: CallbackAction<_PreviousIntent>(
+          onInvoke: (_) => onPrevious?.call(),
+        ),
+        _VolumeUpIntent: CallbackAction<_VolumeUpIntent>(
+          onInvoke: (_) => onVolumeUp?.call(),
+        ),
+        _VolumeDownIntent: CallbackAction<_VolumeDownIntent>(
+          onInvoke: (_) => onVolumeDown?.call(),
+        ),
+        _MuteIntent: CallbackAction<_MuteIntent>(
+          onInvoke: (_) => onMute?.call(),
+        ),
       },
-      child: Actions(
-        actions: {
-          _PlayPauseIntent: CallbackAction<_PlayPauseIntent>(
-            onInvoke: (_) => onPlayPause?.call(),
-          ),
-          _NextIntent: CallbackAction<_NextIntent>(
-            onInvoke: (_) => onNext?.call(),
-          ),
-          _PreviousIntent: CallbackAction<_PreviousIntent>(
-            onInvoke: (_) => onPrevious?.call(),
-          ),
-          _VolumeUpIntent: CallbackAction<_VolumeUpIntent>(
-            onInvoke: (_) => onVolumeUp?.call(),
-          ),
-          _VolumeDownIntent: CallbackAction<_VolumeDownIntent>(
-            onInvoke: (_) => onVolumeDown?.call(),
-          ),
-          _MuteIntent: CallbackAction<_MuteIntent>(
-            onInvoke: (_) => onMute?.call(),
-          ),
-        },
-        child: Focus(autofocus: true, child: child),
-      ),
-    );
-  }
+      child: Focus(autofocus: true, child: child),
+    ),
+  );
 }
 
 class _PlayPauseIntent extends Intent {

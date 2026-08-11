@@ -44,7 +44,7 @@ void main() {
 
   /// Pumps the player bar at a narrow width so the compact layout is used
   /// (RightControls is desktop-only and pulls in platform services).
-  Future<void> pumpPlayerBar(WidgetTester tester) async {
+  Future<void> pumpPlayerBar(final WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -57,10 +57,7 @@ void main() {
         child: const MaterialApp(
           home: Scaffold(
             body: Center(
-              child: SizedBox(
-                width: 360,
-                child: BottomPlayerBarWidget(),
-              ),
+              child: SizedBox(width: 360, child: BottomPlayerBarWidget()),
             ),
           ),
         ),
@@ -69,14 +66,16 @@ void main() {
   }
 
   group('BottomPlayerBarWidget', () {
-    testWidgets('shows empty state when no song is selected', (tester) async {
+    testWidgets('shows empty state when no song is selected', (
+      final tester,
+    ) async {
       await pumpPlayerBar(tester);
       expect(find.text('Chưa chọn bài hát'), findsOneWidget);
       expect(find.byType(CenterControls), findsNothing);
     });
 
     testWidgets('shows song info and controls when a song is loaded', (
-      tester,
+      final tester,
     ) async {
       await playlistService.setPlaylist(createTestSongList(3));
       await pumpPlayerBar(tester);
@@ -87,7 +86,9 @@ void main() {
       expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
     });
 
-    testWidgets('tapping play starts playback via the engine', (tester) async {
+    testWidgets('tapping play starts playback via the engine', (
+      final tester,
+    ) async {
       await playlistService.setPlaylist(createTestSongList(3));
       await pumpPlayerBar(tester);
       await tester.pump();
@@ -101,7 +102,7 @@ void main() {
       expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
     });
 
-    testWidgets('tapping next advances the playlist', (tester) async {
+    testWidgets('tapping next advances the playlist', (final tester) async {
       await playlistService.setPlaylist(createTestSongList(3));
       await pumpPlayerBar(tester);
       await tester.pump();
@@ -114,7 +115,7 @@ void main() {
     });
 
     testWidgets('tapping previous goes back to the prior song', (
-      tester,
+      final tester,
     ) async {
       await playlistService.setPlaylist(createTestSongList(3));
       await playlistService.next();

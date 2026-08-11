@@ -24,17 +24,15 @@ class ResponsiveLayout extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (Breakpoints.isMobile(constraints.maxWidth)) {
-          return mobile;
-        } else if (Breakpoints.isTablet(constraints.maxWidth)) {
-          return tablet ?? mobile;
-        } else {
-          return desktop;
-        }
-      },
-    );
-  }
+  Widget build(final BuildContext context) => LayoutBuilder(
+    builder: (final context, final constraints) {
+      if (Breakpoints.isMobile(constraints.maxWidth)) {
+        return mobile;
+      } else if (Breakpoints.isTablet(constraints.maxWidth)) {
+        return tablet ?? mobile;
+      } else {
+        return desktop;
+      }
+    },
+  );
 }

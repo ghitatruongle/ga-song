@@ -52,9 +52,7 @@ void main() {
     });
 
     test('setter call eventually reflects in state', () async {
-      await container
-          .read(settingsNotifierProvider.notifier)
-          .setBlurLevel(42.0);
+      await container.read(settingsNotifierProvider.notifier).setBlurLevel(42);
       // Debounced refresh — wait for it to settle.
       await Future<void>.delayed(const Duration(milliseconds: 20));
       final state = container.read(settingsNotifierProvider);

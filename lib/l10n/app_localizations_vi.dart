@@ -108,10 +108,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get renderError => 'Đã xảy ra lỗi khi hiển thị giao diện';
 
   @override
-  String get permissionMic => 'Ứng dụng cần quyền truy cập Microphone để hát KTV!';
+  String get permissionMic =>
+      'Ứng dụng cần quyền truy cập Microphone để hát KTV!';
 
   @override
-  String get permissionDenied => 'Quyền Microphone đã bị từ chối. Vui lòng cấp lại trong Cài đặt.';
+  String get permissionDenied =>
+      'Quyền Microphone đã bị từ chối. Vui lòng cấp lại trong Cài đặt.';
 
   @override
   String get greetingMorning => 'Chào buổi sáng,';
@@ -135,7 +137,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noPlaylist => 'Chưa có playlist nào';
 
   @override
-  String get addAlbumField => 'Thêm trường \"album\" vào songs.json để tạo playlist';
+  String get addAlbumField =>
+      'Thêm trường \"album\" vào songs.json để tạo playlist';
 
   @override
   String get noSongPlaying => 'Không có bài hát nào đang phát';
@@ -159,7 +162,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get guide => 'Hướng dẫn';
 
   @override
-  String get guideContent => 'Giúp bạn nghe bất kỳ bài hát nào từ kho tàng YouTube.\n\nDán link YouTube vào ô tìm kiếm và nhấn Tìm.';
+  String get guideContent =>
+      'Giúp bạn nghe bất kỳ bài hát nào từ kho tàng YouTube.\n\nDán link YouTube vào ô tìm kiếm và nhấn Tìm.';
 
   @override
   String get playing => 'Đang phát';
@@ -237,7 +241,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noSongsYet => 'Chưa có bài hát nào';
 
   @override
-  String get addSongsHint => 'Thêm file nhạc vào thư mục assets/song/\nvà cập nhật file songs.json';
+  String get addSongsHint =>
+      'Thêm file nhạc vào thư mục assets/song/\nvà cập nhật file songs.json';
 
   @override
   String get cannotLoadLibrary => 'Không thể tải thư viện bài hát';
@@ -262,10 +267,12 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get androidOnlyFeature => 'Tính năng này chỉ khả dụng trên thiết bị Android.';
+  String get androidOnlyFeature =>
+      'Tính năng này chỉ khả dụng trên thiết bị Android.';
 
   @override
-  String get cannotLoadLibraryDb => 'Không thể nạp danh sách bài hát từ Database.';
+  String get cannotLoadLibraryDb =>
+      'Không thể nạp danh sách bài hát từ Database.';
 
   @override
   String get categoryAppearance => 'Giao diện';
@@ -484,7 +491,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get emptyLibraryTitle => 'Thư viện của bạn đang trống';
 
   @override
-  String get emptyLibraryMessage => 'Nhập nhạc từ máy, quét nhạc hoặc tạo playlist để bắt đầu.';
+  String get emptyLibraryMessage =>
+      'Nhập nhạc từ máy, quét nhạc hoặc tạo playlist để bắt đầu.';
 
   @override
   String get importMusic => 'Nhập nhạc';

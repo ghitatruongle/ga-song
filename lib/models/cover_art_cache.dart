@@ -14,7 +14,7 @@ class CoverArtCache {
     this.id,
     this.fileName = '',
     this.bytes = const [],
-    DateTime? lastAccessed,
+    final DateTime? lastAccessed,
   }) : lastAccessed = lastAccessed ?? DateTime.now();
 
   int? id;
@@ -24,9 +24,9 @@ class CoverArtCache {
 
   Uint8List get bytesAsUint8List => Uint8List.fromList(bytes);
 
-  static int maxDiskCacheEntries(bool isAndroid) => isAndroid ? 24 : 60;
+  static int maxDiskCacheEntries(final bool isAndroid) => isAndroid ? 24 : 60;
 
-  factory CoverArtCache.fromJson(Map<String, dynamic> json) =>
+  factory CoverArtCache.fromJson(final Map<String, dynamic> json) =>
       _$CoverArtCacheFromJson(json);
 
   Map<String, dynamic> toJson() => _$CoverArtCacheToJson(this);

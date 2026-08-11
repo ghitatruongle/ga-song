@@ -1,15 +1,13 @@
 /// Unit Tests for WindowManagerService using MockWindowManagerService
 ///
 /// Tests the window manager logic without platform dependencies.
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
 
-import '../../test_helpers.dart';
 import '../../mocks/mock_window_manager_service.dart';
 import '../../mocks/mock_settings_manager.dart';
-import 'package:ga_song/core/settings_manager.dart';
 import 'package:ga_song/core/platform_capabilities.dart';
 
 void main() {
@@ -35,7 +33,7 @@ void main() {
     test('applies window effect based on settings', () async {
       await windowManager.init();
       await settings.init();
-      
+
       settings.useNativeWindowEffectNotifier.value = true;
       settings.themeModeNotifier.value = ThemeMode.dark;
       settings.windowOpacityNotifier.value = 0.8;
@@ -51,7 +49,7 @@ void main() {
     test('disables effect when useNative is false', () async {
       await windowManager.init();
       await settings.init();
-      
+
       settings.useNativeWindowEffectNotifier.value = false;
 
       await windowManager.applyWindowEffect();
@@ -63,7 +61,7 @@ void main() {
     test('respects light theme', () async {
       await windowManager.init();
       await settings.init();
-      
+
       settings.useNativeWindowEffectNotifier.value = true;
       settings.themeModeNotifier.value = ThemeMode.light;
       settings.windowOpacityNotifier.value = 0.9;
@@ -71,13 +69,13 @@ void main() {
       await windowManager.applyWindowEffect();
 
       expect(windowManager.lastDark, false);
-      expect(windowManager.lastColor!.alpha, (0.9 * 255).toInt());
+      expect((windowManager.lastColor!.a * 255).round(), (0.9 * 255).toInt());
     });
 
     test('respects system theme brightness', () async {
       await windowManager.init();
       await settings.init();
-      
+
       settings.useNativeWindowEffectNotifier.value = true;
       settings.themeModeNotifier.value = ThemeMode.system;
       // We can't easily test system brightness in unit test, but we can verify
@@ -89,7 +87,7 @@ void main() {
     test('caches effect state to avoid redundant calls', () async {
       await windowManager.init();
       await settings.init();
-      
+
       settings.useNativeWindowEffectNotifier.value = true;
       settings.themeModeNotifier.value = ThemeMode.dark;
       settings.windowOpacityNotifier.value = 0.8;
@@ -103,7 +101,10 @@ void main() {
       // Second call with same settings - should skip
       await windowManager.applyWindowEffect();
 
-      expect(windowManager.applyEffectCallCount, firstCallCount); // No increment
+      expect(
+        windowManager.applyEffectCallCount,
+        firstCallCount,
+      ); // No increment
       expect(windowManager.lastEffectType, firstEffectType);
       expect(windowManager.lastColor, firstColor);
     });
@@ -111,7 +112,7 @@ void main() {
     test('invalidates cache when settings change', () async {
       await windowManager.init();
       await settings.init();
-      
+
       settings.useNativeWindowEffectNotifier.value = true;
       settings.themeModeNotifier.value = ThemeMode.light;
       settings.windowOpacityNotifier.value = 0.5;
@@ -155,7 +156,7 @@ void main() {
 
     test('show/hide/focus/destroy work', () async {
       await windowManager.init();
-      
+
       await windowManager.show();
       expect(windowManager.showCallCount, 1);
       expect(windowManager.visible, true);
@@ -180,13 +181,13 @@ void main() {
     test('dispose removes listeners from settings', () async {
       await windowManager.init();
       await settings.init();
-      
+
       // Trigger some effect applications
       settings.useNativeWindowEffectNotifier.value = true;
       await windowManager.applyWindowEffect();
-      
+
       windowManager.dispose();
-      
+
       // After dispose, settings changes shouldn't trigger effect
       settings.useNativeWindowEffectNotifier.value = false;
       // This would normally trigger scheduleApplyEffect, but since listener is removed,

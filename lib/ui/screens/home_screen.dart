@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../providers/service_providers.dart';
@@ -15,7 +16,6 @@ import '../widgets/settings_widget.dart';
 import '../widgets/visualizer_widget.dart';
 import '../../core/settings_manager.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/theme_utils.dart';
 import '../utils/theme_helpers.dart';
 import 'mini_player_screen.dart';
 import 'smart_playlists_screen.dart';
@@ -32,6 +32,8 @@ import '../widgets/playlist_manager_widget.dart';
 import 'blurred_background.dart';
 import '../widgets/album_grid_widget.dart';
 import '../widgets/playlist_songs_view_widget.dart';
+import '../widgets/ios_adaptive_scaffold.dart';
+import '../widgets/mac_mini_player_widget.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -45,10 +47,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Note: sidebar width is now sourced from kSidebarExpandedWidth /
   // kSidebarCollapsedWidth (defined in sidebar.dart) so overlay layers
   // stay aligned to the actual sidebar width when collapsed.
-  static const double _kBottomBarHeight = 90.0;
-  static const double _kTitleBarTopOffset = 50.0;
+  static const double _kBottomBarHeight = 90;
+  static const double _kTitleBarTopOffset = 50;
   static const int _kPreloadNextSongCount = 3;
-  static const double _kMinHeightForSidebar = 200.0;
+  static const double _kMinHeightForSidebar = 200;
   static const int _kBackgroundCoverWidth = 400;
   static const int _kBackgroundCoverHeight = 300;
   static const Duration _kBackgroundTransition = Duration(milliseconds: 800);
@@ -100,7 +102,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Controls whether the bottom player bar is visible.
   /// Scrolling down hides it; scrolling up or reaching the top shows it.
   final ValueNotifier<bool> _isPlayerBarVisibleNotifier = ValueNotifier(true);
-  double _lastScrollPosition = 0.0;
+  double _lastScrollPosition = 0;
 
   /// Cached album list — only rebuilt when _songs changes.
   List<String> _cachedAlbums = <String>[];
@@ -150,7 +152,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// Q-10 fix: Convert int mode to SortMode enum for consistency with PlaylistService.
-  static SortMode _sortModeFromInt(int mode) =>
+  static SortMode _sortModeFromInt(final int mode) =>
       SongSortUtils.sortModeFromInt(mode);
 
   void _applySort() {
@@ -170,10 +172,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     List<Song>? newActiveSongs;
     if (_selectedPlaylistName != null && _activePlaylistSongs.isNotEmpty) {
       final activeFileNames = _activePlaylistSongs
-          .map((s) => s.fileName)
+          .map((final s) => s.fileName)
           .toSet();
       newActiveSongs = sorted
-          .where((s) => activeFileNames.contains(s.fileName))
+          .where((final s) => activeFileNames.contains(s.fileName))
           .toList();
     }
 
@@ -219,7 +221,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // Database stream listener will update _songs instead
-  Future<void> _handleSongsUpdate(List<Song> songs) async {
+  Future<void> _handleSongsUpdate(final List<Song> songs) async {
     if (!mounted) return;
 
     setState(() {
@@ -228,7 +230,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     try {
-      await _coverArtRepository.primeForSongs(songs);
+      // Prime cover art WITHOUT blocking the song list: on slow devices
+      // resolving all 41 covers can take ~20s and previously kept the whole
+      // library invisible until every cover finished. Tiles render with a
+      // placeholder and the art fades in as each entry resolves.
+      unawaited(_coverArtRepository.primeForSongs(songs));
       if (!mounted) return;
 
       _songs = songs;
@@ -279,8 +285,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     _cachedViewPlaylistName = _selectedPlaylistName;
     _cachedViewSongs = _selectedPlaylistName == 'Chưa phân loại'
-        ? _songs.where((s) => s.album == null || s.album!.isEmpty).toList()
-        : _songs.where((s) => s.album == _selectedPlaylistName).toList();
+        ? _songs
+              .where((final s) => s.album == null || s.album!.isEmpty)
+              .toList()
+        : _songs.where((final s) => s.album == _selectedPlaylistName).toList();
     return _cachedViewSongs!;
   }
 
@@ -304,7 +312,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _cachedFilteredSongs = base;
       return base;
     }
-    _cachedFilteredSongs = base.where((song) {
+    _cachedFilteredSongs = base.where((final song) {
       final nameLower = song.name.toLowerCase();
       final artistLower = song.artist?.toLowerCase() ?? '';
       final queryLower = _searchQuery.toLowerCase();
@@ -313,108 +321,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return _cachedFilteredSongs!;
   }
 
-  void _onSearchChanged(String query) {
+  void _onSearchChanged(final String query) {
     setState(() {
       _searchQuery = query;
       _cachedFilteredSongs = null; // Invalidate cache
     });
   }
 
-  Widget _buildPlaylistsGrid() {
-    return AlbumGridWidget(
-      albums: _cachedAlbums,
-      albumSongCount: _cachedAlbumSongCount,
-      songs: _songs,
-      onAlbumTap: _onAlbumTap,
-    );
-  }
+  Widget _buildPlaylistsGrid() => AlbumGridWidget(
+    albums: _cachedAlbums,
+    albumSongCount: _cachedAlbumSongCount,
+    songs: _songs,
+    onAlbumTap: _onAlbumTap,
+  );
 
-  Widget _buildPlaylistSongsView() {
-    return PlaylistSongsViewWidget(
-      playlistName: _selectedPlaylistName,
-      currentViewSongs: _currentViewSongs,
-      filteredSongs: _filteredSongs,
-      songIndexByFileName: _cachedPlaylistIndexMap,
-      isLoading: _isLoading,
-      loadingError: _loadingError,
-      searchQuery: _searchQuery,
-      onBack: () {
-        setState(() {
-          _selectedPlaylistName = null;
-        });
-      },
-      onSearchChanged: _onSearchChanged,
-      onRefresh: () {
-        final asyncValue = ref.read(songListProvider);
-        if (asyncValue.hasValue) {
-          _handleSongsUpdate(asyncValue.value!);
-        }
-      },
-    );
-  }
+  Widget _buildPlaylistSongsView() => PlaylistSongsViewWidget(
+    playlistName: _selectedPlaylistName,
+    currentViewSongs: _currentViewSongs,
+    filteredSongs: _filteredSongs,
+    songIndexByFileName: _cachedPlaylistIndexMap,
+    isLoading: _isLoading,
+    loadingError: _loadingError,
+    searchQuery: _searchQuery,
+    onBack: () {
+      setState(() {
+        _selectedPlaylistName = null;
+      });
+    },
+    onSearchChanged: _onSearchChanged,
+    onRefresh: () {
+      final asyncValue = ref.read(songListProvider);
+      if (asyncValue.hasValue) {
+        _handleSongsUpdate(asyncValue.value!);
+      }
+    },
+  );
 
   /// U-4 fix: Whether the sidebar is currently visible.
-  bool _isSidebarVisible(BuildContext context) {
-    return MediaQuery.of(context).size.height > _kMinHeightForSidebar;
-  }
+  bool _isSidebarVisible(final BuildContext context) =>
+      MediaQuery.of(context).size.height > _kMinHeightForSidebar;
 
   /// C1/C2 fix: Width of the sidebar at its current collapse state.
   /// Used by overlay layers (bottom player bar, lyric overlay) so they
   /// stay aligned to the actual sidebar edge even when collapsed.
   double _currentSidebarWidth() {
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) return 0;
     final isCollapsed = _settingsManager.sidebarCollapsedNotifier.value;
     return isCollapsed ? kSidebarCollapsedWidth : kSidebarExpandedWidth;
   }
 
-  /// Hiển thị thông báo thân thiện khi tính năng không hỗ trợ platform hiện tại.
-  Widget _buildUnsupportedPlatformMessage(String featureName, String message) {
-    final adaptiveColor = context.adaptive;
-    final spacing = ThemeSpacing.of(context);
-    return Center(
-      child: Padding(
-        // 40dp ≈ xl + sm (32 + 8) — closest token composition while
-        // preserving the visually distinctive large inset.
-        padding: EdgeInsets.all(spacing.xl + spacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.phonelink_off_rounded,
-              size: 80,
-              color: adaptiveColor.withValues(alpha: 0.3),
-            ),
-            SizedBox(height: spacing.lg),
-            Text(
-              featureName,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: adaptiveColor.withValues(alpha: 0.8),
-              ),
-            ),
-            SizedBox(height: spacing.sm + spacing.xxs),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: adaptiveColor.withValues(alpha: 0.6),
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Xử lý khi user chọn một album từ grid.
   /// Thiết lập playlist, xử lý special case, và cập nhật state.
-  Future<void> _onAlbumTap(String albumName, List<Song> playlistSongs) async {
+  Future<void> _onAlbumTap(
+    final String albumName,
+    final List<Song> playlistSongs,
+  ) async {
     await _playlistService.setPlaylist(playlistSongs);
     if (albumName == 'Mắt Nhắm Mắt Mở') {
       final trailerIdx = playlistSongs.indexWhere(
-        (s) => s.fileName.contains('trailer'),
+        (final s) => s.fileName.contains('trailer'),
       );
       if (trailerIdx != -1) {
         _playlistService.setPlayMode(PlayMode.playOneStop);
@@ -460,18 +425,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
         );
       case TabItem.online:
-        // YouTube player chỉ hỗ trợ trên Android (youtube_player_iframe không hỗ trợ Desktop)
-        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-          PerformanceProbe.instance.markSurface('Online Screen');
-          return _tabCache.putIfAbsent(
-            TabItem.online,
-            () => const OnlineScreen(),
-          );
-        }
-        // Hiển thị thông báo trên các nền tảng không hỗ trợ
-        return _buildUnsupportedPlatformMessage(
-          'YouTube',
-          AppLocalizations.of(context)!.androidOnlyFeature,
+        PerformanceProbe.instance.markSurface('Online Screen');
+        return _tabCache.putIfAbsent(
+          TabItem.online,
+          () => const OnlineScreen(),
         );
 
       case TabItem.smart:
@@ -499,31 +456,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     // Phase 2.3: ref.listen replaces direct addListener call.
-    ref.listen<int>(currentPlayingIndexProvider, (_, next) {
+    ref.listen<int>(currentPlayingIndexProvider, (_, final next) {
       _onSongChanged();
     });
     // Listen to Isar songListProvider
-    ref.listen<AsyncValue<List<Song>>>(songListProvider, (previous, next) {
+    ref.listen<AsyncValue<List<Song>>>(songListProvider, (
+      final previous,
+      final next,
+    ) {
       next.when(
-        data: (songs) {
+        data: (final songs) {
           // If lengths are different, or it's first load, update
           if (previous?.value?.length != songs.length || _songs.isEmpty) {
-            _handleSongsUpdate(songs);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _handleSongsUpdate(songs);
+            });
           }
         },
         loading: () {},
-        error: (error, stackTrace) {
+        error: (final error, final stackTrace) {
           AppLogger.e(
             'home_screen',
             'Error loading songs from provider',
             error: error,
             stack: stackTrace,
           );
-          setState(() {
-            _isLoading = false;
-            _loadingError = AppLocalizations.of(context)!.cannotLoadLibraryDb;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _loadingError = AppLocalizations.of(
+                  context,
+                )!.cannotLoadLibraryDb;
+              });
+            }
           });
         },
       );
@@ -534,27 +502,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // listener whenever the relevant SettingsState field changes.
     ref.listen<({int sortMode, bool sortAscending})>(
       settingsNotifierProvider.select(
-        (s) => (sortMode: s.sortMode, sortAscending: s.sortAscending),
+        (final s) => (sortMode: s.sortMode, sortAscending: s.sortAscending),
       ),
       (_, _) => _applySort(),
     );
-    ref.listen<int>(settingsNotifierProvider.select((s) => s.currentTabIndex), (
-      _,
-      next,
-    ) {
-      const tabs = TabItem.values;
-      if (next >= 0 && next < tabs.length) {
-        final newTab = tabs[next];
-        if (newTab != _currentTab) {
-          // v0.6.5: Reset scroll tracking when switching tabs so the
-          // player bar visibility doesn't jump based on the previous
-          // tab's scroll position.
-          _lastScrollPosition = 0.0;
-          _isPlayerBarVisibleNotifier.value = true;
-          setState(() => _currentTab = newTab);
+    ref.listen<int>(
+      settingsNotifierProvider.select((final s) => s.currentTabIndex),
+      (_, final next) {
+        const tabs = TabItem.values;
+        if (next >= 0 && next < tabs.length) {
+          final newTab = tabs[next];
+          if (newTab != _currentTab) {
+            // v0.6.5: Reset scroll tracking when switching tabs so the
+            // player bar visibility doesn't jump based on the previous
+            // tab's scroll position.
+            _lastScrollPosition = 0.0;
+            _isPlayerBarVisibleNotifier.value = true;
+            setState(() => _currentTab = newTab);
+          }
         }
-      }
-    });
+      },
+    );
 
     // ref.listen only fires on *state changes*. If the stream already emitted
     // before this widget built, the listener won't fire. Read the current
@@ -562,13 +530,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_songs.isEmpty && _isLoading) {
       final current = ref.read(songListProvider);
       current.when(
-        data: (songs) {
+        data: (final songs) {
           if (songs.isNotEmpty) {
             _handleSongsUpdate(songs);
           }
         },
         loading: () {},
-        error: (error, stackTrace) {
+        error: (final error, final stackTrace) {
           AppLogger.e(
             'home_screen',
             'Error seeding songs from provider',
@@ -583,277 +551,328 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
-    // On Android, also listen for native PiP mode changes
+    final windowManagerService = ref.watch(windowManagerServiceProvider);
+
     return ValueListenableBuilder<bool>(
-      valueListenable: ref.read(pipServiceProvider).isInPipNotifier,
-      builder: (context, isInPip, _) {
-        if (isInPip) {
-          PerformanceProbe.instance.markSurface('Mini Player (PiP)');
-          return const MiniPlayerScreen();
+      valueListenable: windowManagerService.macMiniPlayerNotifier,
+      builder: (final context, final isMacMiniPlayer, _) {
+        if (isMacMiniPlayer) {
+          return MacMiniPlayerWidget(
+            windowManagerService: windowManagerService,
+          );
         }
         return ValueListenableBuilder<bool>(
-          valueListenable: _settingsManager.isMiniPlayerNotifier,
-          builder: (context, isMiniPlayer, _) {
-            if (isMiniPlayer) {
-              PerformanceProbe.instance.markSurface('Mini Player');
-              return PopScope(
-                canPop: false,
-                onPopInvokedWithResult: (didPop, result) {
-                  if (didPop) return;
-                  _settingsManager.setIsMiniPlayer(false);
-                },
-                child: const MiniPlayerScreen(),
-              );
+          valueListenable: ref.read(pipServiceProvider).isInPipNotifier,
+          builder: (final context, final isInPip, _) {
+            if (isInPip) {
+              PerformanceProbe.instance.markSurface('Mini Player (PiP)');
+              return const MiniPlayerScreen();
             }
-            return PopScope(
-              canPop:
-                  _currentTab == TabItem.home && _selectedPlaylistName == null,
-              onPopInvokedWithResult: (didPop, result) {
-                if (didPop) return;
-                // Android back: nếu đang xem playlist -> về playlist grid
-                // Nếu đang ở tab khác -> về Home
-                if (_selectedPlaylistName != null) {
-                  setState(() {
-                    _selectedPlaylistName = null;
-                  });
-                } else if (_currentTab != TabItem.home) {
-                  setState(() => _currentTab = TabItem.home);
+            return ValueListenableBuilder<bool>(
+              valueListenable: _settingsManager.isMiniPlayerNotifier,
+              builder: (final context, final isMiniPlayer, _) {
+                if (isMiniPlayer) {
+                  PerformanceProbe.instance.markSurface('Mini Player');
+                  return PopScope(
+                    canPop: false,
+                    onPopInvokedWithResult: (final didPop, final result) {
+                      if (didPop) return;
+                      _settingsManager.setIsMiniPlayer(false);
+                    },
+                    child: const MiniPlayerScreen(),
+                  );
                 }
-              },
-              child: Scaffold(
-                backgroundColor: Colors.transparent,
-                body: Stack(
-                  children: [
-                    // 1. Dynamic Blurred Background
-                    // Uses ImageFiltered instead of BackdropFilter for performance:
-                    // BackdropFilter re-blurs every pixel every frame (GPU killer).
-                    // ImageFiltered blurs only its child; result is cached by compositor.
-                    // P-1 fix: Single ListenableBuilder with merged listenable
-                    // replaces 5 nested ValueListenableBuilder levels.
-                    Positioned.fill(
-                      child: RepaintBoundary(
-                        child: ListenableBuilder(
-                          listenable: _backgroundListenable,
-                          builder: (context, _) {
-                            final settings = _settingsManager;
-                            final useNative =
-                                settings.useNativeWindowEffectNotifier.value;
-                            if (useNative) return const SizedBox.shrink();
+                return PopScope(
+                  canPop:
+                      _currentTab == TabItem.home &&
+                      _selectedPlaylistName == null,
+                  onPopInvokedWithResult: (final didPop, final result) {
+                    if (didPop) return;
+                    if (_selectedPlaylistName != null) {
+                      setState(() {
+                        _selectedPlaylistName = null;
+                      });
+                    } else if (_currentTab != TabItem.home) {
+                      setState(() => _currentTab = TabItem.home);
+                    }
+                  },
+                  child: IOSAdaptiveScaffold(
+                    currentTab: _currentTab,
+                    onTabSelected: (final tab) =>
+                        setState(() => _currentTab = tab),
+                    body: Scaffold(
+                      backgroundColor: Colors.transparent,
+                      body: Stack(
+                        children: [
+                          // 1. Dynamic Blurred Background
+                          // Uses ImageFiltered instead of BackdropFilter for performance:
+                          // BackdropFilter re-blurs every pixel every frame (GPU killer).
+                          // ImageFiltered blurs only its child; result is cached by compositor.
+                          // P-1 fix: Single ListenableBuilder with merged listenable
+                          // replaces 5 nested ValueListenableBuilder levels.
+                          Positioned.fill(
+                            child: RepaintBoundary(
+                              child: ListenableBuilder(
+                                listenable: _backgroundListenable,
+                                builder: (final context, _) {
+                                  final settings = _settingsManager;
+                                  final useNative = settings
+                                      .useNativeWindowEffectNotifier
+                                      .value;
+                                  if (useNative) return const SizedBox.shrink();
 
-                            final enableBlur =
-                                settings.enableBlurNotifier.value;
-                            final blurLevelVal =
-                                settings.blurLevelNotifier.value;
-                            final blurLevel = enableBlur ? blurLevelVal : 0.0;
-                            final customBgPath =
-                                settings.customBackgroundImageNotifier.value;
+                                  final enableBlur =
+                                      settings.enableBlurNotifier.value;
+                                  final blurLevelVal =
+                                      settings.blurLevelNotifier.value;
+                                  final blurLevel = enableBlur
+                                      ? blurLevelVal
+                                      : 0.0;
+                                  final customBgPath = settings
+                                      .customBackgroundImageNotifier
+                                      .value;
 
-                            // Priority 1: Custom background image
-                            if (customBgPath != null &&
-                                customBgPath.isNotEmpty) {
-                              return BlurredBackground(
-                                blurLevel: blurLevel,
-                                child: AnimatedSwitcher(
-                                  duration: _kBackgroundTransition,
-                                  child: Image.file(
-                                    File(customBgPath),
-                                    key: ValueKey('custom_bg_$customBgPath'),
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    filterQuality: FilterQuality.medium,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            Container(
-                                              color: AppColors.darkBackground,
-                                            ),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            // Priority 2: Cover art of currently playing song
-                            final song = _playlistService.currentSong;
-                            if (song != null) {
-                              return BlurredBackground(
-                                blurLevel: blurLevel,
-                                child: AnimatedSwitcher(
-                                  duration: _kBackgroundTransition,
-                                  child: CoverArtImage(
-                                    key: ValueKey(song.fileName),
-                                    song: song,
-                                    cacheWidth: _kBackgroundCoverWidth,
-                                    cacheHeight: _kBackgroundCoverHeight,
-                                    fallbackBuilder: (context) => Container(
-                                      key: const ValueKey('default_bg'),
-                                      color: AppColors.darkBackground,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                        ),
-                      ),
-                    ),
-
-                    // 2. Main Content
-                    Column(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              // Sidebar only shown when NOT in mini player mode
-                              // and window has enough height
-                              if (MediaQuery.of(context).size.height > 200)
-                                SidebarWidget(
-                                  currentTab: _currentTab,
-                                  onTabChanged: (tab) {
-                                    setState(() {
-                                      _currentTab = tab;
-                                      if (tab == TabItem.library) {
-                                        _selectedPlaylistName = null;
-                                        _cachedFilteredSongs = null;
-                                      }
-                                    });
-                                    if (tab == TabItem.library) {
-                                      WidgetsBinding.instance
-                                          .addPostFrameCallback((_) {
-                                            _playlistService.setPlaylist(
-                                              _songs,
-                                            );
-                                          });
-                                    }
-                                  },
-                                  onImportMusic: _importLocalSongs,
-                                  onManagePlaylists: () =>
-                                      PlaylistManagerWidget.show(context),
-                                ),
-                              // U-1 fix: AnimatedSwitcher adds fade transition between tabs
-                              Expanded(
-                                child: RepaintBoundary(
-                                  child: AnimatedSwitcher(
-                                    duration: _kTabSwitchDuration,
-                                    switchInCurve: Curves.easeOut,
-                                    switchOutCurve: Curves.easeIn,
-                                    transitionBuilder: (child, animation) =>
-                                        FadeTransition(
-                                          opacity: animation,
-                                          child: child,
+                                  // Priority 1: Custom background image
+                                  if (customBgPath != null &&
+                                      customBgPath.isNotEmpty) {
+                                    return BlurredBackground(
+                                      blurLevel: blurLevel,
+                                      child: AnimatedSwitcher(
+                                        duration: _kBackgroundTransition,
+                                        child: Image.file(
+                                          File(customBgPath),
+                                          key: ValueKey(
+                                            'custom_bg_$customBgPath',
+                                          ),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          errorBuilder:
+                                              (
+                                                final context,
+                                                final error,
+                                                final stackTrace,
+                                              ) => Container(
+                                                color: AppColors.darkBackground,
+                                              ),
                                         ),
-                                    child: NotificationListener<ScrollNotification>(
-                                      onNotification: (notification) {
-                                        final currentPosition =
-                                            notification.metrics.pixels;
-                                        final delta =
-                                            currentPosition - _lastScrollPosition;
+                                      ),
+                                    );
+                                  }
 
-                                        if (currentPosition <= 0) {
-                                          // At the top — always show the bar.
-                                          _isPlayerBarVisibleNotifier.value =
-                                              true;
-                                        } else if (delta > 5 &&
-                                            _isPlayerBarVisibleNotifier.value) {
-                                          // Scrolling down — hide the bar.
-                                          _isPlayerBarVisibleNotifier.value =
-                                              false;
-                                        } else if (delta < -5 &&
-                                            !_isPlayerBarVisibleNotifier.value) {
-                                          // Scrolling up — show the bar.
-                                          _isPlayerBarVisibleNotifier.value =
-                                              true;
-                                        }
+                                  // Priority 2: Cover art of currently playing song
+                                  final song = _playlistService.currentSong;
+                                  if (song != null) {
+                                    return BlurredBackground(
+                                      blurLevel: blurLevel,
+                                      child: AnimatedSwitcher(
+                                        duration: _kBackgroundTransition,
+                                        child: CoverArtImage(
+                                          key: ValueKey(song.fileName),
+                                          song: song,
+                                          cacheWidth: _kBackgroundCoverWidth,
+                                          cacheHeight: _kBackgroundCoverHeight,
+                                          fallbackBuilder: (final context) =>
+                                              Container(
+                                                key: const ValueKey(
+                                                  'default_bg',
+                                                ),
+                                                color: AppColors.darkBackground,
+                                              ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ),
+                          ),
 
-                                        _lastScrollPosition = currentPosition;
-                                        return false;
-                                      },
-                                      child: KeyedSubtree(
-                                        key: ValueKey(_currentTab),
-                                        child: _buildCurrentTab(),
+                          // 2. Main Content
+                          Column(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    // Sidebar only shown when NOT on mobile layout
+                                    // and window has enough height
+                                    if ((kIsWeb ||
+                                            (!Platform.isIOS &&
+                                                !Platform.isAndroid)) &&
+                                        MediaQuery.of(context).size.height >
+                                            200)
+                                      SidebarWidget(
+                                        currentTab: _currentTab,
+                                        onTabChanged: (final tab) {
+                                          setState(() {
+                                            _currentTab = tab;
+                                            if (tab == TabItem.library) {
+                                              _selectedPlaylistName = null;
+                                              _cachedFilteredSongs = null;
+                                            }
+                                          });
+                                          if (tab == TabItem.library) {
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  _playlistService.setPlaylist(
+                                                    _songs,
+                                                  );
+                                                });
+                                          }
+                                        },
+                                        onImportMusic: _importLocalSongs,
+                                        onManagePlaylists: () =>
+                                            PlaylistManagerWidget.show(context),
+                                      ),
+                                    // U-1 fix: AnimatedSwitcher adds fade transition between tabs
+                                    Expanded(
+                                      child: RepaintBoundary(
+                                        child: AnimatedSwitcher(
+                                          duration: _kTabSwitchDuration,
+                                          switchInCurve: Curves.easeOut,
+                                          switchOutCurve: Curves.easeIn,
+                                          transitionBuilder:
+                                              (final child, final animation) =>
+                                                  FadeTransition(
+                                                    opacity: animation,
+                                                    child: child,
+                                                  ),
+                                          child: NotificationListener<ScrollNotification>(
+                                            onNotification: (final notification) {
+                                              final currentPosition =
+                                                  notification.metrics.pixels;
+                                              final delta =
+                                                  currentPosition -
+                                                  _lastScrollPosition;
+
+                                              if (currentPosition <= 0) {
+                                                // At the top — always show the bar.
+                                                _isPlayerBarVisibleNotifier
+                                                        .value =
+                                                    true;
+                                              } else if (delta > 5 &&
+                                                  _isPlayerBarVisibleNotifier
+                                                      .value) {
+                                                // Scrolling down — hide the bar.
+                                                _isPlayerBarVisibleNotifier
+                                                        .value =
+                                                    false;
+                                              } else if (delta < -5 &&
+                                                  !_isPlayerBarVisibleNotifier
+                                                      .value) {
+                                                // Scrolling up — show the bar.
+                                                _isPlayerBarVisibleNotifier
+                                                        .value =
+                                                    true;
+                                              }
+
+                                              _lastScrollPosition =
+                                                  currentPosition;
+                                              return false;
+                                            },
+                                            child: KeyedSubtree(
+                                              key: ValueKey(_currentTab),
+                                              child: _buildCurrentTab(),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
 
-                    // 3. Floating Player Overlay (hidden on Settings tab)
-                    // v0.6.5: AnimatedSlide auto-hides the bar on scroll down.
-                    if (_currentTab != TabItem.settings)
-                      Positioned(
-                        left: _currentSidebarWidth(),
-                        right: 0,
-                        bottom: 0,
-                        child: ValueListenableBuilder<bool>(
-                          valueListenable: _isPlayerBarVisibleNotifier,
-                          builder: (context, isVisible, _) {
-                            return AnimatedSlide(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              offset: isVisible
-                                  ? Offset.zero
-                                  : const Offset(0, 1),
-                              child: const RepaintBoundary(
-                                child: BottomPlayerBarWidget(),
+                          // 3. Floating Player Overlay (hidden on Settings tab and on Mobile layout)
+                          // v0.6.5: AnimatedSlide auto-hides the bar on scroll down.
+                          if ((kIsWeb ||
+                                  (!Platform.isIOS && !Platform.isAndroid)) &&
+                              _currentTab != TabItem.settings)
+                            Positioned(
+                              left: _currentSidebarWidth(),
+                              right: 0,
+                              bottom: 0,
+                              child: ValueListenableBuilder<bool>(
+                                valueListenable: _isPlayerBarVisibleNotifier,
+                                builder: (final context, final isVisible, _) =>
+                                    AnimatedSlide(
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      curve: Curves.easeInOut,
+                                      offset: isVisible
+                                          ? Offset.zero
+                                          : const Offset(0, 1),
+                                      child: const RepaintBoundary(
+                                        child: BottomPlayerBarWidget(),
+                                      ),
+                                    ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-
-                    // 4. Standard Lyric Overlay (RepaintBoundary isolates
-                    // lyric repaints from the background blur and song list)
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final showLyrics = ref.watch(lyricVisibilityProvider);
-                        if (!showLyrics || _currentTab == TabItem.ktv) {
-                          return const SizedBox.shrink();
-                        }
-
-                        // U-4 fix: Subtract sidebar width from available space.
-                        // C1/C2 fix: use real sidebar width including collapse.
-                        final screenWidth = MediaQuery.sizeOf(context).width;
-                        final isSidebarVisible = _isSidebarVisible(context);
-                        final availableWidth = isSidebarVisible
-                            ? screenWidth - _currentSidebarWidth()
-                            : screenWidth;
-                        final radius = ThemeRadius.of(context);
-
-                        return Positioned(
-                          top: _kTitleBarTopOffset,
-                          right: 0,
-                          bottom: _kBottomBarHeight,
-                          width: availableWidth / 2.5,
-                          child: RepaintBoundary(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(radius.xl),
-                                  bottomLeft: Radius.circular(radius.xl),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(-5, 0),
-                                  ),
-                                ],
-                              ),
-                              child: const LyricView(isFullScreen: false),
                             ),
+
+                          // 4. Standard Lyric Overlay (RepaintBoundary isolates
+                          // lyric repaints from the background blur and song list)
+                          Consumer(
+                            builder: (final context, final ref, final child) {
+                              final showLyrics = ref.watch(
+                                lyricVisibilityProvider,
+                              );
+                              if (!showLyrics || _currentTab == TabItem.ktv) {
+                                return const SizedBox.shrink();
+                              }
+
+                              // U-4 fix: Subtract sidebar width from available space.
+                              // C1/C2 fix: use real sidebar width including collapse.
+                              final screenWidth = MediaQuery.sizeOf(
+                                context,
+                              ).width;
+                              final isSidebarVisible = _isSidebarVisible(
+                                context,
+                              );
+                              final availableWidth = isSidebarVisible
+                                  ? screenWidth - _currentSidebarWidth()
+                                  : screenWidth;
+                              final radius = ThemeRadius.of(context);
+
+                              return Positioned(
+                                top: _kTitleBarTopOffset,
+                                right: 0,
+                                bottom: _kBottomBarHeight,
+                                width: availableWidth / 2.5,
+                                child: RepaintBoundary(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(radius.xl),
+                                        bottomLeft: Radius.circular(radius.xl),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(-5, 0),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const LyricView(),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -869,7 +888,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _extractDominantColor(Song song) async {
+  Future<void> _extractDominantColor(final Song song) async {
     try {
       final color = await _coverArtRepository.resolveDominantColor(song);
       _settingsManager.dynamicPrimaryColorNotifier.value = color;
@@ -896,9 +915,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       snackMessenger.showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)!.importErrorWithMsg(
-              e.toString(),
-            ),
+            AppLocalizations.of(context)!.importErrorWithMsg(e.toString()),
           ),
           duration: const Duration(seconds: 3),
         ),

@@ -8,14 +8,14 @@ import 'package:ga_song/ui/utils/theme_helpers.dart';
 void main() {
   group('ThemeSpacing', () {
     testWidgets('ThemeSpacing.of(context).md returns AppSpacing.md', (
-      tester,
+      final tester,
     ) async {
       late double observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               observed = ThemeSpacing.of(context).md;
               return const SizedBox();
             },
@@ -25,13 +25,13 @@ void main() {
       expect(observed, AppSpacing.md);
     });
 
-    testWidgets('ThemeSpacing exposes every token level', (tester) async {
+    testWidgets('ThemeSpacing exposes every token level', (final tester) async {
       late Map<String, double> observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               final s = ThemeSpacing.of(context);
               observed = {
                 'xxs': s.xxs,
@@ -56,13 +56,13 @@ void main() {
       expect(observed['xxl'], AppSpacing.xxl);
     });
 
-    testWidgets('ThemeSpacing.all() defaults to md', (tester) async {
+    testWidgets('ThemeSpacing.all() defaults to md', (final tester) async {
       late EdgeInsets observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               observed = ThemeSpacing.of(context).all();
               return const SizedBox();
             },
@@ -72,13 +72,13 @@ void main() {
       expect(observed, const EdgeInsets.all(AppSpacing.md));
     });
 
-    testWidgets('ThemeSpacing.all(8) returns all-8', (tester) async {
+    testWidgets('ThemeSpacing.all(8) returns all-8', (final tester) async {
       late EdgeInsets observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppSpacingExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               observed = ThemeSpacing.of(context).all(AppSpacing.sm);
               return const SizedBox();
             },
@@ -91,14 +91,14 @@ void main() {
 
   group('ThemeRadius', () {
     testWidgets('ThemeRadius.of(context).md returns AppRadius.md', (
-      tester,
+      final tester,
     ) async {
       late double observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppRadiusExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               observed = ThemeRadius.of(context).md;
               return const SizedBox();
             },
@@ -108,13 +108,13 @@ void main() {
       expect(observed, AppRadius.md);
     });
 
-    testWidgets('ThemeRadius exposes every token level', (tester) async {
+    testWidgets('ThemeRadius exposes every token level', (final tester) async {
       late Map<String, double> observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppRadiusExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               final r = ThemeRadius.of(context);
               observed = {'sm': r.sm, 'md': r.md, 'lg': r.lg, 'xl': r.xl};
               return const SizedBox();
@@ -128,13 +128,13 @@ void main() {
       expect(observed['xl'], AppRadius.xl);
     });
 
-    testWidgets('ThemeRadius.circular() defaults to md', (tester) async {
+    testWidgets('ThemeRadius.circular() defaults to md', (final tester) async {
       late BorderRadius observed;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(extensions: const [AppRadiusExtension.defaults()]),
           home: Builder(
-            builder: (context) {
+            builder: (final context) {
               observed = ThemeRadius.of(context).circular();
               return const SizedBox();
             },

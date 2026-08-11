@@ -146,7 +146,7 @@ class StarFieldComputeInput {
 /// [input.screenHeight]. Per-star [StarFieldSnapshot.zs] and
 /// [StarFieldSnapshot.speeds] are also populated so the painter can apply
 /// parallax projection and motion without re-deriving them.
-StarFieldSnapshot computeStarField(StarFieldComputeInput input) {
+StarFieldSnapshot computeStarField(final StarFieldComputeInput input) {
   final n = input.starCount;
   final positions = Float32List(n * 2);
   final colors = Int32List(n);
@@ -159,8 +159,8 @@ StarFieldSnapshot computeStarField(StarFieldComputeInput input) {
   const paletteSize = 20;
   final palette = List<int>.generate(
     paletteSize,
-    (i) => HSVColor.fromAHSV(
-      1.0,
+    (final i) => HSVColor.fromAHSV(
+      1,
       (i * 360.0 / paletteSize) % 360.0,
       0.8,
       0.9,
@@ -215,16 +215,16 @@ StarFieldSnapshot computeStarField(StarFieldComputeInput input) {
 
 class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   VisualizerController({
-    required TickerProvider vsync,
-    required AudioEngineService audioService,
-    required SettingsManager settings,
+    required final TickerProvider vsync,
+    required final AudioEngineService audioService,
+    required final SettingsManager settings,
   }) : _audioService = audioService,
        _settings = settings {
     _audioData = null; // D2 fix: deferred to lazy init in _updateAudioFrame
 
     _initStars();
     // P3.2: Ticker callback wraps the now-async `_handleTick` in `unawaited`.
-    _ticker = vsync.createTicker((elapsed) {
+    _ticker = vsync.createTicker((final elapsed) {
       unawaited(_handleTick(elapsed));
     });
     _audioService.engineState.addListener(_handleActivityChanged);
@@ -242,7 +242,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   bool _isDisposed = false;
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(final AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _isAppInBackground = true;
@@ -260,7 +260,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
 
   static const double _fftSmoothFactor = 0.45;
   static const double _fftNewFactor = 0.55;
-  static const double _energyDivisor = 64.0;
+  static const double _energyDivisor = 64;
 
   static const List<double> _frequencyWeights = [
     2.0, // 0-51:   Sub-bass — nhạy gấp đôi
@@ -273,8 +273,8 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   final AudioEngineService _audioService;
   final SettingsManager _settings;
   final Random _random = Random();
-  final List<double> _fftData = List<double>.filled(fftSampleCount, 0.0);
-  final List<double> _smoothedFft = List<double>.filled(fftSampleCount, 0.0);
+  final List<double> _fftData = List<double>.filled(fftSampleCount, 0);
+  final List<double> _smoothedFft = List<double>.filled(fftSampleCount, 0);
   final List<Star> _stars = <Star>[];
   late final Ticker _ticker;
   AudioData? _audioData;
@@ -293,8 +293,8 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   );
 
   Size _size = Size.zero;
-  double _smoothEnergy = 0.0;
-  double _elapsedSeconds = 0.0;
+  double _smoothEnergy = 0;
+  double _elapsedSeconds = 0;
   Duration? _lastElapsed;
   bool _tickerRunning = false;
   int _lowEnergySkipCounter = 0;
@@ -320,7 +320,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _starPaletteSize,
     Colors.transparent,
   );
-  double _lastPaletteHue = -999.0;
+  double _lastPaletteHue = -999;
 
   // P3.2: Snapshot captured from the isolate call in `_handleTick`.
   // P3.2.5: Now published into [VisualizerFrameSnapshot.starFieldSnapshot]
@@ -339,11 +339,16 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
 
   VisualizerFrameSnapshot get snapshot => _snapshot;
 
+  // v0.9.5: Expose FFT data, energy, and beat state for GPU shader visualizer
+  UnmodifiableListView<double> get fftData => _fftView;
+  double get smoothEnergy => _smoothEnergy;
+  bool get isBeat => _isBeat;
+
   bool get isAudioReactive =>
       _audioService.engineState.value == AudioEngineState.playing &&
       _settings.visualizerEnabledNotifier.value;
 
-  void updateSize(Size size) {
+  void updateSize(final Size size) {
     if (_size == size) {
       return;
     }
@@ -384,13 +389,12 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _tickerRunning = false;
   }
 
-  Future<void> _handleTick(Duration elapsed) async {
+  Future<void> _handleTick(final Duration elapsed) async {
     if (_isDisposed) return;
     final deltaSeconds = _lastElapsed == null
         ? 0.016
         : (elapsed - _lastElapsed!).inMicroseconds /
               Duration.microsecondsPerSecond;
-    _lastElapsed = elapsed;
     _elapsedSeconds = elapsed.inMilliseconds / 1000.0;
 
     // P1.2: Adaptive half-rate — skip every other frame when over budget.
@@ -409,6 +413,12 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       _lowEnergySkipCounter = 0;
     }
 
+    // Advance the frame clock ONLY when we actually render — this keeps
+    // frame-time measurements honest in half-rate mode (previously the
+    // early update made delta always ≈16ms, so the controller never saw
+    // the real frame time and oscillated between full/half rate).
+    _lastElapsed = elapsed;
+
     if (isAudioReactive) {
       _updateAudioFrame();
     }
@@ -420,9 +430,12 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       _updateStars();
     }
 
-    // P3.2: Heavy compute on an isolate.
+    // P3.2: Heavy compute on an isolate. Compute every OTHER rendered frame
+    // only — spawning an isolate per 16ms tick is pure overhead.
     // P3.2.5: Pass screen dimensions so positions cover the viewport.
-    if (isAudioReactive && _settings.visualizerShapeNotifier.value == 4) {
+    if (isAudioReactive &&
+        _settings.visualizerShapeNotifier.value == 4 &&
+        _frameCounter.isEven) {
       try {
         final snap = await compute(
           computeStarField,
@@ -491,7 +504,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       audioData.updateSamples();
-      final samples = audioData.getAudioData(alwaysReturnData: true);
+      final samples = audioData.getAudioData();
       if (samples.length < fftSampleCount) {
         return;
       }
@@ -553,7 +566,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // ── Particle pool: compact in-place, zero allocation ───────────────────────
-  void _updateParticles(double deltaSeconds) {
+  void _updateParticles(final double deltaSeconds) {
     int writeIdx = 0;
     for (int i = 0; i < _activeParticleCount; i++) {
       final p = _particlePool[i];
@@ -593,10 +606,10 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       speed: _random.nextDouble() * 2 + 0.5,
       baseAngle: angle,
       color: HSVColor.fromAHSV(
-        1.0,
+        1,
         _random.nextDouble() * 60 + 200,
         0.6,
-        1.0,
+        1,
       ).toColor(),
     );
   }
@@ -614,7 +627,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
       _lastPaletteHue = baseHue;
       for (int p = 0; p < _starPaletteSize; p++) {
         final hue = (baseHue + p * (360.0 / _starPaletteSize)) % 360.0;
-        _starColorPalette[p] = HSVColor.fromAHSV(1.0, hue, 0.7, 1.0).toColor();
+        _starColorPalette[p] = HSVColor.fromAHSV(1, hue, 0.7, 1).toColor();
       }
     }
 
@@ -649,7 +662,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     return 0.5;
   }
 
-  void _spawnParticle(double energy) {
+  void _spawnParticle(final double energy) {
     if (_activeParticleCount >= maxParticleCount) {
       return;
     }
@@ -663,7 +676,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     p.maxLife = _random.nextDouble() * 2 + 1;
     p.life = p.maxLife;
     final baseHue = (1.0 - min(_smoothEnergy * 2.5, 1.0)) * 270.0;
-    p.color = HSVColor.fromAHSV(0.8, baseHue, 0.8, 1.0).toColor();
+    p.color = HSVColor.fromAHSV(0.8, baseHue, 0.8, 1).toColor();
     _activeParticleCount++;
   }
 

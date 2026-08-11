@@ -12,54 +12,65 @@ class VolumeControl extends ConsumerStatefulWidget {
 }
 
 class _VolumeControlState extends ConsumerState<VolumeControl> {
-  double _previousVolume = 1.0;
+  double _previousVolume = 1;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     // Phase 2.2: read volume from state provider, set via engine service.
     final volume = ref.watch(volumeProvider);
     final engine = ref.read(audioEngineServiceProvider);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        IconButton(
-          icon: Icon(
-            volume == 0
-                ? Icons.volume_off_rounded
-                : volume < 0.5
-                ? Icons.volume_down_rounded
-                : Icons.volume_up_rounded,
-            color: context.adaptiveSecondary,
-            size: 22,
-          ),
-          // Match right_controls.dart: keep volume button compact so the
-          // slider gets the leftover width on narrow mobile breakpoints.
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-          onPressed: () {
-            if (volume > 0) {
-              _previousVolume = volume;
-              engine.setVolume(0.0);
-            } else {
-              engine.setVolume(_previousVolume > 0 ? _previousVolume : 1.0);
-            }
-          },
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-              activeTrackColor: context.adaptive,
-              inactiveTrackColor: context.adaptive.withValues(alpha: 0.2),
-              thumbColor: context.adaptive,
+    return LayoutBuilder(
+      builder: (final context, final constraints) {
+        if (constraints.maxWidth < 36) {
+          return const SizedBox.shrink();
+        }
+        final showSlider = constraints.maxWidth >= 80;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            IconButton(
+              icon: Icon(
+                volume == 0
+                    ? Icons.volume_off_rounded
+                    : volume < 0.5
+                    ? Icons.volume_down_rounded
+                    : Icons.volume_up_rounded,
+                color: context.adaptiveSecondary,
+                size: 22,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+              onPressed: () {
+                if (volume > 0) {
+                  _previousVolume = volume;
+                  engine.setVolume(0);
+                } else {
+                  engine.setVolume(_previousVolume > 0 ? _previousVolume : 1.0);
+                }
+              },
             ),
-            child: Slider(value: volume, onChanged: engine.setVolume),
-          ),
-        ),
-      ],
+            if (showSlider)
+              Expanded(
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 5,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 10,
+                    ),
+                    activeTrackColor: context.adaptive,
+                    inactiveTrackColor: context.adaptive.withValues(alpha: 0.2),
+                    thumbColor: context.adaptive,
+                  ),
+                  child: Slider(value: volume, onChanged: engine.setVolume),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

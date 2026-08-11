@@ -13,10 +13,10 @@ import '../utils/theme_helpers.dart';
 class LibraryStatsWidget extends ConsumerStatefulWidget {
   const LibraryStatsWidget({super.key});
 
-  static Future<void> show(BuildContext context) async {
+  static Future<void> show(final BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => const Dialog(child: LibraryStatsWidget()),
+      builder: (final context) => const Dialog(child: LibraryStatsWidget()),
     );
   }
 
@@ -43,7 +43,7 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
     });
   }
 
-  String _formatDuration(int ms) {
+  String _formatDuration(final int ms) {
     final duration = Duration(milliseconds: ms);
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -54,7 +54,7 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final spacing = ThemeSpacing.of(context);
 
@@ -118,7 +118,7 @@ class _LibraryStatsWidgetState extends ConsumerState<LibraryStatsWidget> {
                       ),
                     ),
                     SizedBox(height: spacing.sm + spacing.xxs),
-                    ...(_stats!['genreCounts'] as List).take(5).map((g) {
+                    ...(_stats!['genreCounts'] as List).take(5).map((final g) {
                       final row = g as Map<String, dynamic>;
                       final genre = row['genre'] as String;
                       final count = row['count'] as int;
@@ -168,7 +168,7 @@ class _StatCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final spacing = ThemeSpacing.of(context);
     final radius = ThemeRadius.of(context);
     final cardBg = AppColors.adaptive(

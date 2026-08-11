@@ -5,12 +5,12 @@ import 'package:ga_song/ui/widgets/main_content_states.dart';
 
 void main() {
   group('EmptyLibraryState', () {
-    testWidgets('renders empty state with icon and text', (tester) async {
+    testWidgets('renders empty state with icon and text', (final tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: const [AppLocalizations.delegate],
-          supportedLocales: const [Locale('vi'), Locale('en')],
-          home: const Scaffold(body: EmptyLibraryState()),
+        const MaterialApp(
+          localizationsDelegates: [AppLocalizations.delegate],
+          supportedLocales: [Locale('vi'), Locale('en')],
+          home: Scaffold(body: EmptyLibraryState()),
         ),
       );
 
@@ -21,7 +21,9 @@ void main() {
   });
 
   group('ErrorLoadingState', () {
-    testWidgets('renders error icon, message and retry button', (tester) async {
+    testWidgets('renders error icon, message and retry button', (
+      final tester,
+    ) async {
       var retried = false;
 
       await tester.pumpWidget(

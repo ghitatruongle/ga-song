@@ -15,13 +15,13 @@ class Playlist {
 
   Playlist({this.id, required this.name, this.songIds = const []});
 
-  factory Playlist.fromJson(Map<String, dynamic> json) =>
+  factory Playlist.fromJson(final Map<String, dynamic> json) =>
       _$PlaylistFromJson(json);
 
   Map<String, dynamic> toJson() => _$PlaylistToJson(this);
 
   @override
-  bool operator ==(Object other) =>
+  bool operator ==(final Object other) =>
       identical(this, other) || other is Playlist && id == other.id;
 
   @override

@@ -10,25 +10,25 @@ class AudioEffectService {
   final _soloud = SoLoud.instance;
 
   final ValueNotifier<int> bassLevelNotifier = ValueNotifier(0);
-  final ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3.0);
+  final ValueNotifier<double> crossfadeDurationNotifier = ValueNotifier(3);
   final ValueNotifier<int> crossfadeCurveNotifier = ValueNotifier(
     0,
   ); // 0=linear, 1=exponential, 2=sCurve
-  final ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(0.0);
-  final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1.0);
-  final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0.0);
-  final ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1.0);
+  final ValueNotifier<double> normalizationLevelNotifier = ValueNotifier(0);
+  final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1);
+  final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0);
+  final ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1);
 
   // Advanced reverb params
   final ValueNotifier<double> reverbRoomSizeNotifier = ValueNotifier(0.5);
   final ValueNotifier<double> reverbDampNotifier = ValueNotifier(0.5);
 
   // Advanced compressor params
-  final ValueNotifier<double> compThresholdNotifier = ValueNotifier(-6.0);
-  final ValueNotifier<double> compAttackNotifier = ValueNotifier(10.0);
-  final ValueNotifier<double> compReleaseNotifier = ValueNotifier(100.0);
-  final ValueNotifier<double> compKneeWidthNotifier = ValueNotifier(2.0);
-  final ValueNotifier<double> compMakeupGainNotifier = ValueNotifier(0.0);
+  final ValueNotifier<double> compThresholdNotifier = ValueNotifier(-6);
+  final ValueNotifier<double> compAttackNotifier = ValueNotifier(10);
+  final ValueNotifier<double> compReleaseNotifier = ValueNotifier(100);
+  final ValueNotifier<double> compKneeWidthNotifier = ValueNotifier(2);
+  final ValueNotifier<double> compMakeupGainNotifier = ValueNotifier(0);
 
   bool _bassActive = false;
   bool _eqInitialized = false;
@@ -41,7 +41,7 @@ class AudioEffectService {
 
   // ─── Bass Boost ────────────────────────────────────────────────────────────
 
-  void setBassLevel(int level) {
+  void setBassLevel(final int level) {
     final clamped = level.clamp(0, 100);
     bassLevelNotifier.value = clamped;
 
@@ -68,7 +68,7 @@ class AudioEffectService {
 
   // ─── Equalizer (5-band EQ) ───────────────────────────────────────────────
 
-  void applyAllEqualizer(List<double> bands) {
+  void applyAllEqualizer(final List<double> bands) {
     if (!_soloud.isInitialized) return;
     if (bands.length != 5) return;
 
@@ -81,7 +81,7 @@ class AudioEffectService {
         _eqInitialized = true;
       }
 
-      final allZero = bands.every((b) => b.abs() < 0.05);
+      final allZero = bands.every((final b) => b.abs() < 0.05);
       if (allZero) {
         eq.wet.value = 0.0;
         return;
@@ -97,7 +97,7 @@ class AudioEffectService {
     }
   }
 
-  static double _uiValueToEqGain(double uiValue) {
+  static double _uiValueToEqGain(final double uiValue) {
     if (uiValue <= 0) {
       return (1.0 + uiValue).clamp(0.0, 1.0);
     }
@@ -106,31 +106,31 @@ class AudioEffectService {
 
   // ─── Volume Normalization ───────────────────────────────────────────────────
 
-  void setNormalizationLevel(double level) {
+  void setNormalizationLevel(final double level) {
     normalizationLevelNotifier.value = level.clamp(-24.0, 0.0);
     _normalizationEnabled = level > -24.0;
   }
 
-  void enableNormalization(bool enabled) {
+  void enableNormalization(final bool enabled) {
     _normalizationEnabled = enabled;
   }
 
-  double calculateNormalizationGain(double trackPeakDb) {
-    if (!_normalizationEnabled) return 1.0;
+  double calculateNormalizationGain(final double trackPeakDb) {
+    if (!_normalizationEnabled) return 1;
     final targetDb = normalizationLevelNotifier.value;
     final gainDb = targetDb - trackPeakDb;
     return _dbToLinear(gainDb);
   }
 
-  double _dbToLinear(double db) {
-    if (db <= -24.0) return 0.0;
-    if (db >= 0.0) return 1.0;
+  double _dbToLinear(final double db) {
+    if (db <= -24.0) return 0;
+    if (db >= 0.0) return 1;
     return pow(10.0, db / 20.0).toDouble();
   }
 
   // ─── Pitch Shift (Real) ────────────────────────────────────────────────────
 
-  void setPitchShift(double pitch) {
+  void setPitchShift(final double pitch) {
     final clamped = pitch.clamp(0.5, 2.0);
     pitchShiftNotifier.value = clamped;
 
@@ -158,7 +158,7 @@ class AudioEffectService {
 
   // ─── Reverb / Freeverb (Real) ──────────────────────────────────────────────
 
-  void setReverbMix(double mix) {
+  void setReverbMix(final double mix) {
     final clamped = mix.clamp(0.0, 1.0);
     reverbMixNotifier.value = clamped;
 
@@ -184,7 +184,7 @@ class AudioEffectService {
     }
   }
 
-  void setReverbRoomSize(double size) {
+  void setReverbRoomSize(final double size) {
     reverbRoomSizeNotifier.value = size.clamp(0.0, 1.0);
     if (!_soloud.isInitialized || !_reverbActive) return;
     try {
@@ -195,7 +195,7 @@ class AudioEffectService {
     }
   }
 
-  void setReverbDamp(double damp) {
+  void setReverbDamp(final double damp) {
     reverbDampNotifier.value = damp.clamp(0.0, 1.0);
     if (!_soloud.isInitialized || !_reverbActive) return;
     try {
@@ -207,7 +207,7 @@ class AudioEffectService {
 
   // ─── Compressor (Real) ─────────────────────────────────────────────────────
 
-  void setCompressionRatio(double ratio) {
+  void setCompressionRatio(final double ratio) {
     final clamped = ratio.clamp(1.0, 10.0);
     compressionRatioNotifier.value = clamped;
 
@@ -242,7 +242,7 @@ class AudioEffectService {
     }
   }
 
-  void setCompThreshold(double threshold) {
+  void setCompThreshold(final double threshold) {
     compThresholdNotifier.value = threshold.clamp(-80.0, 0.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
@@ -253,7 +253,7 @@ class AudioEffectService {
     }
   }
 
-  void setCompAttack(double attack) {
+  void setCompAttack(final double attack) {
     compAttackNotifier.value = attack.clamp(0.0, 100.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
@@ -264,7 +264,7 @@ class AudioEffectService {
     }
   }
 
-  void setCompRelease(double release) {
+  void setCompRelease(final double release) {
     compReleaseNotifier.value = release.clamp(0.0, 1000.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
@@ -275,7 +275,7 @@ class AudioEffectService {
     }
   }
 
-  void setCompKneeWidth(double knee) {
+  void setCompKneeWidth(final double knee) {
     compKneeWidthNotifier.value = knee.clamp(0.0, 40.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
@@ -286,7 +286,7 @@ class AudioEffectService {
     }
   }
 
-  void setCompMakeupGain(double gain) {
+  void setCompMakeupGain(final double gain) {
     compMakeupGainNotifier.value = gain.clamp(-40.0, 40.0);
     if (!_soloud.isInitialized || !_compressorActive) return;
     try {
@@ -299,7 +299,7 @@ class AudioEffectService {
 
   // ─── Crossfade ─────────────────────────────────────────────────────────────
 
-  void setCrossfadeDuration(double seconds) {
+  void setCrossfadeDuration(final double seconds) {
     crossfadeDurationNotifier.value = seconds.clamp(0.0, 10.0);
   }
 
@@ -308,6 +308,7 @@ class AudioEffectService {
 
     bassLevelNotifier.dispose();
     crossfadeDurationNotifier.dispose();
+    crossfadeCurveNotifier.dispose();
     normalizationLevelNotifier.dispose();
     pitchShiftNotifier.dispose();
     reverbMixNotifier.dispose();

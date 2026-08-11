@@ -2,7 +2,7 @@ name: ga_song
 description: "A full-featured music player with KTV mode, lyrics sync, and audio effects."
 publish_to: 'none'
 
-version: 0.8.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.11.4
@@ -33,6 +33,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.0
   sqlite3: ^2.4.0
   youtube_player_iframe: ^5.2.2
+  flutter_inappwebview: ^6.1.5
   http: ^1.2.0
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
@@ -43,7 +44,7 @@ dependencies:
   image: ^4.2.0  # For WebP encoding/decoding
   uuid: ^4.5.1  # For lyrics editor unique IDs
   xml: ^6.5.0  # For XSPF playlist import/export
-  uni_links: ^0.5.1  # For protocol handling (gasong://)
+  app_links: ^3.2.0  # For protocol handling (gasong://)
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -51,6 +52,7 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+  riverpod: ^3.2.1
   flutter_launcher_icons: ^0.14.4
   msix: ^3.16.13
   debian: ^1.0.0
@@ -72,9 +74,11 @@ flutter:
     - assets/song/
     - assets/song/mat_nham_mat_mo/
     - assets/song/anh_trai_say_hi/
+    - assets/song/b_ray/
     - assets/pic/
     - assets/pic/mat_nham_mat_mo/
     - assets/pic/anh_trai_say_hi/
+    - assets/pic/b_ray/
 
   shaders:
     - shaders/visualizer.frag
@@ -110,7 +114,7 @@ debian:
   display_name: GA Song
   description: A new Flutter project.
   maintainer: ghitatruongle <ghitatruongle@gmail.com>
-  version: 0.1.2
+  version: 1.0.0
   section: utils
   priority: optional
   architecture: amd64

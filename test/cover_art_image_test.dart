@@ -8,7 +8,7 @@ import 'package:ga_song/ui/widgets/cover_art_image.dart';
 
 void main() {
   testWidgets('CoverArtImage shows fallback when cover is missing', (
-    WidgetTester tester,
+    final WidgetTester tester,
   ) async {
     final repo = CoverArtRepository();
     await tester.pumpWidget(
@@ -17,12 +17,12 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: CoverArtImage(
-              song: (Song(
+              song: Song(
                 id: 1,
                 name: 'Test',
                 sourcePath: 'assets/song/missing.mp3',
                 isBuiltIn: true,
-              )),
+              ),
               fallbackBuilder: _fallbackBuilder,
             ),
           ),
@@ -35,6 +35,4 @@ void main() {
   });
 }
 
-Widget _fallbackBuilder(BuildContext context) {
-  return const Text('fallback');
-}
+Widget _fallbackBuilder(final BuildContext context) => const Text('fallback');

@@ -14,7 +14,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('GASongApp builds MaterialApp shell', (
-    WidgetTester tester,
+    final WidgetTester tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
     final settings = SettingsManager();

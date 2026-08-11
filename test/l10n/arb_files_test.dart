@@ -24,8 +24,8 @@ void main() {
     });
 
     test('should have matching keys between English and Vietnamese', () {
-      final enKeys = enArb.keys.where((k) => !k.startsWith('@@')).toSet();
-      final viKeys = viArb.keys.where((k) => !k.startsWith('@@')).toSet();
+      final enKeys = enArb.keys.where((final k) => !k.startsWith('@@')).toSet();
+      final viKeys = viArb.keys.where((final k) => !k.startsWith('@@')).toSet();
 
       final missingInVi = enKeys.difference(viKeys);
       final missingInEn = viKeys.difference(enKeys);
@@ -69,7 +69,7 @@ void main() {
     });
 
     test('should not have placeholder values', () {
-      enArb.forEach((key, value) {
+      enArb.forEach((final key, final value) {
         // Skip metadata keys (@key) — gen_l10n placeholder metadata is a map.
         if (key.startsWith('@')) return;
         expect(value, isA<String>(), reason: 'Key $key is not a string');

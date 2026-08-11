@@ -5,76 +5,68 @@
 /// - Long press (mobile/touch)
 /// - Keyboard focus
 /// - Custom positioning and styling
+library;
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import '../../core/theme/tokens.dart';
-import '../../core/theme_utils.dart';
 
 /// Global tooltip theme configuration
 class AppTooltipTheme {
   static const Duration _showDuration = Duration(milliseconds: 500);
-  static const Duration _hideDuration = Duration(milliseconds: 200);
-  static const double _verticalOffset = 8.0;
-  static const double _horizontalOffset = 0.0;
-  
+  static const double _verticalOffset = 8;
+
   /// Creates a tooltip with app-standard styling
   static Widget tooltip({
-    required Widget child,
-    required String message,
-    TooltipPosition position = TooltipPosition.top,
-    Duration? showDuration,
-    Duration? hideDuration,
-    bool preferBelow = false,
-    EdgeInsetsGeometry? padding,
-    TextStyle? textStyle,
-    Decoration? decoration,
-    double? height,
-    bool excludeFromSemantics = false,
-    Widget? triggerWidget,
-  }) {
-    return Tooltip(
-      message: message,
-      child: child,
-      triggerMode: TooltipTriggerMode.tap,
-      showDuration: showDuration ?? _showDuration,
-      waitDuration: const Duration(milliseconds: 300),
-      textStyle: textStyle ?? const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: Colors.white,
-        height: 1.3,
-      ),
-      decoration: decoration ?? BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      verticalOffset: _verticalOffset,
-      preferBelow: preferBelow,
-      excludeFromSemantics: excludeFromSemantics,
-      richMessage: null,
-    );
-  }
+    required final Widget child,
+    required final String message,
+    final TooltipPosition position = TooltipPosition.top,
+    final Duration? showDuration,
+    final Duration? hideDuration,
+    final bool preferBelow = false,
+    final EdgeInsetsGeometry? padding,
+    final TextStyle? textStyle,
+    final Decoration? decoration,
+    final double? height,
+    final bool excludeFromSemantics = false,
+    final Widget? triggerWidget,
+  }) => Tooltip(
+    message: message,
+    triggerMode: TooltipTriggerMode.tap,
+    showDuration: showDuration ?? _showDuration,
+    waitDuration: const Duration(milliseconds: 300),
+    textStyle:
+        textStyle ??
+        const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+          height: 1.3,
+        ),
+    decoration:
+        decoration ??
+        BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+    padding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    margin: const EdgeInsets.symmetric(horizontal: 16),
+    verticalOffset: _verticalOffset,
+    preferBelow: preferBelow,
+    excludeFromSemantics: excludeFromSemantics,
+    child: child,
+  );
 }
 
 /// Tooltip positions
-enum TooltipPosition {
-  top,
-  bottom,
-  left,
-  right,
-}
+enum TooltipPosition { top, bottom, left, right }
 
 /// Custom tooltip with more control over appearance and behavior
 class AppTooltip extends StatefulWidget {
@@ -134,7 +126,7 @@ class _AppTooltipState extends State<AppTooltip> {
 
   void _showTooltip() {
     if (_isTooltipVisible || _overlayEntry != null) return;
-    
+
     _showTimer?.cancel();
     _showTimer = Timer(widget.showDelay, () {
       if (!mounted || _isTooltipVisible) return;
@@ -156,17 +148,21 @@ class _AppTooltipState extends State<AppTooltip> {
 
   void _insertOverlay() {
     _overlayEntry = OverlayEntry(
-      builder: (context) => _TooltipOverlay(
+      builder: (final context) => _TooltipOverlay(
         layerLink: _layerLink,
         message: widget.message,
         position: widget.position,
-        padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        textStyle: widget.textStyle ?? const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: Colors.white,
-          height: 1.3,
-        ),
+        padding:
+            widget.padding ??
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        textStyle:
+            widget.textStyle ??
+            const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+              height: 1.3,
+            ),
         backgroundColor: widget.backgroundColor ?? Colors.black87,
         borderRadius: widget.borderRadius,
         offset: widget.offset,
@@ -181,27 +177,30 @@ class _AppTooltipState extends State<AppTooltip> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: MouseRegion(
-        onEnter: widget.showOnHover ? (_) => _showTooltip() : null,
-        onExit: widget.showOnHover ? (_) => _hideTooltip() : null,
-        child: GestureDetector(
-          onLongPress: widget.showOnLongPress ? _showTooltip : null,
-          onLongPressUp: widget.showOnLongPress ? _hideTooltip : null,
-          onLongPressEnd: widget.showOnLongPress ? (_) => _hideTooltip() : null,
-          child: Focus(
-            onFocusChange: widget.showOnFocus ? (hasFocus) {
-              if (hasFocus) _showTooltip();
-              else _hideTooltip();
-            } : null,
-            child: widget.child,
-          ),
+  Widget build(final BuildContext context) => CompositedTransformTarget(
+    link: _layerLink,
+    child: MouseRegion(
+      onEnter: widget.showOnHover ? (_) => _showTooltip() : null,
+      onExit: widget.showOnHover ? (_) => _hideTooltip() : null,
+      child: GestureDetector(
+        onLongPress: widget.showOnLongPress ? _showTooltip : null,
+        onLongPressUp: widget.showOnLongPress ? _hideTooltip : null,
+        onLongPressEnd: widget.showOnLongPress ? (_) => _hideTooltip() : null,
+        child: Focus(
+          onFocusChange: widget.showOnFocus
+              ? (final hasFocus) {
+                  if (hasFocus) {
+                    _showTooltip();
+                  } else {
+                    _hideTooltip();
+                  }
+                }
+              : null,
+          child: widget.child,
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Internal tooltip overlay widget
@@ -227,35 +226,29 @@ class _TooltipOverlay extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return CompositedTransformFollower(
-      link: layerLink,
-      showWhenUnlinked: false,
-      offset: _getOffset(),
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Text(
-            message,
-            style: textStyle,
-            textAlign: TextAlign.center,
-          ),
+  Widget build(final BuildContext context) => CompositedTransformFollower(
+    link: layerLink,
+    showWhenUnlinked: false,
+    offset: _getOffset(),
+    child: Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
+        child: Text(message, style: textStyle, textAlign: TextAlign.center),
       ),
-    );
-  }
+    ),
+  );
 
   Offset _getOffset() {
     switch (position) {
@@ -295,19 +288,17 @@ class IconTooltip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return AppTooltip(
-      message: tooltip,
-      position: position,
-      child: IconButton(
-        icon: Icon(icon as IconData?, color: iconColor, size: iconSize),
-        onPressed: onPressed,
-        padding: padding ?? EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-        tooltip: semanticLabel,
-      ),
-    );
-  }
+  Widget build(final BuildContext context) => AppTooltip(
+    message: tooltip,
+    position: position,
+    child: IconButton(
+      icon: Icon(icon as IconData?, color: iconColor, size: iconSize),
+      onPressed: onPressed,
+      padding: padding ?? EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+      tooltip: semanticLabel,
+    ),
+  );
 }
 
 /// Rich tooltip with custom content
@@ -334,16 +325,14 @@ class RichTooltip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return AppTooltip(
-      message: '', // Not used for rich tooltip
-      position: position,
-      showDelay: showDelay,
-      hideDelay: hideDelay,
-      offset: offset,
-      backgroundColor: backgroundColor,
-      borderRadius: borderRadius,
-      child: child,
-    );
-  }
+  Widget build(final BuildContext context) => AppTooltip(
+    message: '', // Not used for rich tooltip
+    position: position,
+    showDelay: showDelay,
+    hideDelay: hideDelay,
+    offset: offset,
+    backgroundColor: backgroundColor,
+    borderRadius: borderRadius,
+    child: child,
+  );
 }

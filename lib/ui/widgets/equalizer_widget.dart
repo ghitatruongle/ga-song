@@ -12,11 +12,11 @@ import 'debounced_slider.dart';
 
 /// Premium equalizer dialog with 5-band control and preset selector
 class EqualizerWidget {
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (context) => const _EqualizerDialog(),
+      builder: (final context) => const _EqualizerDialog(),
     );
   }
 }
@@ -40,7 +40,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final textColor = context.adaptive;
     return Dialog(
@@ -50,7 +50,6 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-          width: 1,
         ),
       ),
       child: Container(
@@ -86,7 +85,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
             // selected chip updates when `eqPreset = 'Custom'` is set.
             ValueListenableBuilder<String>(
               valueListenable: _settings.eqPresetNotifier,
-              builder: (context, _, _) => _buildPresetSelector(textColor),
+              builder: (final context, _, _) => _buildPresetSelector(textColor),
             ),
             const SizedBox(height: 20),
 
@@ -96,17 +95,20 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
               height: 200,
               child: ValueListenableBuilder<List<double>>(
                 valueListenable: _settings.eqBandsNotifier,
-                builder: (context, bands, _) {
-                  Widget band(int i, String label, IconData icon) =>
-                      _buildBandSlider(
-                        label: label,
-                        icon: icon,
-                        value: bands[i],
-                        textColor: textColor,
-                        onChanged: (v) {
-                          _settings.setEqBand(i, v);
-                        },
-                      );
+                builder: (final context, final bands, _) {
+                  Widget band(
+                    final int i,
+                    final String label,
+                    final IconData icon,
+                  ) => _buildBandSlider(
+                    label: label,
+                    icon: icon,
+                    value: bands[i],
+                    textColor: textColor,
+                    onChanged: (final v) {
+                      _settings.setEqBand(i, v);
+                    },
+                  );
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -133,7 +135,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
                 onPressed: () {
                   _settings.applyEqPreset('Normal');
                   for (var i = 0; i < 5; i++) {
-                    _settings.setEqBand(i, 0.0);
+                    _settings.setEqBand(i, 0);
                   }
                   _effectService.setBassLevel(0);
                 },
@@ -151,7 +153,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
     );
   }
 
-  Widget _buildPresetSelector(Color textColor) {
+  Widget _buildPresetSelector(final Color textColor) {
     const presets = [
       'Normal',
       'Pop',
@@ -167,7 +169,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
         scrollDirection: Axis.horizontal,
         itemCount: presets.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
+        itemBuilder: (final context, final i) {
           final p = presets[i];
           final selected = _settings.eqPresetNotifier.value == p;
           return ChoiceChip(
@@ -183,11 +185,11 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
   }
 
   Widget _buildBandSlider({
-    required String label,
-    required IconData icon,
-    required double value,
-    required Color textColor,
-    required ValueChanged<double> onChanged,
+    required final String label,
+    required final IconData icon,
+    required final double value,
+    required final Color textColor,
+    required final ValueChanged<double> onChanged,
   }) {
     final isActive = value.abs() > 0.05;
     return _BandSliderWidget(
@@ -205,83 +207,76 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
     );
   }
 
-  Widget _buildBassBoostRow(Color textColor) {
-    return ValueListenableBuilder<int>(
-      valueListenable: _settings.eqBassNotifier,
-      builder: (context, bassLevel, _) {
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+  Widget _buildBassBoostRow(
+    final Color textColor,
+  ) => ValueListenableBuilder<int>(
+    valueListenable: _settings.eqBassNotifier,
+    builder: (final context, final bassLevel, _) => Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: textColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.speaker_rounded,
+            color: textColor.withValues(alpha: 0.7),
+            size: 20,
           ),
-          decoration: BoxDecoration(
-            color: textColor.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(AppRadius.md),
+          const SizedBox(width: 8),
+          Text(
+            'Bass Boost',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.speaker_rounded,
-                color: textColor.withValues(alpha: 0.7),
-                size: 20,
+          const Spacer(),
+          SizedBox(
+            width: 140,
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: textColor,
+                inactiveTrackColor: textColor.withValues(alpha: 0.15),
+                thumbColor: textColor,
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Bass Boost',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: DebouncedSlider(
+                value: bassLevel.toDouble(),
+                max: 100,
+                debounceMs: 250,
+                onChanged: (final val) {
+                  final level = val.round();
+                  _settings.setEqBass(level);
+                  _effectService.setBassLevel(level);
+                  _settings.eqPresetNotifier.value = 'Custom';
+                },
               ),
-              const Spacer(),
-              SizedBox(
-                width: 140,
-                child: SliderTheme(
-                  data: SliderThemeData(
-                    trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 6,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 12,
-                    ),
-                    activeTrackColor: textColor,
-                    inactiveTrackColor: textColor.withValues(alpha: 0.15),
-                    thumbColor: textColor,
-                  ),
-                  child: DebouncedSlider(
-                    value: bassLevel.toDouble(),
-                    min: 0,
-                    max: 100,
-                    debounceMs: 250,
-                    onChanged: (val) {
-                      final level = val.round();
-                      _settings.setEqBass(level);
-                      _effectService.setBassLevel(level);
-                      _settings.eqPresetNotifier.value = 'Custom';
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 36,
-                child: Text(
-                  '$bassLevel%',
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
+            ),
           ),
-        );
-      },
-    );
-  }
+          SizedBox(
+            width: 36,
+            child: Text(
+              '$bassLevel%',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Phase 4 Task 8: per-band slider that glows while dragging.
@@ -310,7 +305,7 @@ class _BandSliderWidgetState extends State<_BandSliderWidget> {
   bool _isDragging = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final animations = animationsEnabled(context);
     final displayDb = (widget.value * 12).round();
     return Column(
@@ -365,10 +360,9 @@ class _BandSliderWidgetState extends State<_BandSliderWidget> {
                 ),
                 child: DebouncedSlider(
                   value: widget.value,
-                  min: -1.0,
-                  max: 1.0,
+                  min: -1,
                   debounceMs: 250,
-                  onChanged: (v) {
+                  onChanged: (final v) {
                     setState(() => _isDragging = true);
                     widget.onChanged(v);
                   },

@@ -14,15 +14,15 @@ class CenterControls extends ConsumerWidget {
   const CenterControls({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     // Phase 2.2: use state providers directly (was PlayerViewModel).
     final engineState = ref.watch(engineStateProvider);
     final playlist = ref.read(playlistServiceProvider);
     // `soundOn` is only consulted inside onPressed callbacks; use
     // ref.read (not ref.watch) so the whole CenterControls subtree
     // doesn't rebuild on every toggle.
-    final soundOn = ref.read(
-      settingsNotifierProvider.select((s) => s.soundFeedbackEnabled),
+    final soundOn = ref.watch(
+      settingsNotifierProvider.select((final s) => s.soundFeedbackEnabled),
     );
     final isPlaying = engineState == AudioEngineState.playing;
     final isLoading = engineState == AudioEngineState.loading;
@@ -74,7 +74,12 @@ class CenterControls extends ConsumerWidget {
                       ? null
                       : () {
                           safeHaptic(HapticType.medium);
-                          playlist.play();
+                          // Toggle: pause if playing (play() would RESTART).
+                          if (engineState == AudioEngineState.playing) {
+                            ref.read(audioEngineServiceProvider).pause();
+                          } else {
+                            playlist.play();
+                          }
                         },
                 ),
               ),

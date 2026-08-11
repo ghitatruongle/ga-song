@@ -53,7 +53,7 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
   }
 
   @override
-  Future<void> play(String assetPath) async {
+  Future<void> play(final String assetPath) async {
     await stop();
 
     String url = assetPath;
@@ -118,20 +118,28 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
   @override
   Future<void> stop() async {
     _audioElement?.pause();
-    _audioElement?.currentTime = 0;
+    // Setting currentTime before metadata is available can throw
+    // InvalidStateError in some browsers — swallow it.
+    try {
+      _audioElement?.currentTime = 0;
+    } catch (_) {}
     _isPlaying = false;
     _isPaused = false;
   }
 
   @override
-  Future<void> seek(Duration position) async {
+  Future<void> seek(final Duration position) async {
     if (_audioElement != null) {
-      _audioElement!.currentTime = position.inMilliseconds / 1000.0;
+      try {
+        _audioElement!.currentTime = position.inMilliseconds / 1000.0;
+      } catch (_) {
+        // Seek on a not-yet-loaded element — ignore, next tick will retry.
+      }
     }
   }
 
   @override
-  void setVolume(double volume) {
+  void setVolume(final double volume) {
     if (_audioElement != null) {
       _audioElement!.volume = volume.clamp(0.0, 1.0);
     }
@@ -164,7 +172,7 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
   @override
   List<double> getFftData() {
     if (_analyserNode == null) {
-      return List<double>.filled(128, 0.0);
+      return List<double>.filled(128, 0);
     }
     final int binCount = _analyserNode['frequencyBinCount'] as int;
     final buffer = Float32List(binCount);
@@ -172,7 +180,7 @@ class WebAudioPlayerWeb implements WebAudioPlayer {
 
     // Float frequency data is in dB (ranges from -100 to 0).
     // Normalize it to 0.0 to 1.0.
-    final List<double> fft = List<double>.filled(binCount, 0.0);
+    final List<double> fft = List<double>.filled(binCount, 0);
     for (int i = 0; i < binCount; i++) {
       // Normalize -100dB..0dB to 0.0..1.0 range
       final val = (buffer[i] + 100).clamp(0.0, 100.0) / 100.0;

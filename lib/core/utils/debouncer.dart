@@ -17,7 +17,7 @@ class Debouncer {
   Timer? _timer;
 
   /// Cancels any pending call and schedules [action] after [milliseconds].
-  void run(void Function() action) {
+  void run(final void Function() action) {
     _timer?.cancel();
     _timer = Timer(Duration(milliseconds: milliseconds), action);
   }

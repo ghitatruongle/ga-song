@@ -7,6 +7,7 @@
 /// - JSON (native GA Song format)
 ///
 /// All formats support round-trip import/export with validation.
+library;
 
 import 'dart:async';
 import 'dart:convert';
@@ -15,19 +16,10 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:xml/xml.dart';
 
-import '../logging/app_logger.dart';
-import '../../models/playlist.dart';
 import '../../models/song.dart';
 
 /// Supported playlist formats
-enum PlaylistFormat {
-  m3u,
-  m3u8,
-  pls,
-  xspf,
-  json,
-  unknown,
-}
+enum PlaylistFormat { m3u, m3u8, pls, xspf, json, unknown }
 
 /// Result of a playlist import operation
 class PlaylistImportResult {
@@ -46,30 +38,26 @@ class PlaylistImportResult {
   });
 
   factory PlaylistImportResult.success({
-    required String playlistName,
-    required List<PlaylistImportEntry> entries,
-    List<String> warnings = const [],
-  }) {
-    return PlaylistImportResult(
-      success: true,
-      playlistName: playlistName,
-      entries: entries,
-      warnings: warnings,
-    );
-  }
+    required final String playlistName,
+    required final List<PlaylistImportEntry> entries,
+    final List<String> warnings = const [],
+  }) => PlaylistImportResult(
+    success: true,
+    playlistName: playlistName,
+    entries: entries,
+    warnings: warnings,
+  );
 
   factory PlaylistImportResult.failure({
-    required String error,
-    String? playlistName,
-    List<String> warnings = const [],
-  }) {
-    return PlaylistImportResult(
-      success: false,
-      playlistName: playlistName,
-      warnings: warnings,
-      error: error,
-    );
-  }
+    required final String error,
+    final String? playlistName,
+    final List<String> warnings = const [],
+  }) => PlaylistImportResult(
+    success: false,
+    playlistName: playlistName,
+    warnings: warnings,
+    error: error,
+  );
 }
 
 /// A single playlist entry during import
@@ -92,29 +80,26 @@ class PlaylistImportEntry {
     this.metadata = const {},
   });
 
-  factory PlaylistImportEntry.fromJson(Map<String, dynamic> json) {
-    return PlaylistImportEntry(
-      title: json['title'] as String? ?? '',
-      artist: json['artist'] as String?,
-      album: json['album'] as String?,
-      sourcePath: json['sourcePath'] as String?,
-      url: json['url'] as String?,
-      durationSeconds: json['durationSeconds'] as int?,
-      metadata: json['metadata'] as Map<String, dynamic>? ?? {},
-    );
-  }
+  factory PlaylistImportEntry.fromJson(final Map<String, dynamic> json) =>
+      PlaylistImportEntry(
+        title: json['title'] as String? ?? '',
+        artist: json['artist'] as String?,
+        album: json['album'] as String?,
+        sourcePath: json['sourcePath'] as String?,
+        url: json['url'] as String?,
+        durationSeconds: json['durationSeconds'] as int?,
+        metadata: json['metadata'] as Map<String, dynamic>? ?? {},
+      );
 
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      if (artist != null) 'artist': artist,
-      if (album != null) 'album': album,
-      if (sourcePath != null) 'sourcePath': sourcePath,
-      if (url != null) 'url': url,
-      if (durationSeconds != null) 'durationSeconds': durationSeconds,
-      if (metadata.isNotEmpty) 'metadata': metadata,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    if (artist != null) 'artist': artist,
+    if (album != null) 'album': album,
+    if (sourcePath != null) 'sourcePath': sourcePath,
+    if (url != null) 'url': url,
+    if (durationSeconds != null) 'durationSeconds': durationSeconds,
+    if (metadata.isNotEmpty) 'metadata': metadata,
+  };
 }
 
 /// Result of a playlist export operation
@@ -123,21 +108,20 @@ class PlaylistExportResult {
   final String? content;
   final String? error;
 
-  const PlaylistExportResult({
-    required this.success,
-    this.content,
-    this.error,
-  });
+  const PlaylistExportResult({required this.success, this.content, this.error});
 
-  factory PlaylistExportResult.success(String content) =>
+  factory PlaylistExportResult.success(final String content) =>
       PlaylistExportResult(success: true, content: content);
 
-  factory PlaylistExportResult.failure(String error) =>
+  factory PlaylistExportResult.failure(final String error) =>
       PlaylistExportResult(success: false, error: error);
 }
 
 /// Detects playlist format from file extension and content
-PlaylistFormat detectPlaylistFormat(String filePath, {String? content}) {
+PlaylistFormat detectPlaylistFormat(
+  final String filePath, {
+  final String? content,
+}) {
   final ext = p.extension(filePath).toLowerCase();
 
   switch (ext) {
@@ -157,13 +141,16 @@ PlaylistFormat detectPlaylistFormat(String filePath, {String? content}) {
         if (trimmed.startsWith('#EXTM3U') || trimmed.startsWith('#EXTINF')) {
           return PlaylistFormat.m3u;
         }
-        if (trimmed.startsWith('[playlist]') || trimmed.startsWith('NumberOfEntries')) {
+        if (trimmed.startsWith('[playlist]') ||
+            trimmed.startsWith('NumberOfEntries')) {
           return PlaylistFormat.pls;
         }
         if (trimmed.startsWith('<?xml') && trimmed.contains('xspf')) {
           return PlaylistFormat.xspf;
         }
-        if (trimmed.startsWith('{') && trimmed.contains('"name"') && trimmed.contains('"songIds"')) {
+        if (trimmed.startsWith('{') &&
+            trimmed.contains('"name"') &&
+            trimmed.contains('"songIds"')) {
           return PlaylistFormat.json;
         }
       }
@@ -176,7 +163,7 @@ class PlaylistImportExportService {
   PlaylistImportExportService();
 
   /// Import a playlist from a file
-  Future<PlaylistImportResult> importFromFile(String filePath) async {
+  Future<PlaylistImportResult> importFromFile(final String filePath) async {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
@@ -189,7 +176,11 @@ class PlaylistImportExportService {
       final content = await file.readAsString();
       final format = detectPlaylistFormat(filePath, content: content);
 
-      return await importFromString(content, format: format, playlistName: p.basenameWithoutExtension(filePath));
+      return await importFromString(
+        content,
+        format: format,
+        playlistName: p.basenameWithoutExtension(filePath),
+      );
     } catch (e) {
       return PlaylistImportResult.failure(
         error: 'Import failed: $e',
@@ -200,9 +191,9 @@ class PlaylistImportExportService {
 
   /// Import a playlist from string content
   Future<PlaylistImportResult> importFromString(
-    String content, {
-    required PlaylistFormat format,
-    String? playlistName,
+    final String content, {
+    required final PlaylistFormat format,
+    final String? playlistName,
   }) async {
     try {
       switch (format) {
@@ -231,9 +222,9 @@ class PlaylistImportExportService {
 
   /// Export a playlist to string content
   Future<PlaylistExportResult> exportToString(
-    List<Song> songs,
-    String playlistName, {
-    required PlaylistFormat format,
+    final List<Song> songs,
+    final String playlistName, {
+    required final PlaylistFormat format,
   }) async {
     try {
       switch (format) {
@@ -256,10 +247,10 @@ class PlaylistImportExportService {
 
   /// Export a playlist to a file
   Future<PlaylistExportResult> exportToFile(
-    List<Song> songs,
-    String filePath, {
-    required PlaylistFormat format,
-    String? playlistName,
+    final List<Song> songs,
+    final String filePath, {
+    required final PlaylistFormat format,
+    final String? playlistName,
   }) async {
     final result = await exportToString(
       songs,
@@ -282,7 +273,10 @@ class PlaylistImportExportService {
 
   // ─── M3U Import/Export ────────────────────────────────────────────────────────
 
-  PlaylistImportResult _importM3U(String content, {String? playlistName}) {
+  PlaylistImportResult _importM3U(
+    final String content, {
+    final String? playlistName,
+  }) {
     final lines = content.split('\n');
     final entries = <PlaylistImportEntry>[];
     final warnings = <String>[];
@@ -341,13 +335,15 @@ class PlaylistImportExportService {
           currentTitle = nameWithoutExt;
         }
 
-        entries.add(PlaylistImportEntry(
-          title: currentTitle ?? 'Unknown',
-          artist: currentArtist,
-          album: currentAlbum,
-          sourcePath: currentPath,
-          durationSeconds: currentDuration,
-        ));
+        entries.add(
+          PlaylistImportEntry(
+            title: currentTitle,
+            artist: currentArtist,
+            album: currentAlbum,
+            sourcePath: currentPath,
+            durationSeconds: currentDuration,
+          ),
+        );
 
         // Reset for next entry
         currentTitle = null;
@@ -375,16 +371,20 @@ class PlaylistImportExportService {
     );
   }
 
-  String _exportM3U(List<Song> songs, String playlistName) {
+  String _exportM3U(final List<Song> songs, final String playlistName) {
     final buffer = StringBuffer();
     buffer.writeln('#EXTM3U');
     buffer.writeln('#PLAYLIST:$playlistName');
 
     for (final song in songs) {
       if (song.duration != null) {
-        buffer.writeln('#EXTINF:${song.duration!.inSeconds},${song.name} - ${song.artist ?? 'Unknown Artist'}');
+        buffer.writeln(
+          '#EXTINF:${song.duration!.inSeconds},${song.name} - ${song.artist ?? 'Unknown Artist'}',
+        );
       } else {
-        buffer.writeln('#EXTINF:-1,${song.name} - ${song.artist ?? 'Unknown Artist'}');
+        buffer.writeln(
+          '#EXTINF:-1,${song.name} - ${song.artist ?? 'Unknown Artist'}',
+        );
       }
 
       if (song.album != null) {
@@ -400,7 +400,10 @@ class PlaylistImportExportService {
 
   // ─── PLS Import/Export ────────────────────────────────────────────────────────
 
-  PlaylistImportResult _importPLS(String content, {String? playlistName}) {
+  PlaylistImportResult _importPLS(
+    final String content, {
+    final String? playlistName,
+  }) {
     final lines = content.split('\n');
     final entries = <PlaylistImportEntry>[];
     final warnings = <String>[];
@@ -415,13 +418,15 @@ class PlaylistImportExportService {
 
     void flushCurrentEntry() {
       if (currentFile == null) return;
-      entries.add(PlaylistImportEntry(
-        title: currentTitle ?? 'Unknown',
-        artist: currentArtist,
-        album: currentAlbum,
-        sourcePath: currentFile!,
-        durationSeconds: currentLength,
-      ));
+      entries.add(
+        PlaylistImportEntry(
+          title: currentTitle ?? 'Unknown',
+          artist: currentArtist,
+          album: currentAlbum,
+          sourcePath: currentFile!,
+          durationSeconds: currentLength,
+        ),
+      );
       currentFile = null;
       currentTitle = null;
       currentArtist = null;
@@ -442,18 +447,20 @@ class PlaylistImportExportService {
       final value = trimmed.substring(equalsIndex + 1).trim();
 
       // Top-level metadata (playlist title, entry count, version).
-      if (key.toLowerCase() == 'title' && !RegExp(r'^title\d+$').hasMatch(key.toLowerCase())) {
+      if (key.toLowerCase() == 'title' &&
+          !RegExp(r'^title\d+$').hasMatch(key.toLowerCase())) {
         playlistTitle = value;
         continue;
       }
-      if (key.toLowerCase() == 'numberofentries' || key.toLowerCase() == 'version') {
+      if (key.toLowerCase() == 'numberofentries' ||
+          key.toLowerCase() == 'version') {
         continue;
       }
 
       // Per-entry keys: fileN, titleN, artistN, albumN, lengthN.
-      final indexMatch =
-          RegExp(r'^(file|title|artist|album|length)(\d+)$')
-              .firstMatch(key.toLowerCase());
+      final indexMatch = RegExp(
+        r'^(file|title|artist|album|length)(\d+)$',
+      ).firstMatch(key.toLowerCase());
       if (indexMatch == null) {
         warnings.add('Unknown PLS key: $key');
         continue;
@@ -468,14 +475,19 @@ class PlaylistImportExportService {
       switch (indexMatch.group(1)) {
         case 'file':
           currentFile = value;
+          break;
         case 'title':
           currentTitle = value;
+          break;
         case 'artist':
           currentArtist = value;
+          break;
         case 'album':
           currentAlbum = value;
+          break;
         case 'length':
           currentLength = int.tryParse(value);
+          break;
       }
     }
 
@@ -496,7 +508,7 @@ class PlaylistImportExportService {
     );
   }
 
-  String _exportPLS(List<Song> songs, String playlistName) {
+  String _exportPLS(final List<Song> songs, final String playlistName) {
     final buffer = StringBuffer();
     buffer.writeln('[playlist]');
     buffer.writeln('Title=$playlistName');
@@ -520,12 +532,18 @@ class PlaylistImportExportService {
 
   // ─── XSPF Import/Export ──────────────────────────────────────────────────────
 
-  PlaylistImportResult _importXSPF(String content, {String? playlistName}) {
+  PlaylistImportResult _importXSPF(
+    final String content, {
+    final String? playlistName,
+  }) {
     try {
       final document = XmlDocument.parse(content);
       final playlistElement = document.findAllElements('playlist').first;
 
-      String? playlistTitle = playlistElement.findElements('title').firstOrNull?.innerText;
+      final String? playlistTitle = playlistElement
+          .findElements('title')
+          .firstOrNull
+          ?.innerText;
       final trackElements = playlistElement.findAllElements('track');
 
       final entries = <PlaylistImportEntry>[];
@@ -562,13 +580,15 @@ class PlaylistImportExportService {
         }
 
         if (trackTitle != null && location != null) {
-          entries.add(PlaylistImportEntry(
-            title: trackTitle,
-            artist: artist,
-            album: album,
-            sourcePath: location,
-            durationSeconds: duration,
-          ));
+          entries.add(
+            PlaylistImportEntry(
+              title: trackTitle,
+              artist: artist,
+              album: album,
+              sourcePath: location,
+              durationSeconds: duration,
+            ),
+          );
         } else {
           warnings.add('Skipping track with missing title or location');
         }
@@ -587,7 +607,7 @@ class PlaylistImportExportService {
     }
   }
 
-  String _exportXSPF(List<Song> songs, String playlistName) {
+  String _exportXSPF(final List<Song> songs, final String playlistName) {
     final buffer = StringBuffer();
     buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
     buffer.writeln('<playlist version="1" xmlns="http://xspf.org/ns/0/">');
@@ -604,11 +624,17 @@ class PlaylistImportExportService {
         buffer.writeln('      <album>${_escapeXml(song.album!)}</album>');
       }
       if (song.duration != null) {
-        buffer.writeln('      <duration>${song.duration!.inMilliseconds}</duration>');
+        buffer.writeln(
+          '      <duration>${song.duration!.inMilliseconds}</duration>',
+        );
       }
-      buffer.writeln('      <location>${_escapeXml(song.sourcePath)}</location>');
+      buffer.writeln(
+        '      <location>${_escapeXml(song.sourcePath)}</location>',
+      );
       if (song.album != null) {
-        buffer.writeln('      <identifier>${_escapeXml(song.sourcePath)}</identifier>');
+        buffer.writeln(
+          '      <identifier>${_escapeXml(song.sourcePath)}</identifier>',
+        );
       }
       buffer.writeln('    </track>');
     }
@@ -618,22 +644,24 @@ class PlaylistImportExportService {
     return buffer.toString();
   }
 
-  String _escapeXml(String input) {
-    return input
-        .replaceAll('&', '&')
-        .replaceAll('<', '<')
-        .replaceAll('>', '>')
-        .replaceAll('"', '"')
-        .replaceAll("'", '&apos;');
-  }
+  String _escapeXml(final String input) => input
+      .replaceAll('&', '&')
+      .replaceAll('<', '<')
+      .replaceAll('>', '>')
+      .replaceAll('"', '"')
+      .replaceAll("'", '&apos;');
 
   // ─── JSON Import/Export ──────────────────────────────────────────────────────
 
-  PlaylistImportResult _importJSON(String content, {String? playlistName}) {
+  PlaylistImportResult _importJSON(
+    final String content, {
+    final String? playlistName,
+  }) {
     try {
       final json = jsonDecode(content) as Map<String, dynamic>;
 
-      final name = json['name'] as String? ?? playlistName ?? 'Imported Playlist';
+      final name =
+          json['name'] as String? ?? playlistName ?? 'Imported Playlist';
 
       final entries = <PlaylistImportEntry>[];
       final warnings = <String>[];
@@ -644,23 +672,28 @@ class PlaylistImportExportService {
       if (songsJson.isNotEmpty) {
         for (final songJson in songsJson) {
           if (songJson is Map<String, dynamic>) {
-            entries.add(PlaylistImportEntry(
-              title: songJson['name'] as String? ?? 'Unknown',
-              artist: songJson['artist'] as String?,
-              album: songJson['album'] as String?,
-              sourcePath: songJson['sourcePath'] as String? ?? '',
-              durationSeconds: ((songJson['durationMs'] as num?) ?? 0) ~/ 1000,
-              metadata: {'songId': songJson['id']},
-            ));
+            entries.add(
+              PlaylistImportEntry(
+                title: songJson['name'] as String? ?? 'Unknown',
+                artist: songJson['artist'] as String?,
+                album: songJson['album'] as String?,
+                sourcePath: songJson['sourcePath'] as String? ?? '',
+                durationSeconds:
+                    ((songJson['durationMs'] as num?) ?? 0) ~/ 1000,
+                metadata: {'songId': songJson['id']},
+              ),
+            );
           }
         }
       } else {
         final songIds = (json['songIds'] as List?)?.cast<int>() ?? [];
         for (final id in songIds) {
-          entries.add(PlaylistImportEntry(
-            title: 'Song ID: $id',
-            metadata: {'songId': id},
-          ));
+          entries.add(
+            PlaylistImportEntry(
+              title: 'Song ID: $id',
+              metadata: {'songId': id},
+            ),
+          );
         }
       }
 
@@ -685,11 +718,15 @@ class PlaylistImportExportService {
     }
   }
 
-  String _exportJSON(List<Song> songs, String playlistName) {
+  String _exportJSON(final List<Song> songs, final String playlistName) {
     final data = {
       'name': playlistName,
-      'songIds': songs.map((s) => s.id).where((id) => id != null).cast<int>().toList(),
-      'songs': songs.map((s) => s.toJson()).toList(),
+      'songIds': songs
+          .map((final s) => s.id)
+          .where((final id) => id != null)
+          .cast<int>()
+          .toList(),
+      'songs': songs.map((final s) => s.toJson()).toList(),
       'exportedAt': DateTime.now().toIso8601String(),
       'format': 'ga-song-playlist',
       'version': 1,

@@ -10,39 +10,36 @@ class SmartPlaylistsScreen extends ConsumerWidget {
   const SmartPlaylistsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.all(24.0),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                'Danh sách phát thông minh',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: context.onAdaptive,
-                ),
+  Widget build(final BuildContext context, final WidgetRef ref) => Scaffold(
+    backgroundColor: Colors.transparent,
+    body: CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(24),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              'Danh sách phát thông minh',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: context.onAdaptive,
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            sliver: SliverGrid.count(
-              crossAxisCount: MediaQuery.sizeOf(context).width > 800 ? 5 : 3,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.0,
-              children: SmartPlaylistType.values.map((type) {
-                return _SmartPlaylistCard(type: type);
-              }).toList(),
-            ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          sliver: SliverGrid.count(
+            crossAxisCount: MediaQuery.sizeOf(context).width > 800 ? 5 : 3,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            children: SmartPlaylistType.values
+                .map((final type) => _SmartPlaylistCard(type: type))
+                .toList(),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
 
 class _SmartPlaylistCard extends ConsumerWidget {
@@ -51,7 +48,7 @@ class _SmartPlaylistCard extends ConsumerWidget {
   const _SmartPlaylistCard({required this.type});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final playlistAsync = ref.watch(smartPlaylistProvider(type));
 
     return Card(
@@ -59,7 +56,7 @@ class _SmartPlaylistCard extends ConsumerWidget {
       color: context.adaptive.withValues(alpha: 0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+        side: BorderSide(color: Theme.of(context).dividerColor),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -67,7 +64,7 @@ class _SmartPlaylistCard extends ConsumerWidget {
           _showPlaylistDetails(context, ref, type);
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -86,7 +83,7 @@ class _SmartPlaylistCard extends ConsumerWidget {
               const SizedBox(height: 8),
               playlistAsync.when(
                 skipLoadingOnReload: true,
-                data: (songs) => Text(
+                data: (final songs) => Text(
                   '${songs.length} bài hát',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: context.onAdaptive.withValues(alpha: 0.6),
@@ -97,7 +94,7 @@ class _SmartPlaylistCard extends ConsumerWidget {
                   width: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                error: (error, stackTrace) => Text(
+                error: (final error, final stackTrace) => Text(
                   'Lỗi tải',
                   style: Theme.of(
                     context,
@@ -112,13 +109,13 @@ class _SmartPlaylistCard extends ConsumerWidget {
   }
 
   void _showPlaylistDetails(
-    BuildContext context,
-    WidgetRef ref,
-    SmartPlaylistType type,
+    final BuildContext context,
+    final WidgetRef ref,
+    final SmartPlaylistType type,
   ) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => _SmartPlaylistDetailsScreen(type: type),
+        builder: (final context) => _SmartPlaylistDetailsScreen(type: type),
       ),
     );
   }
@@ -130,7 +127,7 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
   const _SmartPlaylistDetailsScreen({required this.type});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final playlistAsync = ref.watch(smartPlaylistProvider(type));
 
     return Scaffold(
@@ -145,10 +142,10 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
             icon: const Icon(Icons.play_arrow_rounded),
             onPressed: () {
               playlistAsync.whenOrNull(
-                data: (songs) {
+                data: (final songs) {
                   if (songs.isNotEmpty) {
                     final playlist = ref.read(playlistServiceProvider);
-                    playlist.setPlaylist(songs, startIndex: 0);
+                    playlist.setPlaylist(songs);
                     playlist.play();
                   }
                 },
@@ -159,13 +156,13 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
       ),
       body: playlistAsync.when(
         skipLoadingOnReload: true,
-        data: (songs) {
+        data: (final songs) {
           if (songs.isEmpty) {
             return const Center(child: Text('Danh sách trống'));
           }
           return ListView.builder(
             itemCount: songs.length,
-            itemBuilder: (context, index) {
+            itemBuilder: (final context, final index) {
               final song = songs[index];
               return InkWell(
                 onTap: () {
@@ -179,7 +176,7 @@ class _SmartPlaylistDetailsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Lỗi: $err')),
+        error: (final err, final stack) => Center(child: Text('Lỗi: $err')),
       ),
     );
   }

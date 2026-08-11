@@ -9,7 +9,7 @@ class ProgressBar extends ConsumerWidget {
   const ProgressBar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     // Phase 2.2: read position/duration from state providers (was PlayerViewModel).
     final position = ref.watch(positionProvider);
     final duration = ref.watch(trackDurationProvider);
@@ -50,7 +50,7 @@ class ProgressBar extends ConsumerWidget {
               ),
               child: Slider(
                 value: progress.clamp(0.0, 1.0),
-                onChanged: (value) {
+                onChanged: (final value) {
                   final newPosition = Duration(
                     milliseconds: (value * duration.inMilliseconds).round(),
                   );

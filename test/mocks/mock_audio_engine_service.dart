@@ -17,7 +17,7 @@ class MockAudioEngineService
   @override
   ValueNotifier<Duration> durationNotifier = ValueNotifier(Duration.zero);
   @override
-  ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
+  ValueNotifier<double> volumeNotifier = ValueNotifier(1);
 
   final StreamController<void> _songCompletedController =
       StreamController<void>.broadcast();
@@ -45,7 +45,10 @@ class MockAudioEngineService
   }
 
   @override
-  Future<void> playAsset(String assetPath, {double? normalizationGain}) async {
+  Future<void> playAsset(
+    final String assetPath, {
+    final double? normalizationGain,
+  }) async {
     playCallCount++;
     lastPlayedAsset = assetPath;
     lastNormalizationGain = normalizationGain;
@@ -67,27 +70,27 @@ class MockAudioEngineService
   }
 
   @override
-  Future<void> seek(Duration position) async {
+  Future<void> seek(final Duration position) async {
     lastSeekPosition = position;
     positionNotifier.value = position;
   }
 
   @override
-  void setVolume(double volume) {
+  void setVolume(final double volume) {
     volumeNotifier.value = volume.clamp(0.0, 1.0);
   }
 
   @override
-  void setNormalizationGain(double gain) {
+  void setNormalizationGain(final double gain) {
     // No-op in mock
   }
 
   @override
   Future<void> crossfadeTo(
-    String nextAssetPath,
-    double crossfadeDuration, {
-    double? nextNormalizationGain,
-    CrossfadeCurve curve = CrossfadeCurve.linear,
+    final String nextAssetPath,
+    final double crossfadeDuration, {
+    final double? nextNormalizationGain,
+    final CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {
     lastPlayedAsset = nextAssetPath;
     lastNormalizationGain = nextNormalizationGain;
@@ -95,12 +98,12 @@ class MockAudioEngineService
   }
 
   @override
-  Future<void> preload(String assetPath) async {
+  Future<void> preload(final String assetPath) async {
     // No-op in mock
   }
 
   @override
-  Future<void> evictSources(Set<String> keepAssetPaths) async {
+  Future<void> evictSources(final Set<String> keepAssetPaths) async {
     // No-op in mock
   }
 
@@ -124,14 +127,14 @@ class MockAudioEngineService
   };
 
   @override
-  Future<AudioSource?> ensureSource(String assetPath) async => null;
+  Future<AudioSource?> ensureSource(final String assetPath) async => null;
 
   // P3.4: Lifecycle observer — mock records the events for verification.
   int lifecycleEventCount = 0;
   AppLifecycleState? lastLifecycleState;
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(final AppLifecycleState state) {
     lifecycleEventCount++;
     lastLifecycleState = state;
   }
@@ -140,5 +143,6 @@ class MockAudioEngineService
   // didChangeMetrics, etc.) are forwarded to noSuchMethod so the mock
   // doesn't have to stub them all explicitly.
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

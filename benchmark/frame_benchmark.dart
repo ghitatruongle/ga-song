@@ -10,11 +10,11 @@
 /// - p99_frame_ms: 99th percentile (target < 16ms for 60fps)
 /// - jank_count: Frames > 16ms
 /// - severe_jank_count: Frames > 32ms
+library;
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +25,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Frame Time Benchmark', () {
-    testWidgets('measure frame performance during navigation', (WidgetTester tester) async {
+    testWidgets('measure frame performance during navigation', (final WidgetTester tester) async {
       // Setup app
       await tester.pumpWidget(const app.GASongApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -34,7 +34,7 @@ void main() {
       final frameCallbackCompleter = Completer<void>();
 
       // Register frame callback to measure frame times
-      WidgetsBinding.instance.addPersistentFrameCallback((Duration timestamp) {
+      WidgetsBinding.instance.addPersistentFrameCallback((final Duration timestamp) {
         frameTimes.add(timestamp.inMicroseconds);
       });
 
@@ -45,7 +45,7 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
 
       // Remove callback
-      WidgetsBinding.instance.addPersistentFrameCallback((Duration timestamp) {
+      WidgetsBinding.instance.addPersistentFrameCallback((final Duration timestamp) {
         // No-op, just to remove previous callback
         if (frameCallbackCompleter.isCompleted) return;
       });
@@ -66,14 +66,14 @@ void main() {
 
       frameDeltas.sort();
       final count = frameDeltas.length;
-      final sum = frameDeltas.fold<int>(0, (a, b) => a + b);
+      final sum = frameDeltas.fold<int>(0, (final a, final b) => a + b);
       final avg = sum / count;
       final p50 = frameDeltas[(count * 0.5).floor()];
       final p90 = frameDeltas[(count * 0.9).floor()];
       final p99 = frameDeltas[(count * 0.99).floor()];
-      final jankCount = frameDeltas.where((d) => d > 16000).length; // > 16ms
+      final jankCount = frameDeltas.where((final d) => d > 16000).length; // > 16ms
       const severeJankThreshold = 32000; // > 32ms
-      final severeJankCount = frameDeltas.where((d) => d > severeJankThreshold).length;
+      final severeJankCount = frameDeltas.where((final d) => d > severeJankThreshold).length;
 
       final results = {
         'timestamp': DateTime.now().toIso8601String(),
@@ -102,7 +102,7 @@ void main() {
         resultsDir.createSync(recursive: true);
       }
       final resultsFile = File('benchmark/results/frame_benchmark_${DateTime.now().millisecondsSinceEpoch}.json');
-      resultsFile.writeAsStringSync(JsonEncoder.withIndent('  ').convert(results));
+      resultsFile.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(results));
 
       print('=== FRAME TIME BENCHMARK RESULTS ===');
       print('Total frames: $count');
@@ -124,7 +124,7 @@ void main() {
   });
 }
 
-Future<void> _simulateInteractions(WidgetTester tester) async {
+Future<void> _simulateInteractions(final WidgetTester tester) async {
   // Navigate through tabs
   final tabs = ['Thư viện', 'Phòng Hát (KTV)', 'Cài đặt', 'Trang chủ'];
   

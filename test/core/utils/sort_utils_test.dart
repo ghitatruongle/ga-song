@@ -73,8 +73,12 @@ void main() {
     test('sort does not modify original list', () {
       final original = List<Song>.from(songs);
       SongSortUtils.sorted(songs, SortMode.name);
-      expect(songs.map((s) => s.name).toList(), ['Delta', 'Alpha', 'Charlie']);
-      expect(original.map((s) => s.name).toList(), [
+      expect(songs.map((final s) => s.name).toList(), [
+        'Delta',
+        'Alpha',
+        'Charlie',
+      ]);
+      expect(original.map((final s) => s.name).toList(), [
         'Delta',
         'Alpha',
         'Charlie',
@@ -141,11 +145,7 @@ void main() {
     group('dateAdded sorting', () {
       test('sort by dateAdded ascending', () {
         final songsWithDates = [
-          Song(
-            name: 'Old',
-            sourcePath: 'old.mp3',
-            dateAdded: DateTime(2026, 1, 1),
-          ),
+          Song(name: 'Old', sourcePath: 'old.mp3', dateAdded: DateTime(2026)),
           Song(
             name: 'New',
             sourcePath: 'new.mp3',
@@ -168,14 +168,10 @@ void main() {
           Song(
             name: 'Has Date',
             sourcePath: 'a.mp3',
-            dateAdded: DateTime(2026, 5, 1),
+            dateAdded: DateTime(2026, 5),
           ),
           Song(name: 'No Date', sourcePath: 'b.mp3'),
-          Song(
-            name: 'Old',
-            sourcePath: 'c.mp3',
-            dateAdded: DateTime(2026, 1, 1),
-          ),
+          Song(name: 'Old', sourcePath: 'c.mp3', dateAdded: DateTime(2026)),
         ];
         final result = SongSortUtils.sorted(
           songsMixedDates,

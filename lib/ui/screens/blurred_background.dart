@@ -18,25 +18,23 @@ class BlurredBackground extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (blurLevel > 0)
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(
-              sigmaX: blurLevel,
-              sigmaY: blurLevel,
-              tileMode: TileMode.clamp,
-            ),
-            child: child,
-          )
-        else
-          child,
-        IgnorePointer(
-          child: ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
-        ),
-      ],
-    );
-  }
+  Widget build(final BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      if (blurLevel > 0)
+        ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: blurLevel,
+            sigmaY: blurLevel,
+            tileMode: TileMode.clamp,
+          ),
+          child: child,
+        )
+      else
+        child,
+      IgnorePointer(
+        child: ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
+      ),
+    ],
+  );
 }

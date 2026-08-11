@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -35,6 +36,8 @@ import 'core/database/migration/migration_service.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/service_providers.dart';
 import 'providers/theme_provider.dart';
+import 'core/platforms/platform_service.dart';
+import 'core/platforms/macos/macos_menu_bar.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/widgets/frame_budget_overlay.dart';
 import 'ui/widgets/settings_search_dialog.dart';
@@ -46,49 +49,28 @@ class _OpenSettingsSearchIntent extends Intent {
   const _OpenSettingsSearchIntent();
 }
 
-Widget _buildErrorScreen(Object error, StackTrace stackTrace, Locale locale) {
-  // Built before the Localizations tree exists, but after settings.init(),
-  // so honor the user's persisted locale instead of the vi-only fallback.
-  final l10n = lookupAppLocalizations(locale);
-  return Scaffold(
-    body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              l10n.errorInit,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: const TextStyle(fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              stackTrace.toString(),
-              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              l10n.errorRestart,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Wire the logger to debugPrint BEFORE anything else logs, otherwise all
+  // diagnostics are silently dropped (sink defaults to null).
+  AppLogger.init();
+  final startupStopwatch = Stopwatch()..start();
+
+  // Configure image cache limits based on device capabilities
+  final caps = PlatformCapabilities.instance;
+  final imageCache = PaintingBinding.instance.imageCache;
+  if (caps.isAndroid && caps.deviceTier == DeviceTier.low) {
+    imageCache.maximumSizeBytes =
+        16 * 1024 * 1024; // 16MB for low-spec Android (SM J610F)
+    imageCache.maximumSize = 25;
+  } else if (caps.isAndroid) {
+    imageCache.maximumSizeBytes = 32 * 1024 * 1024; // 32MB for mid-tier Android
+    imageCache.maximumSize = 50;
+  } else {
+    imageCache.maximumSizeBytes = 120 * 1024 * 1024; // 120MB for Desktop
+    imageCache.maximumSize = 150;
+  }
 
   // Initialize sqflite for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -99,9 +81,16 @@ Future<void> main() async {
   // Initialize crash reporter
   final crashReporter = DebugCrashReporter();
   await crashReporter.init();
+  for (final r in AppLogger.drainPendingCrashReports()) {
+    crashReporter.reportError(
+      r.error ?? StateError(r.msg),
+      r.stack ?? StackTrace.current,
+      context: r.tag,
+    );
+  }
 
   // Bắt lỗi UI (Render exceptions)
-  FlutterError.onError = (FlutterErrorDetails details) {
+  FlutterError.onError = (final FlutterErrorDetails details) {
     FlutterError.presentError(details);
     crashReporter.reportError(
       details.exception,
@@ -110,48 +99,47 @@ Future<void> main() async {
     );
   };
 
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      color: Colors.black87,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-                size: 64,
+  ErrorWidget.builder = (final FlutterErrorDetails details) => Material(
+    color: Colors.black87,
+    child: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.orange,
+              size: 64,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              lookupAppLocalizations(const Locale('vi')).renderError,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 16),
-              Text(
-                lookupAppLocalizations(const Locale('vi')).renderError,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                details.exceptionAsString(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              details.exceptionAsString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
         ),
       ),
-    );
-  };
+    ),
+  );
 
   // Create services directly (no get_it)
+  // Phase 3: Deferred initialization for faster startup
   final settings = SettingsManager();
-  await settings.init();
+  await settings.init(); // Critical: must complete before UI
   PerformanceProbe.instance.install();
 
-  // Run migration first
+  // Run migration first (critical for data integrity)
   final appDb = AppDatabase();
   final migrationService = MigrationService(appDb);
   await migrationService.migrateFromSqflite();
@@ -159,8 +147,9 @@ Future<void> main() async {
 
   // Use the wrapper to interact with Drift
   final dbService = DatabaseServiceWrapper(appDb);
-  await dbService.init();
+  await dbService.init(); // Critical: must complete before UI
 
+  // Phase 3: Create services with lazy initialization
   final engineService = AudioEngineService();
   final effectService = AudioEffectService();
   final playlistService = PlaylistService(
@@ -170,71 +159,88 @@ Future<void> main() async {
   );
   final coverArtRepo = CoverArtRepository();
 
-  Widget initialScreen;
-  try {
-    await SoLoud.instance.init();
+  // ── Audio engine init is DEFERRED past first frame ─────────────────────────
+  // On low-end Android (e.g. SM-J610F) `SoLoud.init()` + effect warmup +
+  // `AudioService.init()` can take many seconds — and audio_service's
+  // MediaBrowserServiceCompat connection can hang FOREVER on Samsung after a
+  // force-stop. Awaiting them before `runApp()` leaves a blank screen with a
+  // UI that never appears and playback that never starts.
+  // Playback paths call `ensureWarmedUp()` (bounded timeout) before loading
+  // audio, so the UI renders immediately and playback still works.
 
-    // P4.2: Replace fixed 200ms delay with retry-on-failure logic.
-    Future<void> tryApplyEq() async {
-      for (int attempt = 0; attempt < 3; attempt++) {
-        try {
-          effectService.applyAllEqualizer(settings.eqBandsNotifier.value);
-          return;
-        } catch (e, stack) {
-          AppLogger.e('main', 'Error in main', error: e, stack: stack);
-          if (attempt < 2) {
-            await Future<void>.delayed(const Duration(milliseconds: 100));
-          }
+  // P4.2: Replace fixed 200ms delay with retry-on-failure logic.
+  Future<void> tryApplyEq() async {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        effectService.applyAllEqualizer(settings.eqBandsNotifier.value);
+        return;
+      } catch (e, stack) {
+        AppLogger.e('main', 'EQ apply failed', error: e, stack: stack);
+        if (attempt < 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
         }
       }
-      AppLogger.w('main', 'EQ init failed after 3 retries');
     }
-
-    await tryApplyEq();
-
-    try {
-      effectService.setBassLevel(settings.eqBassNotifier.value);
-    } catch (e) {
-      AppLogger.w('main', 'Bass init failed', error: e);
-    }
-
-    try {
-      effectService.setCrossfadeDuration(
-        settings.crossfadeDurationNotifier.value,
-      );
-      effectService.crossfadeCurveNotifier.value =
-          settings.crossfadeCurveNotifier.value;
-      effectService.setNormalizationLevel(
-        settings.normalizationLevelNotifier.value,
-      );
-      effectService.enableNormalization(
-        settings.normalizationEnabledNotifier.value,
-      );
-      effectService.setPitchShift(settings.pitchShiftNotifier.value);
-      effectService.setReverbMix(settings.reverbMixNotifier.value);
-      effectService.setCompressionRatio(
-        settings.compressionRatioNotifier.value,
-      );
-    } catch (e) {
-      AppLogger.w('main', 'audio effects init failed', error: e);
-    }
-
-    try {
-      SoLoud.instance.setVisualizationEnabled(
-        settings.visualizerEnabledNotifier.value,
-      );
-    } catch (e) {
-      AppLogger.w('main', 'enable visualization failed', error: e);
-    }
-
-    initialScreen = const HomeScreen();
-  } catch (e, st) {
-    AppLogger.e('main', 'SoLoud init error', error: e, stack: st);
-    initialScreen = _buildErrorScreen(e, st, settings.localeNotifier.value);
+    AppLogger.w('main', 'EQ init failed after 3 retries');
   }
 
+  // SoLoud init + audio-effect warmup, run off the critical first-frame path.
+  // Failures are logged; playback will surface an error state instead of
+  // blocking startup.
+  Future<void> initAudioEngine() async {
+    try {
+      AppLogger.i('main', 'warming up audio engine (deferred)');
+      await engineService.warmupAsync();
+
+      await tryApplyEq();
+
+      try {
+        effectService.setBassLevel(settings.eqBassNotifier.value);
+      } catch (e) {
+        AppLogger.w('main', 'Bass init failed', error: e);
+      }
+
+      try {
+        effectService.setCrossfadeDuration(
+          settings.crossfadeDurationNotifier.value,
+        );
+        effectService.crossfadeCurveNotifier.value =
+            settings.crossfadeCurveNotifier.value;
+        effectService.setNormalizationLevel(
+          settings.normalizationLevelNotifier.value,
+        );
+        effectService.enableNormalization(
+          settings.normalizationEnabledNotifier.value,
+        );
+        effectService.setPitchShift(settings.pitchShiftNotifier.value);
+        effectService.setReverbMix(settings.reverbMixNotifier.value);
+        effectService.setCompressionRatio(
+          settings.compressionRatioNotifier.value,
+        );
+      } catch (e) {
+        AppLogger.w('main', 'audio effects init failed', error: e);
+      }
+
+      try {
+        SoLoud.instance.setVisualizationEnabled(
+          settings.visualizerEnabledNotifier.value,
+        );
+      } catch (e) {
+        AppLogger.w('main', 'enable visualization failed', error: e);
+      }
+
+      AppLogger.i('main', 'audio engine warmup complete');
+    } catch (e, st) {
+      AppLogger.e('main', 'audio engine warmup failed', error: e, stack: st);
+    }
+  }
+
+  // Defer audio engine init until after the first frame presents.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(initAudioEngine());
+  });
+
   // Desktop services
-  final caps = PlatformCapabilities.instance;
   final windowManager = WindowManagerService(settingsManager: settings);
   final desktopLyricsService = DesktopLyricsService(settingsManager: settings);
   final hotkeyService = HotkeyService(
@@ -244,10 +250,11 @@ Future<void> main() async {
     onOpenSettingsSearch: () {
       navigatorKey.currentState?.push(
         MaterialPageRoute<void>(
-          builder: (context) => const SettingsSearchDialog(),
+          builder: (final context) => const SettingsSearchDialog(),
         ),
       );
     },
+    onToggleMiniPlayer: () => windowManager.toggleMacMiniPlayerMode(),
   );
   final systemTrayService = SystemTrayService(
     audioEngineService: engineService,
@@ -262,6 +269,12 @@ Future<void> main() async {
 
   if (caps.isDesktop) {
     await windowManager.init();
+    // Hidden to tray / minimized → free decoded audio + image caches so
+    // background playback does not keep growing RAM (see user reports).
+    windowManager.onHiddenToTray = () {
+      engineService.releaseMemoryWhenHidden();
+      PaintingBinding.instance.imageCache.clear();
+    };
     desktopLyricsService.init();
     if (Platform.isWindows) {
       final smtcService = SmtcService(engineService, playlistService);
@@ -272,17 +285,55 @@ Future<void> main() async {
     // `runApp(...)`) so they do not block first paint.
   }
 
-  if (!kIsWeb && (Platform.isAndroid || Platform.isLinux)) {
-    await AudioService.init(
-      builder: () => GaSongAudioHandler(engineService, playlistService),
-      config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.ghitatruongle.gasong.channel.audio',
-        androidNotificationChannelName: 'GA Song Playback',
-        androidNotificationOngoing: true,
-      ),
-    );
-    // AudioHandler is used internally by audio_service, no need to store in providers
+  if (!kIsWeb &&
+      (Platform.isAndroid ||
+          Platform.isLinux ||
+          Platform.isIOS ||
+          Platform.isMacOS)) {
+    // audio_service's MediaBrowserServiceCompat connection can hang forever
+    // on some Samsung devices (notably after a force-stop); bound the wait so
+    // startup can never be blocked. Runs post-frame on purpose — playback
+    // itself does NOT depend on it (soloud plays directly).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await Future.any([
+          AudioService.init(
+            builder: () => GaSongAudioHandler(engineService, playlistService),
+            config: const AudioServiceConfig(
+              androidNotificationChannelId:
+                  'com.ghitatruongle.gasong.channel.audio',
+              androidNotificationChannelName: 'GA Song Playback',
+              androidNotificationOngoing: true,
+            ),
+          ),
+          Future<void>.delayed(const Duration(seconds: 12)),
+        ]);
+        AppLogger.i('main', 'AudioService initialized');
+      } catch (e, stack) {
+        AppLogger.w(
+          'main',
+          'AudioService init failed or timed out '
+              '(media notification unavailable)',
+          error: e,
+          stack: stack,
+        );
+      }
+    });
   }
+
+  // Defer PlatformService initialization (iOS/macOS/Web native features)
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    try {
+      await PlatformService.instance.initialize();
+    } catch (e, stack) {
+      AppLogger.w(
+        'main',
+        'PlatformService init failed',
+        error: e,
+        stack: stack,
+      );
+    }
+  });
 
   // P3.5: defer non-critical init until after first paint.
   // Future first-frame targets: lyrics DB warmup, smart playlist computation,
@@ -295,7 +346,7 @@ Future<void> main() async {
       try {
         await hotkeyService.init();
         if (!kDebugMode) await systemTrayService.init();
-        
+
         // Initialize protocol handler for gasong:// URIs
         final protocolHandler = ProtocolHandlerService(
           databaseService: dbService,
@@ -304,13 +355,10 @@ Future<void> main() async {
           settingsManager: settings,
         );
         await protocolHandler.init();
-        
+
         // Initialize Jump List service on Windows
         if (Platform.isWindows) {
-          final jumpListService = JumpListService(
-            settingsManager: settings,
-            databaseService: dbService,
-          );
+          final jumpListService = JumpListService();
           await jumpListService.init();
         }
       } catch (e, stack) {
@@ -323,6 +371,40 @@ Future<void> main() async {
       }
     });
   }
+
+  // Android & iOS: initialize the gasong:// protocol handler post-frame too
+  // (deep links arrive via app_links; playback itself never depends on it).
+  if (caps.isAndroid || caps.isIOS) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final protocolHandler = ProtocolHandlerService(
+          databaseService: dbService,
+          playlistService: playlistService,
+          audioEngineService: engineService,
+          settingsManager: settings,
+        );
+        await protocolHandler.init();
+      } catch (e, stack) {
+        AppLogger.w(
+          'main',
+          'deferred mobile protocol handler init failed',
+          error: e,
+          stack: stack,
+        );
+      }
+    });
+  }
+
+  AppLogger.i(
+    'main',
+    'startup: pre-runApp init took ${startupStopwatch.elapsedMilliseconds}ms',
+  );
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    AppLogger.i(
+      'main',
+      'first frame presented in ${startupStopwatch.elapsedMilliseconds}ms',
+    );
+  });
 
   runApp(
     ProviderScope(
@@ -339,18 +421,17 @@ Future<void> main() async {
         windowManagerServiceProvider.overrideWithValue(windowManager),
         desktopLyricsServiceProvider.overrideWithValue(desktopLyricsService),
         smartShuffleServiceProvider.overrideWithValue(SmartShuffleService()),
-        jumpListServiceProvider.overrideWithValue(JumpListService(
-          settingsManager: settings,
-          databaseService: dbService,
-        )),
-        protocolHandlerServiceProvider.overrideWithValue(ProtocolHandlerService(
-          databaseService: dbService,
-          playlistService: playlistService,
-          audioEngineService: engineService,
-          settingsManager: settings,
-        )),
+        jumpListServiceProvider.overrideWithValue(JumpListService()),
+        protocolHandlerServiceProvider.overrideWithValue(
+          ProtocolHandlerService(
+            databaseService: dbService,
+            playlistService: playlistService,
+            audioEngineService: engineService,
+            settingsManager: settings,
+          ),
+        ),
       ],
-      child: GASongApp(home: initialScreen),
+      child: const GASongApp(),
     ),
   );
 }
@@ -367,6 +448,16 @@ class GASongApp extends ConsumerStatefulWidget {
 class _GASongAppState extends ConsumerState<GASongApp> {
   late final Listenable _themeListenable;
 
+  // Q-12 perf: ColorScheme.fromSeed (esp. the `fidelity` variant) is a very
+  // expensive MCU palette computation — seconds on low-end devices
+  // (SM-J610F). Memoize the ThemeData instances and recompute only when the
+  // seed color or the native-window-effect flag actually changes; otherwise
+  // every theme-listenable tick rebuilds MaterialApp and re-runs fromSeed.
+  ThemeData? _cachedLightTheme;
+  ThemeData? _cachedDarkTheme;
+  Color? _cachedSeed;
+  bool? _cachedUseNative;
+
   @override
   void initState() {
     super.initState();
@@ -379,12 +470,16 @@ class _GASongAppState extends ConsumerState<GASongApp> {
       settings.dynamicPrimaryColorNotifier,
       settings.useNativeWindowEffectNotifier,
     ]);
-    
+
     // Initialize motion preferences from MediaQuery
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final motionPrefs = MotionPreferences.fromMediaQuery(MediaQuery.of(context));
-        ref.read(motionPreferencesNotifierProvider.notifier).setReduceMotion(motionPrefs.reduceMotion);
+        final motionPrefs = MotionPreferences.fromMediaQuery(
+          MediaQuery.of(context),
+        );
+        ref
+            .read(motionPreferencesNotifierProvider.notifier)
+            .setReduceMotion(motionPrefs.reduceMotion);
       }
     });
   }
@@ -396,17 +491,21 @@ class _GASongAppState extends ConsumerState<GASongApp> {
     // changes). Deferred so we don't modify the provider mid-build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final motionPrefs = MotionPreferences.fromMediaQuery(MediaQuery.of(context));
-      ref.read(motionPreferencesNotifierProvider.notifier).setReduceMotion(motionPrefs.reduceMotion);
+      final motionPrefs = MotionPreferences.fromMediaQuery(
+        MediaQuery.of(context),
+      );
+      ref
+          .read(motionPreferencesNotifierProvider.notifier)
+          .setReduceMotion(motionPrefs.reduceMotion);
     });
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final settings = ref.read(settingsManagerProvider);
 
     // Automatically update dynamic color when song changes
-    ref.listen(currentSongDominantColorProvider, (previous, next) {
+    ref.listen(currentSongDominantColorProvider, (final previous, final next) {
       if (next.hasValue && next.value != null) {
         settings.dynamicPrimaryColorNotifier.value = next.value;
       }
@@ -414,7 +513,7 @@ class _GASongAppState extends ConsumerState<GASongApp> {
 
     return AnimatedBuilder(
       animation: _themeListenable,
-      builder: (context, _) {
+      builder: (final context, _) {
         final themeMode = settings.themeModeNotifier.value;
         final useDynamic = settings.useDynamicColorNotifier.value;
         final customColor = settings.customPrimaryColorNotifier.value;
@@ -423,6 +522,55 @@ class _GASongAppState extends ConsumerState<GASongApp> {
         final primaryColor = useDynamic
             ? (dynamicColor ?? customColor)
             : customColor;
+
+        if (primaryColor != _cachedSeed || useNative != _cachedUseNative) {
+          _cachedSeed = primaryColor;
+          _cachedUseNative = useNative;
+          final themeSw = Stopwatch()..start();
+
+          final isAndroid =
+              !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+          // Android 8.1 has no Material You; `fidelity` only adds cost on
+          // low-tier hardware — use the cheaper tonalSpot there.
+          final lowTierAndroid =
+              isAndroid &&
+              PlatformCapabilities.instance.deviceTier == DeviceTier.low;
+          final variant = (isAndroid && !lowTierAndroid)
+              ? DynamicSchemeVariant.fidelity
+              : DynamicSchemeVariant.tonalSpot;
+
+          // Phase 4: Material 3 — derive ColorScheme.fromSeed for a richer,
+          // consistent palette instead of the legacy copyWith approach.
+          _cachedLightTheme = ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.light,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primaryColor,
+              dynamicSchemeVariant: variant,
+            ).copyWith(surface: AppColors.lightSurface),
+            scaffoldBackgroundColor: useNative
+                ? Colors.transparent
+                : AppColors.lightSurface2,
+          );
+          _cachedDarkTheme = ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: primaryColor,
+              brightness: Brightness.dark,
+              dynamicSchemeVariant: variant,
+            ).copyWith(surface: AppColors.darkSurface2),
+            scaffoldBackgroundColor: useNative
+                ? Colors.transparent
+                : AppColors.darkBackground,
+          );
+          AppLogger.i(
+            'main',
+            'theme rebuilt in ${themeSw.elapsedMilliseconds}ms '
+                '(seed=${primaryColor.toARGB32().toRadixString(16)}, '
+                'lowTier=$lowTierAndroid)',
+          );
+        }
 
         return MaterialApp(
           title: 'G.A - Song',
@@ -436,31 +584,9 @@ class _GASongAppState extends ConsumerState<GASongApp> {
             GlobalCupertinoLocalizations.delegate,
           ],
           themeMode: themeMode,
-          // Phase 4: Material 3 — derive ColorScheme.fromSeed for a richer,
-          // consistent palette instead of the legacy copyWith approach.
-          theme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: primaryColor,
-              brightness: Brightness.light,
-            ).copyWith(surface: AppColors.lightSurface),
-            scaffoldBackgroundColor: useNative
-                ? Colors.transparent
-                : AppColors.lightSurface2,
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.dark,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: primaryColor,
-              brightness: Brightness.dark,
-            ).copyWith(surface: AppColors.darkSurface2),
-            scaffoldBackgroundColor: useNative
-                ? Colors.transparent
-                : AppColors.darkBackground,
-          ),
-          builder: (context, child) {
+          theme: _cachedLightTheme!,
+          darkTheme: _cachedDarkTheme!,
+          builder: (final context, final child) {
             // Honor reduced-motion preference: disable all tickers
             // (animations, hero transitions, etc.) when the user has
             // requested reduced motion.
@@ -477,24 +603,26 @@ class _GASongAppState extends ConsumerState<GASongApp> {
               curve: AppCurves.emphasized,
               child: Shortcuts(
                 shortcuts: <LogicalKeySet, Intent>{
-                  LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK):
-                      const _OpenSettingsSearchIntent(),
+                  LogicalKeySet(
+                    LogicalKeyboardKey.control,
+                    LogicalKeyboardKey.keyK,
+                  ): const _OpenSettingsSearchIntent(),
                 },
                 child: Actions(
                   actions: <Type, Action<Intent>>{
-                    _OpenSettingsSearchIntent: CallbackAction<_OpenSettingsSearchIntent>(
-                      onInvoke: (_) => SettingsSearchDialog.show(context),
-                    ),
+                    _OpenSettingsSearchIntent:
+                        CallbackAction<_OpenSettingsSearchIntent>(
+                          onInvoke: (_) => SettingsSearchDialog.show(context),
+                        ),
                   },
                   child: FrameBudgetOverlayWrapper(
-                    enabled: kDebugMode,
                     child: child ?? const SizedBox.shrink(),
                   ),
                 ),
               ),
             );
           },
-          home: widget.home,
+          home: MacOSMenuBar(child: widget.home),
         );
       },
     );

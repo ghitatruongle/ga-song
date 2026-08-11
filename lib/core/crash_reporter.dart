@@ -9,16 +9,20 @@ abstract class CrashReporter {
   Future<void> init();
 
   /// Reports a non-fatal error.
-  void reportError(Object error, StackTrace stackTrace, {String? context});
+  void reportError(
+    final Object error,
+    final StackTrace stackTrace, {
+    final String? context,
+  });
 
   /// Reports a fatal crash.
-  void reportFatalError(Object error, StackTrace stackTrace);
+  void reportFatalError(final Object error, final StackTrace stackTrace);
 
   /// Sets the current user identifier for crash reports.
-  void setUser(String? userId);
+  void setUser(final String? userId);
 
   /// Adds breadcrumb for debugging context.
-  void addBreadcrumb(String message, {Map<String, dynamic>? data});
+  void addBreadcrumb(final String message, {final Map<String, dynamic>? data});
 
   /// Flushes any buffered reports.
   Future<void> flush();
@@ -41,7 +45,11 @@ class DebugCrashReporter implements CrashReporter {
   }
 
   @override
-  void reportError(Object error, StackTrace stackTrace, {String? context}) {
+  void reportError(
+    final Object error,
+    final StackTrace stackTrace, {
+    final String? context,
+  }) {
     final ctx = context != null ? '[$context] ' : '';
     AppLogger.w(
       _tag,
@@ -52,17 +60,17 @@ class DebugCrashReporter implements CrashReporter {
   }
 
   @override
-  void reportFatalError(Object error, StackTrace stackTrace) {
+  void reportFatalError(final Object error, final StackTrace stackTrace) {
     AppLogger.f(_tag, 'FATAL crash reported', error: error, stack: stackTrace);
   }
 
   @override
-  void setUser(String? userId) {
+  void setUser(final String? userId) {
     AppLogger.d(_tag, 'User set: $userId');
   }
 
   @override
-  void addBreadcrumb(String message, {Map<String, dynamic>? data}) {
+  void addBreadcrumb(final String message, {final Map<String, dynamic>? data}) {
     final dataStr = data != null ? ' $data' : '';
     AppLogger.d(_tag, 'Breadcrumb: $message$dataStr');
   }

@@ -7,10 +7,11 @@
 /// - gasong://search?q=<query>
 /// - gasong://settings?page=<page_name>
 /// - gasong://library?view=<view_name>
+library;
 
 import 'dart:async';
 
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 
 import '../logging/app_logger.dart';
 import '../platform_capabilities.dart';
@@ -19,6 +20,8 @@ import '../audio/playlist_service.dart';
 import '../audio/audio_engine_service.dart';
 import '../settings_manager.dart';
 import '../../models/song.dart';
+
+final _appLinks = AppLinks();
 
 /// Supported protocol actions
 enum ProtocolAction {
@@ -114,23 +117,29 @@ class ProtocolHandlerService {
 
     try {
       // Handle initial URI if app was launched via protocol
-      final initialUri = await getInitialUri();
+      final initialUri = await _appLinks.getInitialAppLink();
       if (initialUri != null) {
         await handleUri(initialUri);
       }
 
       // Listen for subsequent URI links
-      _uriSubscription = uriLinkStream.listen((uri) {
-        if (uri != null) {
+      _uriSubscription = _appLinks.uriLinkStream.listen(
+        (uri) {
           handleUri(uri);
-        }
-      }, onError: (err) {
-        AppLogger.w('protocol_handler', 'URI link stream error', error: err);
-      });
+        },
+        onError: (err) {
+          AppLogger.w('protocol_handler', 'URI link stream error', error: err);
+        },
+      );
 
       AppLogger.i('protocol_handler', 'Protocol handler initialized');
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to initialize protocol handler', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to initialize protocol handler',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -175,7 +184,12 @@ class ProtocolHandlerService {
           AppLogger.w('protocol_handler', 'Unknown action: ${result.action}');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to handle URI', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to handle URI',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -191,15 +205,22 @@ class ProtocolHandlerService {
     }
 
     final songId = int.tryParse(songIdStr);
-    final playlistId = playlistIdStr != null ? int.tryParse(playlistIdStr) : null;
-    final position = positionStr != null ? Duration(seconds: int.tryParse(positionStr) ?? 0) : null;
+    final playlistId = playlistIdStr != null
+        ? int.tryParse(playlistIdStr)
+        : null;
+    final position = positionStr != null
+        ? Duration(seconds: int.tryParse(positionStr) ?? 0)
+        : null;
 
     if (songId == null) {
       AppLogger.w('protocol_handler', 'Invalid song ID: $songIdStr');
       return;
     }
 
-    AppLogger.i('protocol_handler', 'Play song: $songId, playlist: $playlistId, position: $position');
+    AppLogger.i(
+      'protocol_handler',
+      'Play song: $songId, playlist: $playlistId, position: $position',
+    );
 
     try {
       // Get song from database
@@ -211,7 +232,8 @@ class ProtocolHandlerService {
 
       // If playlist is specified, set the playlist first
       if (playlistId != null) {
-        final playlistSongs = await _databaseService?.getPlaylistSongsDirect(playlistId) ?? [];
+        final playlistSongs =
+            await _databaseService?.getPlaylistSongsDirect(playlistId) ?? [];
         if (playlistSongs.isNotEmpty) {
           // Set playlist with song at specified index
           final index = playlistSongs.indexWhere((s) => s.id == songId);
@@ -226,7 +248,12 @@ class ProtocolHandlerService {
       // Play single song
       await _playSingleSong(song, position);
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to play song', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to play song',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -236,20 +263,34 @@ class ProtocolHandlerService {
     final shuffleStr = params['shuffle'];
     final view = params['view'];
 
-    final playlistId = playlistIdStr != null ? int.tryParse(playlistIdStr) : null;
-    final shuffle = shuffleStr != null ? shuffleStr.toLowerCase() == 'true' : null;
+    final playlistId = playlistIdStr != null
+        ? int.tryParse(playlistIdStr)
+        : null;
+    final shuffle = shuffleStr != null
+        ? shuffleStr.toLowerCase() == 'true'
+        : null;
 
     if (playlistId == null) {
-      AppLogger.w('protocol_handler', 'Playlist action requires playlist parameter');
+      AppLogger.w(
+        'protocol_handler',
+        'Playlist action requires playlist parameter',
+      );
       return;
     }
 
-    AppLogger.i('protocol_handler', 'Open playlist: $playlistId, shuffle: $shuffle, view: $view');
+    AppLogger.i(
+      'protocol_handler',
+      'Open playlist: $playlistId, shuffle: $shuffle, view: $view',
+    );
 
     try {
-      final playlistSongs = await _databaseService?.getPlaylistSongsDirect(playlistId) ?? [];
+      final playlistSongs =
+          await _databaseService?.getPlaylistSongsDirect(playlistId) ?? [];
       if (playlistSongs.isEmpty) {
-        AppLogger.w('protocol_handler', 'Playlist not found or empty: $playlistId');
+        AppLogger.w(
+          'protocol_handler',
+          'Playlist not found or empty: $playlistId',
+        );
         return;
       }
 
@@ -260,7 +301,12 @@ class ProtocolHandlerService {
 
       await _setPlaylistViaProvider(playlistSongs);
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to open playlist', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to open playlist',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -284,7 +330,12 @@ class ProtocolHandlerService {
         AppLogger.i('protocol_handler', 'No search results for: $query');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to search', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to search',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -293,7 +344,10 @@ class ProtocolHandlerService {
     final page = params['page'];
     final subsection = params['subsection'];
 
-    AppLogger.i('protocol_handler', 'Open settings: page=$page, subsection=$subsection');
+    AppLogger.i(
+      'protocol_handler',
+      'Open settings: page=$page, subsection=$subsection',
+    );
 
     // Navigate to settings tab via provider
     try {
@@ -304,7 +358,12 @@ class ProtocolHandlerService {
         AppLogger.i('protocol_handler', 'Navigated to settings tab');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to open settings', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to open settings',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -324,7 +383,12 @@ class ProtocolHandlerService {
         AppLogger.i('protocol_handler', 'Navigated to library tab');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to open library', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to open library',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -355,7 +419,10 @@ class ProtocolHandlerService {
             final index = playlist.playlist.indexWhere((s) => s.id == songId);
             if (index >= 0) {
               await playlist.remove(index);
-              AppLogger.i('protocol_handler', 'Removed song $songId from queue');
+              AppLogger.i(
+                'protocol_handler',
+                'Removed song $songId from queue',
+              );
             }
           }
           break;
@@ -367,7 +434,12 @@ class ProtocolHandlerService {
           AppLogger.w('protocol_handler', 'Unknown queue action: $action');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to manipulate queue', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to manipulate queue',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -388,7 +460,12 @@ class ProtocolHandlerService {
         AppLogger.i('protocol_handler', 'Navigated to KTV tab for lyrics');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to open lyrics', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to open lyrics',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -397,9 +474,14 @@ class ProtocolHandlerService {
     final shapeStr = params['shape'];
     final fullscreenStr = params['fullscreen'];
     final shape = shapeStr != null ? int.tryParse(shapeStr) : null;
-    final fullscreen = fullscreenStr != null ? fullscreenStr.toLowerCase() == 'true' : null;
+    final fullscreen = fullscreenStr != null
+        ? fullscreenStr.toLowerCase() == 'true'
+        : null;
 
-    AppLogger.i('protocol_handler', 'Open visualizer: shape=$shape, fullscreen=$fullscreen');
+    AppLogger.i(
+      'protocol_handler',
+      'Open visualizer: shape=$shape, fullscreen=$fullscreen',
+    );
 
     try {
       final settings = _getSettingsManager();
@@ -413,7 +495,12 @@ class ProtocolHandlerService {
         AppLogger.i('protocol_handler', 'Navigated to visualizer tab');
       }
     } catch (e, stack) {
-      AppLogger.e('protocol_handler', 'Failed to open visualizer', error: e, stack: stack);
+      AppLogger.e(
+        'protocol_handler',
+        'Failed to open visualizer',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -477,13 +564,15 @@ class ProtocolHandlerService {
     int? playlistId,
     Duration? position,
   }) {
-    final params = <String, String>{
-      'song': songId.toString(),
-    };
+    final params = <String, String>{'song': songId.toString()};
     if (playlistId != null) params['playlist'] = playlistId.toString();
     if (position != null) params['position'] = position.inSeconds.toString();
 
-    return Uri(scheme: 'gasong', host: 'play', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'play',
+      queryParameters: params,
+    ).toString();
   }
 
   static String generatePlaylistUri({
@@ -496,70 +585,80 @@ class ProtocolHandlerService {
     if (shuffle != null) params['shuffle'] = shuffle.toString();
     if (view != null) params['view'] = view;
 
-    return Uri(scheme: 'gasong', host: 'playlist', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'playlist',
+      queryParameters: params,
+    ).toString();
   }
 
-  static String generateSearchUri({
-    required String query,
-    String? type,
-  }) {
+  static String generateSearchUri({required String query, String? type}) {
     final params = <String, String>{'q': query};
     if (type != null) params['type'] = type;
 
-    return Uri(scheme: 'gasong', host: 'search', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'search',
+      queryParameters: params,
+    ).toString();
   }
 
-  static String generateSettingsUri({
-    String? page,
-    String? subsection,
-  }) {
+  static String generateSettingsUri({String? page, String? subsection}) {
     final params = <String, String>{};
     if (page != null) params['page'] = page;
     if (subsection != null) params['subsection'] = subsection;
 
-    return Uri(scheme: 'gasong', host: 'settings', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'settings',
+      queryParameters: params,
+    ).toString();
   }
 
-  static String generateLibraryUri({
-    String? view,
-    String? filter,
-  }) {
+  static String generateLibraryUri({String? view, String? filter}) {
     final params = <String, String>{};
     if (view != null) params['view'] = view;
     if (filter != null) params['filter'] = filter;
 
-    return Uri(scheme: 'gasong', host: 'library', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'library',
+      queryParameters: params,
+    ).toString();
   }
 
-  static String generateQueueUri({
-    required String action,
-    int? songId,
-  }) {
+  static String generateQueueUri({required String action, int? songId}) {
     final params = <String, String>{'action': action};
     if (songId != null) params['song'] = songId.toString();
 
-    return Uri(scheme: 'gasong', host: 'queue', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'queue',
+      queryParameters: params,
+    ).toString();
   }
 
-  static String generateLyricsUri({
-    required int songId,
-    int? line,
-  }) {
+  static String generateLyricsUri({required int songId, int? line}) {
     final params = <String, String>{'song': songId.toString()};
     if (line != null) params['line'] = line.toString();
 
-    return Uri(scheme: 'gasong', host: 'lyrics', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'lyrics',
+      queryParameters: params,
+    ).toString();
   }
 
-  static String generateVisualizerUri({
-    int? shape,
-    bool? fullscreen,
-  }) {
+  static String generateVisualizerUri({int? shape, bool? fullscreen}) {
     final params = <String, String>{};
     if (shape != null) params['shape'] = shape.toString();
     if (fullscreen != null) params['fullscreen'] = fullscreen.toString();
 
-    return Uri(scheme: 'gasong', host: 'visualizer', queryParameters: params).toString();
+    return Uri(
+      scheme: 'gasong',
+      host: 'visualizer',
+      queryParameters: params,
+    ).toString();
   }
 
   void dispose() {

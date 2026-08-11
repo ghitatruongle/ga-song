@@ -26,7 +26,8 @@ class ReorderablePlaylistView extends ConsumerStatefulWidget {
       _ReorderablePlaylistViewState();
 }
 
-class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistView> {
+class _ReorderablePlaylistViewState
+    extends ConsumerState<ReorderablePlaylistView> {
   late Future<List<Song>> _songsFuture;
   bool _isReordering = false;
 
@@ -37,7 +38,7 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
   }
 
   @override
-  void didUpdateWidget(covariant ReorderablePlaylistView oldWidget) {
+  void didUpdateWidget(covariant final ReorderablePlaylistView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.playlistId != widget.playlistId) {
       _loadSongs();
@@ -50,16 +51,15 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
 
   Future<List<Song>> _fetchPlaylistSongs() async {
     final db = ref.read(databaseServiceProvider);
-    return await db.getPlaylistSongsDirect(widget.playlistId);
+    return db.getPlaylistSongsDirect(widget.playlistId);
   }
 
-  Future<void> _onReorderItem(int oldIndex, int newIndex) async {
+  Future<void> _onReorderItem(final int oldIndex, int newIndex) async {
     if (_isReordering) return;
     setState(() => _isReordering = true);
 
     try {
       final snapshot = await _songsFuture;
-      if (oldIndex < newIndex) newIndex -= 1;
 
       final moved = snapshot[oldIndex];
       final reordered = List<Song>.from(snapshot);
@@ -68,7 +68,10 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
 
       // Persist new order to DB
       final db = ref.read(databaseServiceProvider);
-      final songIds = reordered.where((s) => s.id != null).map((s) => s.id!).toList();
+      final songIds = reordered
+          .where((final s) => s.id != null)
+          .map((final s) => s.id!)
+          .toList();
       await db.reorderPlaylistSongs(widget.playlistId, songIds);
 
       // Refresh the list
@@ -76,16 +79,12 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
         _songsFuture = _fetchPlaylistSongs();
       });
 
-      // If this playlist is currently playing, update the queue order
+      // If this playlist is currently playing, update the queue order.
+      // NOTE: only reorder the queue — do NOT call playSongAt() here, it
+      // would restart the currently playing song from position 0.
       final playlistService = ref.read(playlistServiceProvider);
       if (playlistService.currentSong != null) {
-        final currentFileName = playlistService.currentSong!.fileName;
-        final currentInNewOrder =
-            reordered.indexWhere((s) => s.fileName == currentFileName);
-        if (currentInNewOrder >= 0) {
-          playlistService.reorderPlaylist(reordered);
-          playlistService.playSongAt(currentInNewOrder);
-        }
+        playlistService.reorderPlaylist(reordered);
       }
     } finally {
       if (mounted) setState(() => _isReordering = false);
@@ -93,7 +92,7 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final adaptiveColor = context.adaptive;
 
     return Scaffold(
@@ -143,7 +142,7 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
           Expanded(
             child: FutureBuilder<List<Song>>(
               future: _songsFuture,
-              builder: (context, snapshot) {
+              builder: (final context, final snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
                     child: CircularProgressIndicator(color: adaptiveColor),
@@ -153,7 +152,9 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
                   return Center(
                     child: Text(
                       'Lỗi tải danh sách bài hát',
-                      style: TextStyle(color: adaptiveColor.withValues(alpha: 0.6)),
+                      style: TextStyle(
+                        color: adaptiveColor.withValues(alpha: 0.6),
+                      ),
                     ),
                   );
                 }
@@ -162,7 +163,9 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
                   return Center(
                     child: Text(
                       'Playlist trống',
-                      style: TextStyle(color: adaptiveColor.withValues(alpha: 0.5)),
+                      style: TextStyle(
+                        color: adaptiveColor.withValues(alpha: 0.5),
+                      ),
                     ),
                   );
                 }
@@ -172,7 +175,7 @@ class _ReorderablePlaylistViewState extends ConsumerState<ReorderablePlaylistVie
                   padding: const EdgeInsets.fromLTRB(40, 0, 40, 80),
                   itemCount: songs.length,
                   buildDefaultDragHandles: false,
-                  itemBuilder: (context, index) {
+                  itemBuilder: (final context, final index) {
                     final song = songs[index];
                     return _ReorderableSongTile(
                       key: ValueKey<int>(song.id != null ? song.id! : index),
@@ -204,7 +207,7 @@ class _ReorderableSongTile extends ConsumerWidget {
   final int playlistId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final adaptiveColor = context.adaptive;
     final isDark = context.isDark;
     final playlistService = ref.read(playlistServiceProvider);
@@ -222,7 +225,10 @@ class _ReorderableSongTile extends ConsumerWidget {
         index: index,
         child: ListTile(
           dense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
           leading: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -241,8 +247,7 @@ class _ReorderableSongTile extends ConsumerWidget {
                   song: song,
                   cacheWidth: 80,
                   cacheHeight: 80,
-                  fit: BoxFit.cover,
-                  fallbackBuilder: (context) => Container(
+                  fallbackBuilder: (final context) => ColoredBox(
                     color: AppColors.darkSurface2,
                     child: Icon(
                       Icons.music_note_rounded,
@@ -285,11 +290,13 @@ class _ReorderableSongTile extends ConsumerWidget {
           onTap: () {
             // Play this song in the context of the playlist
             final db = ref.read(databaseServiceProvider);
-            db.getPlaylistSongsDirect(playlistId).then((songs) {
+            db.getPlaylistSongsDirect(playlistId).then((final songs) {
               final currentPlaylist = ref.read(playlistServiceProvider);
               if (currentPlaylist.currentSong?.fileName != song.fileName) {
                 currentPlaylist.reorderPlaylist(songs);
-                final idx = songs.indexWhere((s) => s.fileName == song.fileName);
+                final idx = songs.indexWhere(
+                  (final s) => s.fileName == song.fileName,
+                );
                 if (idx >= 0) {
                   currentPlaylist.playSongAt(idx);
                 }
@@ -302,7 +309,7 @@ class _ReorderableSongTile extends ConsumerWidget {
     );
   }
 
-  static String _formatDuration(int ms) {
+  static String _formatDuration(final int ms) {
     final totalSec = ms ~/ 1000;
     final min = totalSec ~/ 60;
     final sec = totalSec % 60;

@@ -18,7 +18,7 @@ class ErrorHandlerService {
   ///
   /// Catches [AppException] and unexpected exceptions, logs them,
   /// and returns a [Failure] with the error message.
-  Result<T> handle<T>(T Function() operation, {String? context}) {
+  Result<T> handle<T>(final T Function() operation, {final String? context}) {
     try {
       final result = operation();
       return Success(result);
@@ -36,8 +36,8 @@ class ErrorHandlerService {
   /// Catches [AppException] and unexpected exceptions, logs them,
   /// and returns a [Failure] with the error message.
   Future<Result<T>> handleAsync<T>(
-    Future<T> Function() operation, {
-    String? context,
+    final Future<T> Function() operation, {
+    final String? context,
   }) async {
     try {
       final result = await operation();
@@ -56,16 +56,28 @@ class ErrorHandlerService {
   /// Catches [AppException] and unexpected exceptions, logs them,
   /// and yields [Failure] for error events.
   Stream<Result<T>> handleStream<T>(
-    Stream<T> stream, {
-    String? context,
+    final Stream<T> stream, {
+    final String? context,
   }) async* {
-    await for (final event in stream) {
-      yield Success(event);
+    try {
+      await for (final event in stream) {
+        yield Success(event);
+      }
+    } on AppException catch (e, stack) {
+      _reportError(e, stack, context: context);
+      yield Failure(e.message, stack, e);
+    } catch (e, stack) {
+      _reportError(e, stack, context: context);
+      yield Failure('Unexpected error: $e', stack, e);
     }
   }
 
   /// Reports an error to the crash reporter and debug console.
-  void _reportError(Object error, StackTrace stackTrace, {String? context}) {
+  void _reportError(
+    final Object error,
+    final StackTrace stackTrace, {
+    final String? context,
+  }) {
     // Log to debug console
     if (kDebugMode) {
       AppLogger.w(
@@ -85,9 +97,9 @@ class ErrorHandlerService {
   /// Use this when you want to convert an exception to a [Failure]
   /// without catching it.
   static Failure<T> failureFromException<T>(
-    Object exception,
-    StackTrace stackTrace, {
-    String? context,
+    final Object exception,
+    final StackTrace stackTrace, {
+    final String? context,
   }) {
     final message = exception is AppException
         ? exception.message

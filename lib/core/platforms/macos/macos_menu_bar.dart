@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/service_providers.dart';
+import '../../audio/audio_engine_service.dart';
 
 /// macOS menu bar configuration for G.A Song.
 ///
 /// Provides native macOS menu bar items for playback control,
 /// window management, and app features.
-class MacOSMenuBar extends StatelessWidget {
+class MacOSMenuBar extends ConsumerWidget {
   /// Child widget.
   final Widget child;
 
@@ -37,8 +40,23 @@ class MacOSMenuBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     if (!Platform.isMacOS) return child;
+
+    final playlistService = ref.read(playlistServiceProvider);
+    final engineService = ref.read(audioEngineServiceProvider);
+
+    final handlePlayPause =
+        onPlayPause ??
+        () {
+          if (engineService.engineState.value == AudioEngineState.playing) {
+            engineService.pause();
+          } else {
+            playlistService.play();
+          }
+        };
+    final handleNext = onNext ?? () => playlistService.next();
+    final handlePrevious = onPrevious ?? () => playlistService.previous();
 
     return PlatformMenuBar(
       menus: [
@@ -121,7 +139,7 @@ class MacOSMenuBar extends StatelessWidget {
                 PlatformMenuItem(
                   label: 'Play/Pause',
                   shortcut: const SingleActivator(LogicalKeyboardKey.space),
-                  onSelected: () => onPlayPause?.call(),
+                  onSelected: handlePlayPause,
                 ),
                 PlatformMenuItem(
                   label: 'Next',
@@ -129,7 +147,7 @@ class MacOSMenuBar extends StatelessWidget {
                     LogicalKeyboardKey.arrowRight,
                     meta: true,
                   ),
-                  onSelected: () => onNext?.call(),
+                  onSelected: handleNext,
                 ),
                 PlatformMenuItem(
                   label: 'Previous',
@@ -137,7 +155,7 @@ class MacOSMenuBar extends StatelessWidget {
                     LogicalKeyboardKey.arrowLeft,
                     meta: true,
                   ),
-                  onSelected: () => onPrevious?.call(),
+                  onSelected: handlePrevious,
                 ),
               ],
             ),
@@ -167,7 +185,7 @@ class MacOSMenuBar extends StatelessWidget {
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(final BuildContext context) {
     showAboutDialog(
       context: context,
       applicationName: 'G.A Song',

@@ -16,7 +16,7 @@ class AmbientGlowPainter extends CustomPainter {
   final Paint _paint;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.smoothEnergy <= 0.01) {
       return;
@@ -33,22 +33,20 @@ class AmbientGlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant AmbientGlowPainter oldDelegate) {
-    return oldDelegate.controller != controller || oldDelegate.color != color;
-  }
+  bool shouldRepaint(covariant final AmbientGlowPainter oldDelegate) =>
+      oldDelegate.controller != controller || oldDelegate.color != color;
 }
 
 class ParticlePainter extends CustomPainter {
   ParticlePainter({required this.controller})
-    : _paint = Paint()
-        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0),
+    : _paint = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2),
       super(repaint: controller);
 
   final VisualizerController controller;
   final Paint _paint;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final particles = controller.snapshot.particles;
     for (final particle in particles) {
       _paint.color = particle.color.withValues(
@@ -59,9 +57,8 @@ class ParticlePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant ParticlePainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant final ParticlePainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class CircleVisualizerPainter extends CustomPainter {
@@ -70,7 +67,7 @@ class CircleVisualizerPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5.0
         ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4.0),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4),
       super(repaint: controller);
 
   final VisualizerController controller;
@@ -83,20 +80,20 @@ class CircleVisualizerPainter extends CustomPainter {
     _lutSize,
     Colors.transparent,
   );
-  double _lastBaseHue = -999.0;
+  double _lastBaseHue = -999;
 
-  void _rebuildLut(double baseHue) {
+  void _rebuildLut(final double baseHue) {
     if ((baseHue - _lastBaseHue).abs() < 0.5) return;
     _lastBaseHue = baseHue;
     for (int i = 0; i < _lutSize; i++) {
       final ratio = i / (_lutSize - 1);
       final hue = (baseHue - ratio * 60).clamp(0.0, 360.0);
-      _colorLut[i] = HSVColor.fromAHSV(0.9, hue, 1.0, 1.0).toColor();
+      _colorLut[i] = HSVColor.fromAHSV(0.9, hue, 1, 1).toColor();
     }
   }
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.fftData.isEmpty) return;
 
@@ -137,9 +134,8 @@ class CircleVisualizerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CircleVisualizerPainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant final CircleVisualizerPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class BarVisualizerPainter extends CustomPainter {
@@ -147,7 +143,7 @@ class BarVisualizerPainter extends CustomPainter {
     : _barPaint = Paint()..style = PaintingStyle.fill,
       _reflectionPaint = Paint()
         ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
       _highlightPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0,
@@ -162,22 +158,22 @@ class BarVisualizerPainter extends CustomPainter {
   static const int _lutSize = 20;
   final List<Color> _barLut = List<Color>.filled(_lutSize, Colors.transparent);
   final List<Color> _refLut = List<Color>.filled(_lutSize, Colors.transparent);
-  double _lastBaseHue = -999.0;
+  double _lastBaseHue = -999;
   static final Color _highlightColor = Colors.white.withValues(alpha: 0.3);
 
-  void _rebuildLut(double baseHue) {
+  void _rebuildLut(final double baseHue) {
     if ((baseHue - _lastBaseHue).abs() < 0.5) return;
     _lastBaseHue = baseHue;
     for (int i = 0; i < _lutSize; i++) {
       final ratio = i / (_lutSize - 1);
       final hue = (baseHue - ratio * 60).clamp(0.0, 360.0);
-      _barLut[i] = HSVColor.fromAHSV(0.9, hue, 0.9, 1.0).toColor();
-      _refLut[i] = HSVColor.fromAHSV(0.2, hue, 0.8, 1.0).toColor();
+      _barLut[i] = HSVColor.fromAHSV(0.9, hue, 0.9, 1).toColor();
+      _refLut[i] = HSVColor.fromAHSV(0.2, hue, 0.8, 1).toColor();
     }
   }
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.fftData.isEmpty) return;
 
@@ -232,9 +228,8 @@ class BarVisualizerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant BarVisualizerPainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant final BarVisualizerPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class WaveVisualizerPainter extends CustomPainter {
@@ -245,7 +240,7 @@ class WaveVisualizerPainter extends CustomPainter {
       _strokePaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2),
       super(repaint: controller);
 
   final VisualizerController controller;
@@ -263,7 +258,11 @@ class WaveVisualizerPainter extends CustomPainter {
   ];
   final List<Shader?> _cachedShaders = [null, null, null];
 
-  Shader _getLayerShader(int layer, Color layerColor, Size size) {
+  Shader _getLayerShader(
+    final int layer,
+    final Color layerColor,
+    final Size size,
+  ) {
     final sizeChanged = size != _cachedShaderSize;
     final colorChanged = _cachedLayerColors[layer] != layerColor;
     if (sizeChanged || colorChanged || _cachedShaders[layer] == null) {
@@ -272,14 +271,14 @@ class WaveVisualizerPainter extends CustomPainter {
       _cachedShaders[layer] = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: <Color>[layerColor, layerColor.withValues(alpha: 0.0)],
+        colors: <Color>[layerColor, layerColor.withValues(alpha: 0)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     }
     return _cachedShaders[layer]!;
   }
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.fftData.isEmpty) {
       return;
@@ -338,26 +337,20 @@ class WaveVisualizerPainter extends CustomPainter {
         0.8 - (layer * 0.2),
         dynamicHue,
         0.9,
-        1.0,
+        1,
       ).toColor();
 
       _fillPaint.shader = _getLayerShader(layer, layerColor, size);
       canvas.drawPath(_layerPath, _fillPaint);
 
-      _strokePaint.color = HSVColor.fromAHSV(
-        1.0,
-        dynamicHue,
-        0.5,
-        1.0,
-      ).toColor();
+      _strokePaint.color = HSVColor.fromAHSV(1, dynamicHue, 0.5, 1).toColor();
       canvas.drawPath(_edgePath, _strokePaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant WaveVisualizerPainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant final WaveVisualizerPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class SpectrumTunnelPainter extends CustomPainter {
@@ -375,22 +368,22 @@ class SpectrumTunnelPainter extends CustomPainter {
   // Cached MaskFilter objects — MaskFilter is immutable, safe to reuse
   static final List<MaskFilter> _ringBlurCache = List<MaskFilter>.generate(
     21,
-    (i) => MaskFilter.blur(BlurStyle.solid, 3.0 + i * 0.3),
+    (final i) => MaskFilter.blur(BlurStyle.solid, 3.0 + i * 0.3),
   );
   static final List<MaskFilter> _glowBlurCache = List<MaskFilter>.generate(
     21,
-    (i) => MaskFilter.blur(BlurStyle.normal, 40.0 + i * 3.0),
+    (final i) => MaskFilter.blur(BlurStyle.normal, 40.0 + i * 3.0),
   );
 
   // P1.4: 36-slot hue ring LUT (10° per slot) at sat=0.9, val=1.0.
   // Ring and glow colors are computed via simple index lookup.
   static final List<Color> _hueLut = List<Color>.generate(
     36,
-    (i) => HSVColor.fromAHSV(1.0, i * 10.0, 0.9, 1.0).toColor(),
+    (final i) => HSVColor.fromAHSV(1, i * 10.0, 0.9, 1).toColor(),
   );
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.fftData.isEmpty) return;
 
@@ -461,9 +454,8 @@ class SpectrumTunnelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant SpectrumTunnelPainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant final SpectrumTunnelPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class StarfieldPainter extends CustomPainter {
@@ -492,7 +484,7 @@ class StarfieldPainter extends CustomPainter {
   // starSize is quantized to 16 steps
   static final List<MaskFilter> _starBlurCache = List<MaskFilter>.generate(
     16,
-    (i) => MaskFilter.blur(BlurStyle.solid, 0.5 + i * 0.25),
+    (final i) => MaskFilter.blur(BlurStyle.solid, 0.5 + i * 0.25),
   );
 
   // #11: Cache wave shader — recreate only when size changes
@@ -501,7 +493,7 @@ class StarfieldPainter extends CustomPainter {
   Shader? _cachedWaveShader;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
 
     // P3.2.5: Prefer the typed-array snapshot produced on an isolate.
@@ -531,7 +523,10 @@ class StarfieldPainter extends CustomPainter {
   /// applied here. The visual style is intentionally simpler than the
   /// legacy branch (dots with z-based size and alpha, no trails) to keep
   /// the inner loop allocation-free.
-  void _paintStarFieldFromSnapshot(Canvas canvas, StarFieldSnapshot snap) {
+  void _paintStarFieldFromSnapshot(
+    final Canvas canvas,
+    final StarFieldSnapshot snap,
+  ) {
     final positions = snap.positions;
     final colors = snap.colors;
     final radii = snap.radii;
@@ -568,9 +563,9 @@ class StarfieldPainter extends CustomPainter {
   /// trails. This branch is retained as a fallback during the migration
   /// window when the typed-array snapshot is not yet available.
   void _paintStarFieldFromLegacyStars(
-    Canvas canvas,
-    Size size,
-    UnmodifiableListView<Star> stars,
+    final Canvas canvas,
+    final Size size,
+    final UnmodifiableListView<Star> stars,
   ) {
     final center = Offset(size.width / 2, size.height / 2);
     final snapshot = controller.snapshot;
@@ -633,9 +628,9 @@ class StarfieldPainter extends CustomPainter {
   }
 
   void _drawBottomWave(
-    Canvas canvas,
-    Size size,
-    VisualizerFrameSnapshot snapshot,
+    final Canvas canvas,
+    final Size size,
+    final VisualizerFrameSnapshot snapshot,
   ) {
     _wavePath.reset();
     const points = 60;
@@ -656,7 +651,7 @@ class StarfieldPainter extends CustomPainter {
       ..close();
 
     final baseHue = (1.0 - min(snapshot.smoothEnergy * 2.5, 1.0)) * 270.0;
-    final waveColor = HSVColor.fromAHSV(0.3, baseHue, 0.7, 1.0).toColor();
+    final waveColor = HSVColor.fromAHSV(0.3, baseHue, 0.7, 1).toColor();
     final waveRect = Rect.fromLTWH(
       0,
       baseY - waveHeight * 3,
@@ -672,7 +667,7 @@ class StarfieldPainter extends CustomPainter {
       _cachedWaveShader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: <Color>[waveColor, waveColor.withValues(alpha: 0.0)],
+        colors: <Color>[waveColor, waveColor.withValues(alpha: 0)],
       ).createShader(waveRect);
     }
     _wavePaint.shader = _cachedWaveShader;
@@ -681,9 +676,8 @@ class StarfieldPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant StarfieldPainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant final StarfieldPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
 
 class OscilloscopePainter extends CustomPainter {
@@ -695,7 +689,7 @@ class OscilloscopePainter extends CustomPainter {
       _glowPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
       _gridPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 0.5,
@@ -709,12 +703,12 @@ class OscilloscopePainter extends CustomPainter {
   final Path _wavePath;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     _drawGrid(canvas, size);
     _drawWaveform(canvas, size);
   }
 
-  void _drawGrid(Canvas canvas, Size size) {
+  void _drawGrid(final Canvas canvas, final Size size) {
     _gridPaint.color = Colors.green.withValues(alpha: 0.1);
     for (int i = 0; i <= 10; i++) {
       final x = size.width * i / 10;
@@ -726,7 +720,7 @@ class OscilloscopePainter extends CustomPainter {
     }
   }
 
-  void _drawWaveform(Canvas canvas, Size size) {
+  void _drawWaveform(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.fftData.isEmpty) {
       return;
@@ -756,7 +750,7 @@ class OscilloscopePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant OscilloscopePainter oldDelegate) =>
+  bool shouldRepaint(covariant final OscilloscopePainter oldDelegate) =>
       oldDelegate.controller != controller;
 }
 
@@ -775,22 +769,22 @@ class RadialBurstPainter extends CustomPainter {
   // B3 & B5 fix: Cache MaskFilters for rays and glow to avoid GC pressure
   static final List<MaskFilter> _rayBlurCache = List<MaskFilter>.generate(
     21,
-    (i) => MaskFilter.blur(BlurStyle.solid, 2.0 + (i / 20.0) * 4.0),
+    (final i) => MaskFilter.blur(BlurStyle.solid, 2.0 + (i / 20.0) * 4.0),
   );
 
   static final List<MaskFilter> _glowBlurCache = List<MaskFilter>.generate(
     21,
-    (i) => MaskFilter.blur(BlurStyle.normal, 20.0 + (i / 20.0) * 40.0),
+    (final i) => MaskFilter.blur(BlurStyle.normal, 20.0 + (i / 20.0) * 40.0),
   );
 
   // P1.4: 36-slot hue ring LUT (10° per slot) at sat=0.9, val=1.0.
   static final List<Color> _hueLut = List<Color>.generate(
     36,
-    (i) => HSVColor.fromAHSV(1.0, i * 10.0, 0.9, 1.0).toColor(),
+    (final i) => HSVColor.fromAHSV(1, i * 10.0, 0.9, 1).toColor(),
   );
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     final snapshot = controller.snapshot;
     if (snapshot.fftData.isEmpty) return;
 
@@ -841,6 +835,6 @@ class RadialBurstPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant RadialBurstPainter oldDelegate) =>
+  bool shouldRepaint(covariant final RadialBurstPainter oldDelegate) =>
       oldDelegate.controller != controller;
 }

@@ -1,89 +1,371 @@
-# ─── OS / Editor ──────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  G.A - Song — Comprehensive .gitignore
+#  Flutter multi-platform project (Android, iOS, macOS, Windows, Linux, Web)
+#  Last updated: 2026-08-05
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+# ─── OS-generated files ───────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+**/._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
-*.swp
-*.swo
-*~
+$RECYCLE.BIN/
+*.lnk
 
-# ─── IDE ──────────────────────────────────────────────────────
+
+# ─── Editor / IDE ─────────────────────────────────────────────────────────────
+# IntelliJ / Android Studio
 .idea/
-.vscode/
 *.iml
 *.ipr
 *.iws
+.idea_modules/
+# Root-level IntelliJ module file (project-scoped)
+ga_song.iml
 
-# ─── Flutter / Dart ───────────────────────────────────────────
+# Visual Studio Code
+.vscode/
+
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+*~
+.netrwhist
+Session.vim
+.undodir/
+
+# Emacs
+\#*\#
+.#*
+*.elc
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Nova (macOS)
+*.novaextension/
+
+
+# ─── Dart / Flutter Core ──────────────────────────────────────────────────────
 .dart_tool/
 .pub-cache/
 .pub/
+.packages
 build/
 **/build/
 **/doc/api/
-**/ios/Flutter/.last_build_id
+.flutter-plugins
 .flutter-plugins-dependencies
-/coverage/
+# pubspec.lock — committed for apps, ignored for packages
+# analysis_options.yaml — committed to enforce lint rules across team
 
-# ─── Generated code (kept tracked) ───────────────────────────
-# *.g.dart and *.freezed.dart are committed because build_runner
-# output is required for compilation.
 
-# ─── Python / Logs / Temp ─────────────────────────────────────
-*.py
-*.log
-*.backup
-*.sh
-*.bat
-!build_all.bat
-!pubspec.yaml
-!.metadata
+# ─── Flutter generated files ──────────────────────────────────────────────────
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/App.framework/
+**/ios/Flutter/Flutter.framework/
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/ephemeral/
+**/ios/Pods/
 
-# ─── Android ──────────────────────────────────────────────────
-/android/app/debug
-/android/app/profile
-/android/app/release
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral/
+
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/linux/flutter/generated_plugins.cmake
+**/linux/flutter/ephemeral/
+
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+**/windows/flutter/ephemeral/
+
+**/web/flutter_bootstrap.js
+
+
+# ─── Generated Dart code (KEPT IN VCS) ────────────────────────────────────────
+# *.g.dart, *.freezed.dart, *.mocks.dart are committed because build_runner
+# output is required for compilation. Do NOT add them here.
+
+
+# ─── Android ──────────────────────────────────────────────────────────────────
+/android/**/build/
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
 local.properties
+/android/local.properties
+/android/.gradle/
+/android/.kotlin/
+/android/captures/
+/android/.cxx/
+/android/.externalNativeBuild/
+
+# Android Gradle plugin generated files
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Android JVM crash logs (Gradle daemon)
+/android/hs_err_pid*.log
+/android/replay_pid*.log
+
+# Android signing
 *.keystore
 *.jks
-google-services.json
+/android/key.properties
+!**/debug.keystore
 
-# ─── Packaging ────────────────────────────────────────────────
+# Google Services (contains API keys)
+google-services.json
+GoogleService-Info.plist
+
+# Android Studio Navigation Editor temp files
+.navigation/
+
+# Android generated module files
+/android/**/*.iml
+/android/ga_song_android.iml
+
+
+# ─── iOS ──────────────────────────────────────────────────────────────────────
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework/
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/App.framework/
+/ios/Flutter/ephemeral/
+/ios/ServiceDefinitions.json
+/ios/Runner/GeneratedPluginRegistrant.*
+
+# Xcode user-specific data
+**/xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+# Xcode build artifacts
+**/DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+
+# ─── macOS ────────────────────────────────────────────────────────────────────
+/macos/Pods/
+/macos/.symlinks/
+/macos/Flutter/ephemeral/
+/macos/Runner/GeneratedPluginRegistrant.swift
+
+
+# ─── Windows ──────────────────────────────────────────────────────────────────
+/windows/flutter/ephemeral/
+/windows/flutter/generated_plugin_registrant.cc
+/windows/flutter/generated_plugin_registrant.h
+/windows/flutter/generated_plugins.cmake
+
+
+# ─── Linux ────────────────────────────────────────────────────────────────────
+/linux/flutter/ephemeral/
+/linux/flutter/generated_plugin_registrant.cc
+/linux/flutter/generated_plugin_registrant.h
+/linux/flutter/generated_plugins.cmake
+
+
+# ─── Web ──────────────────────────────────────────────────────────────────────
+/web/.dart_tool/
+/web/flutter_service_worker.js
+/web/flutter_bootstrap.js
+# CanvasKit pre-built binaries (large, downloaded at build time)
+/web/canvaskit/
+/web/sksl/
+
+
+# ─── Packaging / Distribution Artifacts ───────────────────────────────────────
 *.deb
 *.rpm
 *.dmg
 *.exe
+*.msi
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+*.apk
+*.aab
+*.ipa
+*.snap
+*.flatpak
+*.AppImage
+*.pkg
+*.tar.gz
+*.zip
 /deb_build/
+/debian/build/
+/debian/gui/ga_song.debhelper.log
+/debian/ga_song.substvars
+/debian/files
+/debian/stamp-*
 /dist/
+/installer/
+/release/
+/output/
 
-# ─── Tooling artifacts ────────────────────────────────────────
-/.kilo/
-/.openclaude/
-/.zcode/plans/
-/.zcode-screenshots/
-/Plan/
-/nul
-/test_project/
-/C:UsersAcerDesktopgit_files.txt
 
-# ─── Secrets & credentials ────────────────────────────────────
-# API keys, tokens, service accounts, signing material
+# ─── Secrets & Credentials ───────────────────────────────────────────────────
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.p12
 *.pfx
+*.cer
+*.crt
 secrets.yaml
 secrets.json
 serviceAccount*.json
 firebase-adminsdk-*.json
+amplify-*.json
+/android/key.properties
+/ios/AuthKey_*.p8
+/ios/ExportOptions.plist
 
-# ─── Scratch / one-off debugging files (root-level) ───────────
-# Root-level logs and ad-hoc dumps. Project docs (CHANGELOG, README,
-# CONTRIBUTING) use .md and are not affected.
+
+# ─── Logs & Debug ─────────────────────────────────────────────────────────────
+*.log
+*.log.*
+debug.log
+crash_report_*.txt
 /debug_screenshots/
+flutter_*.log
+/logs/
+
+
+# ─── Temp & Backup files ─────────────────────────────────────────────────────
 *.bak
+*.backup
 *.tmp
-*.swp
+*.temp
 *.orig
 *.rej
+*.old
+*.cache
+*.patch
+
+
+# ─── Python scripts (migration helpers — not part of Dart app) ────────────────
+*.py
+/scripts/*.py
+*.pyc
+__pycache__/
+*.pyo
+.Python
+env/
+venv/
+.venv/
+
+
+# ─── Shell/Batch scripts (build helpers) ──────────────────────────────────────
+# Allow only whitelisted build scripts; ignore ad-hoc ones
+*.sh
+*.bat
+!build_all.bat
+!build_release.sh
+!build_linux.sh
+!run_linux_optimized.sh
+!pubspec.yaml
+!.metadata
+
+
+# ─── AI / Tooling artifacts ──────────────────────────────────────────────────
+.github/
+.openclaude/
+.zcode/
+.zcode-screenshots/
+.kilo/
+.gemini/
+.agents/
+.cursor/
+.windsurf/
+.copilot/
+.aider/
+.continue/
+Plan/
+nul
+
+
+# ─── Test / Scratch / Orphan ─────────────────────────────────────────────────
+/test_project/
+/C:*
+/CUsersAcerDesktopgit_files.txt
+/EG.A/
+
+
+# ─── Coverage & Analysis ─────────────────────────────────────────────────────
+/coverage/
+lcov.info
+*.lcov
+/test/.test_coverage.dart
+/.dart_code_coverage/
+/test/failures/
+
+
+# ─── Native build caches ─────────────────────────────────────────────────────
+# CocoaPods
+**/Pods/
+**/Podfile.lock
+
+# Gradle
+**/.gradle/
+
+# CMake
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+
+# ─── Miscellaneous ────────────────────────────────────────────────────────────
+# Large binary files that shouldn't be in git
+*.mp3
+*.flac
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.mp4
+*.avi
+*.mkv
+*.mov
+# Exception: keep built-in song assets tracked
+!/assets/song/**
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+!/assets/**/*.db

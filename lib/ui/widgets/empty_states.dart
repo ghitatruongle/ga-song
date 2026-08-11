@@ -1,6 +1,7 @@
 /// Empty State Widgets for G.A - Song
 ///
 /// Illustrated empty states with actionable buttons for better UX.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,11 +16,11 @@ class EmptyLibraryState extends ConsumerWidget {
   const EmptyLibraryState({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = context.isDark;
     final adaptiveColor = context.adaptive;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -31,7 +32,9 @@ class EmptyLibraryState extends ConsumerWidget {
               width: 160,
               height: 160,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
+                color: isDark
+                    ? AppColors.darkSurface2
+                    : AppColors.lightSurface2,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -41,7 +44,7 @@ class EmptyLibraryState extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Title
             Text(
               l10n.emptyLibraryTitle,
@@ -53,7 +56,7 @@ class EmptyLibraryState extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            
+
             // Description
             Text(
               l10n.emptyLibraryMessage,
@@ -65,7 +68,7 @@ class EmptyLibraryState extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            
+
             // Action buttons
             Wrap(
               spacing: 12,
@@ -78,7 +81,10 @@ class EmptyLibraryState extends ConsumerWidget {
                   label: Text(l10n.importMusic),
                   onPressed: () => _importLocalSongs(context, ref),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
                   ),
                 ),
                 // Scan for music
@@ -87,7 +93,10 @@ class EmptyLibraryState extends ConsumerWidget {
                   label: Text(l10n.scanForMusic),
                   onPressed: () => _scanForMusic(context, ref),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
                   ),
                 ),
                 // Create playlist
@@ -96,7 +105,10 @@ class EmptyLibraryState extends ConsumerWidget {
                   label: Text(l10n.createPlaylist),
                   onPressed: () => _createPlaylist(context, ref),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
                   ),
                 ),
               ],
@@ -107,30 +119,39 @@ class EmptyLibraryState extends ConsumerWidget {
     );
   }
 
-  void _importLocalSongs(BuildContext context, WidgetRef ref) {
+  void _importLocalSongs(final BuildContext context, final WidgetRef ref) {
     final manager = ref.read(musicManagerProvider);
     final messenger = ScaffoldMessenger.of(context);
-    manager.importLocalSongs().then((_) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.importSuccess)),
-        );
-      }
-    }).catchError((e) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)!.importError}: $e')),
-        );
-      }
-    });
+    manager
+        .importLocalSongs()
+        .then((_) {
+          if (context.mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.importSuccess),
+              ),
+            );
+          }
+        })
+        .catchError((final e) {
+          if (context.mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${AppLocalizations.of(context)!.importError}: $e',
+                ),
+              ),
+            );
+          }
+        });
   }
 
-  void _scanForMusic(BuildContext context, WidgetRef ref) {
+  void _scanForMusic(final BuildContext context, final WidgetRef ref) {
     // Scan for music uses the same import flow (file picker)
     _importLocalSongs(context, ref);
   }
 
-  void _createPlaylist(BuildContext context, WidgetRef ref) {
+  void _createPlaylist(final BuildContext context, final WidgetRef ref) {
     PlaylistManagerWidget.show(context);
   }
 }
@@ -139,19 +160,15 @@ class EmptyLibraryState extends ConsumerWidget {
 class EmptySearchState extends StatelessWidget {
   final String query;
   final VoidCallback? onClearSearch;
-  
-  const EmptySearchState({
-    super.key, 
-    required this.query,
-    this.onClearSearch,
-  });
+
+  const EmptySearchState({super.key, required this.query, this.onClearSearch});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = context.isDark;
     final adaptiveColor = context.adaptive;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -162,7 +179,9 @@ class EmptySearchState extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
+                color: isDark
+                    ? AppColors.darkSurface2
+                    : AppColors.lightSurface2,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -207,18 +226,15 @@ class EmptySearchState extends StatelessWidget {
 /// Empty playlist state
 class EmptyPlaylistState extends ConsumerWidget {
   final String playlistName;
-  
-  const EmptyPlaylistState({
-    super.key, 
-    required this.playlistName,
-  });
+
+  const EmptyPlaylistState({super.key, required this.playlistName});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = context.isDark;
     final adaptiveColor = context.adaptive;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -229,7 +245,9 @@ class EmptyPlaylistState extends ConsumerWidget {
               width: 140,
               height: 140,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
+                color: isDark
+                    ? AppColors.darkSurface2
+                    : AppColors.lightSurface2,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -280,7 +298,7 @@ class EmptyPlaylistState extends ConsumerWidget {
     );
   }
 
-  void _importPlaylist(BuildContext context, WidgetRef ref) {
+  void _importPlaylist(final BuildContext context, final WidgetRef ref) {
     // Implementation for importing playlist
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.featureComingSoon)),
@@ -292,19 +310,19 @@ class EmptyPlaylistState extends ConsumerWidget {
 class ErrorLoadingState extends StatelessWidget {
   final String errorMessage;
   final VoidCallback onRetry;
-  
+
   const ErrorLoadingState({
-    super.key, 
+    super.key,
     required this.errorMessage,
     required this.onRetry,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = context.isDark;
     final adaptiveColor = context.adaptive;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -315,7 +333,9 @@ class ErrorLoadingState extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: isDark ? Colors.red.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.05),
+                color: isDark
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -348,7 +368,10 @@ class ErrorLoadingState extends StatelessWidget {
               label: Text(l10n.retry),
               onPressed: onRetry,
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 14,
+                ),
               ),
             ),
           ],
@@ -361,18 +384,15 @@ class ErrorLoadingState extends StatelessWidget {
 /// No internet connection state
 class NoInternetState extends StatelessWidget {
   final VoidCallback onRetry;
-  
-  const NoInternetState({
-    super.key, 
-    required this.onRetry,
-  });
+
+  const NoInternetState({super.key, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = context.isDark;
     final adaptiveColor = context.adaptive;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -383,7 +403,9 @@ class NoInternetState extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
+                color: isDark
+                    ? AppColors.darkSurface2
+                    : AppColors.lightSurface2,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -434,7 +456,7 @@ class NoInternetState extends StatelessWidget {
     );
   }
 
-  void _openNetworkSettings(BuildContext context) {
+  void _openNetworkSettings(final BuildContext context) {
     // Platform-specific network settings
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.featureComingSoon)),

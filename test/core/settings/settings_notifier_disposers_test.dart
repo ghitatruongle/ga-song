@@ -65,9 +65,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [settingsManagerProvider.overrideWithValue(manager)],
       );
-      container.listen(settingsNotifierProvider, (prev, next) {
+      container.listen(settingsNotifierProvider, (final prev, final next) {
         if (prev != next) stateRebuildCount++;
-      }, fireImmediately: false);
+      });
 
       // Trigger initial build + first change
       container.read(settingsNotifierProvider);

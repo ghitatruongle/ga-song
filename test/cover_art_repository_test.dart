@@ -9,12 +9,12 @@ void main() {
     final repository = CoverArtRepository();
 
     final entry = await repository.resolveEntry(
-      (Song(
+      Song(
         id: 1,
         name: 'test',
         sourcePath: 'assets/song/test.mp3',
         isBuiltIn: true,
-      )),
+      ),
     );
 
     expect(entry.imagePath, 'assets/pic/test.png');
@@ -26,12 +26,12 @@ void main() {
     final repository = CoverArtRepository();
 
     final entry = await repository.resolveEntry(
-      (Song(
+      Song(
         id: 2,
         name: 'het yeu',
         sourcePath: 'assets/song/mat_nham_mat_mo/het_yeu.mp3',
         isBuiltIn: true,
-      )),
+      ),
     );
 
     expect(entry.imagePath, 'assets/pic/mat_nham_mat_mo/het_yeu.png');
@@ -47,7 +47,6 @@ void main() {
         id: 3,
         name: 'local song',
         sourcePath: '/data/user/0/local_songs/test.mp3',
-        isBuiltIn: false,
       ),
     );
 
@@ -81,12 +80,7 @@ void main() {
     final tempDir = Directory.systemTemp.createTempSync('ga_song_test');
     try {
       final songFile = File('${tempDir.path}/mysong.mp3')..createSync();
-      final song = Song(
-        id: 101,
-        name: 'local',
-        sourcePath: songFile.path,
-        isBuiltIn: false,
-      );
+      final song = Song(id: 101, name: 'local', sourcePath: songFile.path);
 
       // Case 1: No cover exists
       expect(await CoverArtRepository.findLocalCoverPath(song), isNull);
@@ -94,12 +88,12 @@ void main() {
       // Case 2: Sibling cover.png exists
       final coverFile = File('${tempDir.path}/cover.png')..createSync();
       final resolved = await CoverArtRepository.findLocalCoverPath(song);
-      expect(resolved, coverFile.path.replaceAll('\\', '/'));
+      expect(resolved, coverFile.path.replaceAll(r'\', '/'));
 
       // Case 3: Sibling song-specific png exists (higher priority)
       final specificCover = File('${tempDir.path}/mysong.png')..createSync();
       final resolved2 = await CoverArtRepository.findLocalCoverPath(song);
-      expect(resolved2, specificCover.path.replaceAll('\\', '/'));
+      expect(resolved2, specificCover.path.replaceAll(r'\', '/'));
     } finally {
       tempDir.deleteSync(recursive: true);
     }

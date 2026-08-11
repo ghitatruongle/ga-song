@@ -2,13 +2,12 @@
 ///
 /// Provides drag-drop reordering, swipe-to-delete, and multi-select
 /// for the playback queue.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/rendering.dart';
 
 import '../../providers/service_providers.dart';
-import '../../core/audio/playlist_service.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 import '../../models/song.dart';
@@ -20,7 +19,8 @@ class QueueManagementSheet extends ConsumerStatefulWidget {
   const QueueManagementSheet({super.key, this.onClose});
 
   @override
-  ConsumerState<QueueManagementSheet> createState() => _QueueManagementSheetState();
+  ConsumerState<QueueManagementSheet> createState() =>
+      _QueueManagementSheetState();
 }
 
 class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
@@ -43,7 +43,7 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
     });
   }
 
-  void _toggleSelection(int index) {
+  void _toggleSelection(final int index) {
     setState(() {
       if (_selectedIndices.contains(index)) {
         _selectedIndices.remove(index);
@@ -59,7 +59,8 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
     setState(() {
       _selectedIndices.clear();
       for (int i = 0; i < playlist.playlist.length; i++) {
-        if (i != currentIndex) { // Don't select currently playing
+        if (i != currentIndex) {
+          // Don't select currently playing
           _selectedIndices.add(i);
         }
       }
@@ -74,16 +75,17 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
 
   void _removeSelected() {
     if (_selectedIndices.isEmpty) return;
-    
+
     final playlist = ref.read(playlistServiceProvider);
-    final indicesToRemove = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
-    
+    final indicesToRemove = _selectedIndices.toList()
+      ..sort((final a, final b) => b.compareTo(a));
+
     for (final index in indicesToRemove) {
       if (index < playlist.playlist.length) {
         playlist.remove(index);
       }
     }
-    
+
     setState(() {
       _selectedIndices.clear();
       _isMultiSelectMode = false;
@@ -92,10 +94,10 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
 
   Future<void> _moveToTop() async {
     if (_selectedIndices.isEmpty) return;
-    
+
     final playlist = ref.read(playlistServiceProvider);
     final indicesToMove = _selectedIndices.toList()..sort();
-    
+
     // Move each selected song to the top, ascending order preserves
     // their relative order (upward moves don't shift items below).
     for (final index in indicesToMove) {
@@ -103,7 +105,7 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
         await playlist.reorderQueue(index, 0);
       }
     }
-    
+
     setState(() {
       _selectedIndices.clear();
     });
@@ -111,10 +113,10 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
 
   Future<void> _moveToBottom() async {
     if (_selectedIndices.isEmpty) return;
-    
+
     final playlist = ref.read(playlistServiceProvider);
     final indicesToMove = _selectedIndices.toList()..sort();
-    
+
     // Each successful move to the end shifts the remaining selected
     // songs down by one, so track the current position accordingly.
     for (int i = 0; i < indicesToMove.length; i++) {
@@ -123,201 +125,214 @@ class _QueueManagementSheetState extends ConsumerState<QueueManagementSheet> {
         await playlist.reorderQueue(currentPos, playlist.playlist.length - 1);
       }
     }
-    
+
     setState(() {
       _selectedIndices.clear();
     });
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final playlist = ref.watch(playlistServiceProvider);
     final currentIndex = playlist.currentIndex;
     final isDark = context.isDark;
     final textColor = context.adaptive;
     final accentColor = Theme.of(context).colorScheme.primary;
-    
+
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       minChildSize: 0.3,
       maxChildSize: 0.95,
       expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
+      builder: (final context, final scrollController) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: textColor.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Hàng đợi phát (${playlist.playlist.length})',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                  if (!_isMultiSelectMode) ...[
+                    if (playlist.playlist.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.checklist_rounded),
+                        onPressed: _toggleMultiSelect,
+                        tooltip: 'Chọn nhiều',
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.clear_all_rounded),
+                      onPressed: () {
+                        playlist.clear();
+                      },
+                      tooltip: 'Xóa tất cả',
+                    ),
+                  ] else ...[
+                    Text(
+                      '${_selectedIndices.length} đã chọn',
+                      style: TextStyle(
+                        color: accentColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () {
+                        _clearSelection();
+                        _toggleMultiSelect();
+                      },
+                      tooltip: 'Hủy',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Multi-select toolbar
+            if (_isMultiSelectMode && _selectedIndices.isNotEmpty)
               Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: textColor.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+                  color: accentColor.withValues(alpha: 0.1),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: accentColor.withValues(alpha: 0.3),
+                    ),
+                  ),
                 ),
-              ),
-              
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Hàng đợi phát (${playlist.playlist.length})',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: textColor,
-                        ),
-                      ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.drag_indicator_rounded),
+                      label: const Text('Lên đầu'),
+                      onPressed: _moveToTop,
                     ),
-                    if (!_isMultiSelectMode) ...[
-                      if (playlist.playlist.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.checklist_rounded),
-                          onPressed: _toggleMultiSelect,
-                          tooltip: 'Chọn nhiều',
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.clear_all_rounded),
-                        onPressed: () {
-                          playlist.clear();
-                        },
-                        tooltip: 'Xóa tất cả',
-                      ),
-                    ] else ...[
-                      Text('${_selectedIndices.length} đã chọn',
-                          style: TextStyle(color: accentColor, fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () {
-                          _clearSelection();
-                          _toggleMultiSelect();
-                        },
-                        tooltip: 'Hủy',
-                      ),
-                    ],
+                    TextButton.icon(
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      label: const Text('Đi cuối'),
+                      onPressed: _moveToBottom,
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      label: const Text('Xóa'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      onPressed: _removeSelected,
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Chọn tất cả'),
+                      onPressed: _selectAll,
+                    ),
                   ],
                 ),
               ),
-              
-              // Multi-select toolbar
-              if (_isMultiSelectMode && _selectedIndices.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    border: Border(
-                      bottom: BorderSide(color: accentColor.withValues(alpha: 0.3)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.drag_indicator_rounded),
-                        label: const Text('Lên đầu'),
-                        onPressed: _moveToTop,
-                      ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        label: const Text('Đi cuối'),
-                        onPressed: _moveToBottom,
-                      ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.delete_outline_rounded),
-                        label: const Text('Xóa'),
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        onPressed: _removeSelected,
-                      ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.check_rounded),
-                        label: const Text('Chọn tất cả'),
-                        onPressed: _selectAll,
-                      ),
-                    ],
-                  ),
-                ),
-              
-              // Queue list
-              Expanded(
-                child: playlist.playlist.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.queue_music_rounded,
-                              size: 64,
-                              color: textColor.withValues(alpha: 0.3),
+
+            // Queue list
+            Expanded(
+              child: playlist.playlist.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.queue_music_rounded,
+                            size: 64,
+                            color: textColor.withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Hàng đợi trống',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: textColor.withValues(alpha: 0.5),
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Hàng đợi trống',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: textColor.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Kéo thả bài hát vào đây hoặc nhấn "Thêm vào hàng đợi"',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: textColor.withValues(alpha: 0.4),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ReorderableListView.builder(
+                      scrollController: scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: playlist.playlist.length,
+                      onReorderItem: (final oldIndex, newIndex) {
+                        ref
+                            .read(playlistServiceProvider)
+                            .reorderQueue(oldIndex, newIndex);
+                      },
+                      proxyDecorator:
+                          (final child, final index, final animation) =>
+                              Material(
+                                elevation: 8,
+                                color: Colors.transparent,
+                                child: child,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Kéo thả bài hát vào đây hoặc nhấn "Thêm vào hàng đợi"',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: textColor.withValues(alpha: 0.4),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    : ReorderableListView.builder(
-                        scrollController: scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: playlist.playlist.length,
-                        onReorder: (oldIndex, newIndex) {
-                          if (oldIndex < newIndex) newIndex--;
-                          ref.read(playlistServiceProvider).reorderQueue(oldIndex, newIndex);
-                        },
-                        proxyDecorator: (child, index, animation) {
-                          return Material(
-                            elevation: 8,
-                            color: Colors.transparent,
-                            child: child,
-                          );
-                        },
-                        itemBuilder: (context, index) {
-                          final song = playlist.playlist[index];
-                          final isCurrent = index == currentIndex;
-                          final isSelected = _selectedIndices.contains(index);
-                          final isDark = context.isDark;
-                          final textColor = context.adaptive;
-                          
-                          return _QueueItem(
-                            key: ValueKey(song.fileName),
-                            song: song,
-                            index: index,
-                            isCurrent: isCurrent,
-                            isSelected: isSelected,
-                            isMultiSelectMode: _isMultiSelectMode,
-                            onTap: () => _isMultiSelectMode ? _toggleSelection(index) : null,
-                            onPlay: () => ref.read(playlistServiceProvider).playSongAt(index),
-                          );
-                        },
-                      ),
+                      itemBuilder: (final context, final index) {
+                        final song = playlist.playlist[index];
+                        final isCurrent = index == currentIndex;
+                        final isSelected = _selectedIndices.contains(index);
+
+                        return _QueueItem(
+                          key: ValueKey(song.fileName),
+                          song: song,
+                          index: index,
+                          isCurrent: isCurrent,
+                          isSelected: isSelected,
+                          isMultiSelectMode: _isMultiSelectMode,
+                          onTap: () => _isMultiSelectMode
+                              ? _toggleSelection(index)
+                              : null,
+                          onPlay: () => ref
+                              .read(playlistServiceProvider)
+                              .playSongAt(index),
+                          onRemove: () =>
+                              ref.read(playlistServiceProvider).remove(index),
+                        );
+                      },
                     ),
-                  ],
-                ),
-              );
-          }
-        );
-      }
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Individual queue item with drag handle, swipe-to-delete, and selection
@@ -329,6 +344,7 @@ class _QueueItem extends StatelessWidget {
   final bool isMultiSelectMode;
   final VoidCallback? onTap;
   final VoidCallback? onPlay;
+  final VoidCallback? onRemove;
 
   const _QueueItem({
     super.key,
@@ -339,14 +355,15 @@ class _QueueItem extends StatelessWidget {
     required this.isMultiSelectMode,
     this.onTap,
     this.onPlay,
+    this.onRemove,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final textColor = context.adaptive;
     final accentColor = Theme.of(context).colorScheme.primary;
-    
+
     return Dismissible(
       key: ValueKey(song.fileName),
       direction: DismissDirection.endToStart,
@@ -359,35 +376,37 @@ class _QueueItem extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_rounded, color: Colors.white, size: 24),
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Xóa bài hát'),
-            content: Text('Bạn có chắc muốn xóa "${song.name}" khỏi hàng đợi?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Hủy'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Xóa', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (direction) {
-        // The playlist service will handle removal via the provider
-        // We need to find the provider and call remove
+      confirmDismiss: (final direction) async => showDialog<bool>(
+        context: context,
+        builder: (final context) => AlertDialog(
+          title: const Text('Xóa bài hát'),
+          content: Text('Bạn có chắc muốn xóa "${song.name}" khỏi hàng đợi?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      ),
+      onDismissed: (final direction) {
+        // Actually remove the song from the queue — an empty handler left
+        // the item in the list (and caused "dismissed Dismissible still in
+        // tree" debug crashes).
+        onRemove?.call();
       },
       child: Material(
         color: isCurrent
-            ? (isDark ? accentColor.withValues(alpha: 0.12) : accentColor.withValues(alpha: 0.08))
+            ? (isDark
+                  ? accentColor.withValues(alpha: 0.12)
+                  : accentColor.withValues(alpha: 0.08))
             : (isSelected
-                ? accentColor.withValues(alpha: 0.1)
-                : Colors.transparent),
+                  ? accentColor.withValues(alpha: 0.1)
+                  : Colors.transparent),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -416,9 +435,9 @@ class _QueueItem extends StatelessWidget {
                       ),
                     ),
                   ),
-                
+
                 const SizedBox(width: 8),
-                
+
                 // Cover art
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
@@ -428,9 +447,9 @@ class _QueueItem extends StatelessWidget {
                     child: _CoverArtSmall(song: song),
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 // Song info
                 Expanded(
                   child: Column(
@@ -444,7 +463,9 @@ class _QueueItem extends StatelessWidget {
                               song.name,
                               style: TextStyle(
                                 fontSize: 14,
-                                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                                 color: isCurrent ? accentColor : textColor,
                               ),
                               maxLines: 1,
@@ -453,7 +474,10 @@ class _QueueItem extends StatelessWidget {
                           ),
                           if (isCurrent)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: accentColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
@@ -481,9 +505,9 @@ class _QueueItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 // Duration
                 if (song.durationMs != null && song.durationMs! > 0)
                   Text(
@@ -494,7 +518,7 @@ class _QueueItem extends StatelessWidget {
                       fontFamily: 'monospace',
                     ),
                   ),
-                
+
                 // Play button for non-current songs
                 if (!isCurrent && onPlay != null)
                   IconButton(
@@ -513,8 +537,8 @@ class _QueueItem extends StatelessWidget {
       ),
     );
   }
-  
-  String _formatDuration(int durationMs) {
+
+  String _formatDuration(final int durationMs) {
     final duration = Duration(milliseconds: durationMs);
     final minutes = duration.inMinutes;
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
@@ -525,21 +549,23 @@ class _QueueItem extends StatelessWidget {
 /// Small cover art for queue items
 class _CoverArtSmall extends ConsumerWidget {
   final Song song;
-  
+
   const _CoverArtSmall({required this.song});
-  
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final repository = ref.watch(coverArtRepositoryProvider);
     final provider = repository.getCachedProvider(
       song.fileName,
       cacheWidth: 96,
       cacheHeight: 96,
     );
-    
+
     if (provider == null) {
-      return Container(
-        color: context.isDark ? AppColors.darkSurface2 : AppColors.lightSurface2,
+      return ColoredBox(
+        color: context.isDark
+            ? AppColors.darkSurface2
+            : AppColors.lightSurface2,
         child: Icon(
           Icons.music_note_rounded,
           color: context.adaptive.withValues(alpha: 0.3),
@@ -547,11 +573,7 @@ class _CoverArtSmall extends ConsumerWidget {
         ),
       );
     }
-    
-    return Image(
-      image: provider,
-      fit: BoxFit.cover,
-      gaplessPlayback: true,
-    );
+
+    return Image(image: provider, fit: BoxFit.cover, gaplessPlayback: true);
   }
 }

@@ -5,7 +5,7 @@
 identity:
   name: "GASong"
   publisher: "CN=GA Song Publisher"
-  version: "0.8.0.0"
+  version: "1.0.0.0"
 
 # App Properties
 properties:

@@ -5,11 +5,11 @@ import '../../providers/service_providers.dart';
 import '../../core/theme/tokens.dart';
 
 class SortFilterDialog {
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (context) => const _SortFilterDialog(),
+      builder: (final context) => const _SortFilterDialog(),
     );
   }
 }
@@ -32,7 +32,7 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.white
         : Colors.black87;
@@ -87,73 +87,69 @@ class _SortFilterDialogState extends ConsumerState<_SortFilterDialog> {
               const SizedBox(height: 12),
               ValueListenableBuilder<int>(
                 valueListenable: _settings.sortModeNotifier,
-                builder: (context, currentMode, _) {
-                  return Column(
-                    children: _sortOptions.map((option) {
-                      final isSelected = currentMode == option['value'];
-                      return RadioListTile<int>(
-                        value: option['value'] as int,
-                        groupValue: currentMode,
-                        onChanged: (value) {
-                          if (value != null) {
-                            _settings.setSortMode(value);
-                          }
-                        },
-                        title: Row(
-                          children: [
-                            Icon(
-                              option['icon'] as IconData,
+                builder: (final context, final currentMode, _) => Column(
+                  children: _sortOptions.map((final option) {
+                    final isSelected = currentMode == option['value'];
+                    return RadioListTile<int>(
+                      value: option['value'] as int,
+                      groupValue: currentMode,
+                      onChanged: (final value) {
+                        if (value != null) {
+                          _settings.setSortMode(value);
+                        }
+                      },
+                      title: Row(
+                        children: [
+                          Icon(
+                            option['icon'] as IconData,
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : textColor.withValues(alpha: 0.7),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            option['label'] as String,
+                            style: TextStyle(
                               color: isSelected
                                   ? Theme.of(context).primaryColor
-                                  : textColor.withValues(alpha: 0.7),
-                              size: 20,
+                                  : textColor,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              option['label'] as String,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Theme.of(context).primaryColor
-                                    : textColor,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                        activeColor: Theme.of(context).primaryColor,
-                        dense: true,
-                      );
-                    }).toList(),
-                  );
-                },
+                          ),
+                        ],
+                      ),
+                      activeColor: Theme.of(context).primaryColor,
+                      dense: true,
+                    );
+                  }).toList(),
+                ),
               ),
               const SizedBox(height: 16),
               ValueListenableBuilder<bool>(
                 valueListenable: _settings.sortAscendingNotifier,
-                builder: (context, ascending, _) {
-                  return SwitchListTile(
-                    title: Row(
-                      children: [
-                        Icon(
-                          ascending ? Icons.arrow_upward : Icons.arrow_downward,
-                          color: textColor.withValues(alpha: 0.7),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          ascending ? 'Tăng dần' : 'Giảm dần',
-                          style: TextStyle(color: textColor),
-                        ),
-                      ],
-                    ),
-                    value: ascending,
-                    activeThumbColor: Theme.of(context).primaryColor,
-                    onChanged: (value) => _settings.setSortAscending(value),
-                    dense: true,
-                  );
-                },
+                builder: (final context, final ascending, _) => SwitchListTile(
+                  title: Row(
+                    children: [
+                      Icon(
+                        ascending ? Icons.arrow_upward : Icons.arrow_downward,
+                        color: textColor.withValues(alpha: 0.7),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        ascending ? 'Tăng dần' : 'Giảm dần',
+                        style: TextStyle(color: textColor),
+                      ),
+                    ],
+                  ),
+                  value: ascending,
+                  activeThumbColor: Theme.of(context).primaryColor,
+                  onChanged: (final value) => _settings.setSortAscending(value),
+                  dense: true,
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

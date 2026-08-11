@@ -6,7 +6,7 @@ import 'package:ga_song/providers/service_providers.dart';
 
 void main() {
   testWidgets('settingsNotifierProvider resolves under test container', (
-    tester,
+    final tester,
   ) async {
     final container = ProviderContainer(
       overrides: [settingsManagerProvider.overrideWithValue(SettingsManager())],

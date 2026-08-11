@@ -12,6 +12,52 @@ import 'playlist_manager_widget.dart';
 import '../utils/animation_utils.dart';
 import '../utils/haptic_helper.dart';
 
+/// Confirms and deletes a user-imported song from the library + disk.
+/// Built-in songs cannot be deleted.
+Future<void> _confirmDeleteSong(
+  final BuildContext context,
+  final WidgetRef ref,
+  final Song song,
+) async {
+  if (song.isBuiltIn) return;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (final ctx) => AlertDialog(
+      title: const Text('Xóa bài hát'),
+      content: Text(
+        'Xóa "${song.name}" khỏi thư viện và khỏi thiết bị này?\n'
+        'Bài hát tự thêm sẽ bị xóa vĩnh viễn.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Xóa'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+
+  try {
+    await ref.read(musicManagerProvider).deleteSong(song);
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Đã xóa "${song.name}"')));
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi khi xóa bài hát: $e')));
+    }
+  }
+}
+
 /// InheritedWidget that provides playback state to all song tiles.
 /// Replaces per-tile listener registration (200+ listeners → 2 parent listeners).
 class SongPlaybackInheritedWidget extends InheritedWidget {
@@ -25,7 +71,7 @@ class SongPlaybackInheritedWidget extends InheritedWidget {
   final int currentIndex;
   final bool isPlaying;
 
-  static SongPlaybackInheritedWidget of(BuildContext context) {
+  static SongPlaybackInheritedWidget of(final BuildContext context) {
     final widget = context
         .dependOnInheritedWidgetOfExactType<SongPlaybackInheritedWidget>();
     assert(widget != null, 'No SongPlaybackInheritedWidget found in context');
@@ -33,10 +79,9 @@ class SongPlaybackInheritedWidget extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(SongPlaybackInheritedWidget oldWidget) {
-    return currentIndex != oldWidget.currentIndex ||
-        isPlaying != oldWidget.isPlaying;
-  }
+  bool updateShouldNotify(final SongPlaybackInheritedWidget oldWidget) =>
+      currentIndex != oldWidget.currentIndex ||
+      isPlaying != oldWidget.isPlaying;
 }
 
 // ─── Grid Tile ───────────────────────────────────────────────────────────────
@@ -56,7 +101,7 @@ class _SongGridTileState extends ConsumerState<SongGridTile> {
   bool _isPressed = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final playback = SongPlaybackInheritedWidget.of(context);
     final isCurrent = playback.currentIndex == widget.songIndex;
     final isPlaying = isCurrent && playback.isPlaying;
@@ -79,6 +124,10 @@ class _SongGridTileState extends ConsumerState<SongGridTile> {
             }
             playlistService.playSongByFileName(widget.song.fileName);
           },
+          // Long-press: delete user-imported songs (built-in are protected)
+          onLongPress: widget.song.isBuiltIn
+              ? null
+              : () => _confirmDeleteSong(context, ref, widget.song),
           onTapDown: (_) {
             if (animations) setState(() => _isPressed = true);
           },
@@ -94,10 +143,10 @@ class _SongGridTileState extends ConsumerState<SongGridTile> {
             transform: Matrix4.diagonal3Values(
               _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
               _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
-              1.0,
+              1,
             ),
             transformAlignment: Alignment.center,
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 color: isCurrent
                     ? (isDark
@@ -107,9 +156,12 @@ class _SongGridTileState extends ConsumerState<SongGridTile> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isCurrent
-                      ? (isDark ? AppColors.darkSurface3 : AppColors.lightBorder)
-                      : (isDark ? AppColors.darkSurface2 : AppColors.lightDivider),
-                  width: 1,
+                      ? (isDark
+                            ? AppColors.darkSurface3
+                            : AppColors.lightBorder)
+                      : (isDark
+                            ? AppColors.darkSurface2
+                            : AppColors.lightDivider),
                 ),
                 boxShadow: isCurrent
                     ? [
@@ -138,7 +190,7 @@ class _SongGridTileState extends ConsumerState<SongGridTile> {
                             song: widget.song,
                             cacheWidth: 320,
                             cacheHeight: 320,
-                            fallbackBuilder: (context) => Center(
+                            fallbackBuilder: (final context) => Center(
                               child: Icon(
                                 Icons.music_note_rounded,
                                 color: context.adaptive.withValues(alpha: 0.3),
@@ -255,7 +307,7 @@ class _SongListTileState extends ConsumerState<SongListTile> {
   bool _isHovered = false;
   bool _isPressed = false;
 
-  String _formatDuration(int? durationMs) {
+  String _formatDuration(final int? durationMs) {
     if (durationMs == null) return '--:--';
     final duration = Duration(milliseconds: durationMs);
     final minutes = duration.inMinutes;
@@ -264,7 +316,7 @@ class _SongListTileState extends ConsumerState<SongListTile> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final playback = SongPlaybackInheritedWidget.of(context);
     final isCurrent = playback.currentIndex == widget.songIndex;
     final isPlaying = isCurrent && playback.isPlaying;
@@ -280,217 +332,220 @@ class _SongListTileState extends ConsumerState<SongListTile> {
           if (animations) setState(() => _isHovered = false);
         },
         child: GestureDetector(
-        onTap: () {
-          final playlistService = ref.read(playlistServiceProvider);
-          if (playlistService.playMode == PlayMode.playOneStop) {
-            playlistService.setPlayMode(PlayMode.sequential);
-          }
-          playlistService.playSongByFileName(widget.song.fileName);
-        },
-        onTapDown: (_) {
-          if (animationsEnabled(context)) setState(() => _isPressed = true);
-        },
-        onTapUp: (_) {
-          if (animationsEnabled(context)) setState(() => _isPressed = false);
-        },
-        onTapCancel: () {
-          if (animationsEnabled(context)) setState(() => _isPressed = false);
-        },
-        child: AnimatedContainer(
-          duration: animationsEnabled(context)
-              ? AppDurations.short
-              : Duration.zero,
-          curve: AppCurves.decelerate,
-          transform: Matrix4.diagonal3Values(
-            _isPressed ? 0.98 : (_isHovered ? 1.01 : 1.0),
-            _isPressed ? 0.98 : (_isHovered ? 1.01 : 1.0),
-            1.0,
-          ),
-          transformAlignment: Alignment.center,
-          child: Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: _isHovered && !isCurrent
-                  ? (isDark
-                        ? Colors.white.withValues(alpha: 0.04)
-                        : Colors.black.withValues(alpha: 0.03))
-                  : Colors.transparent,
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.06),
-                  width: 1,
+          onTap: () {
+            final playlistService = ref.read(playlistServiceProvider);
+            if (playlistService.playMode == PlayMode.playOneStop) {
+              playlistService.setPlayMode(PlayMode.sequential);
+            }
+            playlistService.playSongByFileName(widget.song.fileName);
+          },
+          // Long-press: delete user-imported songs (built-in are protected)
+          onLongPress: widget.song.isBuiltIn
+              ? null
+              : () => _confirmDeleteSong(context, ref, widget.song),
+          onTapDown: (_) {
+            if (animationsEnabled(context)) setState(() => _isPressed = true);
+          },
+          onTapUp: (_) {
+            if (animationsEnabled(context)) setState(() => _isPressed = false);
+          },
+          onTapCancel: () {
+            if (animationsEnabled(context)) setState(() => _isPressed = false);
+          },
+          child: AnimatedContainer(
+            duration: animationsEnabled(context)
+                ? AppDurations.short
+                : Duration.zero,
+            curve: AppCurves.decelerate,
+            transform: Matrix4.diagonal3Values(
+              _isPressed ? 0.98 : (_isHovered ? 1.01 : 1.0),
+              _isPressed ? 0.98 : (_isHovered ? 1.01 : 1.0),
+              1,
+            ),
+            transformAlignment: Alignment.center,
+            child: Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: _isHovered && !isCurrent
+                    ? (isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : Colors.black.withValues(alpha: 0.03))
+                    : Colors.transparent,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.06),
+                  ),
                 ),
               ),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // Phase 4 fix: at narrow viewports (mobile portrait with
-                // sidebar visible, ~63 px inner) the fixed-width children
-                // (32+12+36+12+8+40 = 140) overflow.  Drop the index and
-                // shrink the cover/duration so the row fits.
-                final isNarrow = constraints.maxWidth < 240;
-                final coverSize = isNarrow ? 28.0 : 36.0;
-                final durationWidth = isNarrow ? 32.0 : 40.0;
-                final coverSpacing = isNarrow ? 8.0 : 12.0;
+              child: LayoutBuilder(
+                builder: (final context, final constraints) {
+                  // Phase 4 fix: at narrow viewports (mobile portrait with
+                  // sidebar visible, ~63 px inner) the fixed-width children
+                  // (32+12+36+12+8+40 = 140) overflow.  Drop the index and
+                  // shrink the cover/duration so the row fits.
+                  final isNarrow = constraints.maxWidth < 240;
+                  final coverSize = isNarrow ? 28.0 : 36.0;
+                  final durationWidth = isNarrow ? 32.0 : 40.0;
+                  final coverSpacing = isNarrow ? 8.0 : 12.0;
 
-                return Row(
-                  children: [
-                    // Index / Playing indicator (hidden on narrow)
-                    if (!isNarrow)
-                      SizedBox(
-                        width: 32,
-                        child: isPlaying
-                            ? Icon(
-                                Icons.equalizer_rounded,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.primary,
-                              )
-                            : Text(
-                                '${widget.songIndex + 1}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.adaptive.withValues(
-                                    alpha: 0.35,
+                  return Row(
+                    children: [
+                      // Index / Playing indicator (hidden on narrow)
+                      if (!isNarrow)
+                        SizedBox(
+                          width: 32,
+                          child: isPlaying
+                              ? Icon(
+                                  Icons.equalizer_rounded,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )
+                              : Text(
+                                  '${widget.songIndex + 1}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context.adaptive.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    fontWeight: FontWeight.w400,
                                   ),
-                                  fontWeight: FontWeight.w400,
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
+                        ),
+
+                      if (!isNarrow) const SizedBox(width: 12),
+
+                      // Cover art (smaller on narrow)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: SizedBox(
+                          width: coverSize,
+                          height: coverSize,
+                          child: CoverArtImage(
+                            song: widget.song,
+                            cacheWidth: (coverSize * 2).toInt(),
+                            cacheHeight: (coverSize * 2).toInt(),
+                            fallbackBuilder: (final context) => ColoredBox(
+                              color: isDark
+                                  ? AppColors.darkSurface2
+                                  : AppColors.lightSidebarHover,
+                              child: Icon(
+                                Icons.music_note_rounded,
+                                size: isNarrow ? 14 : 18,
+                                color: context.adaptive.withValues(alpha: 0.3),
                               ),
-                      ),
-
-                    if (!isNarrow) const SizedBox(width: 12),
-
-                    // Cover art (smaller on narrow)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: SizedBox(
-                        width: coverSize,
-                        height: coverSize,
-                        child: CoverArtImage(
-                          song: widget.song,
-                          cacheWidth: (coverSize * 2).toInt(),
-                          cacheHeight: (coverSize * 2).toInt(),
-                          fallbackBuilder: (context) => Container(
-                            color: isDark
-                                ? AppColors.darkSurface2
-                                : AppColors.lightSidebarHover,
-                            child: Icon(
-                              Icons.music_note_rounded,
-                              size: isNarrow ? 14 : 18,
-                              color: context.adaptive.withValues(alpha: 0.3),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
-                    SizedBox(width: coverSpacing),
+                      SizedBox(width: coverSpacing),
 
-                    // Song name + artist
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.song.name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: isCurrent
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: isCurrent
-                                  ? Theme.of(context).colorScheme.primary
-                                  : context.adaptive,
+                      // Song name + artist
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.song.name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: isCurrent
+                                    ? Theme.of(context).colorScheme.primary
+                                    : context.adaptive,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            const SizedBox(height: 1),
+                            Text(
+                              widget.song.artist ?? 'Unknown',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.adaptive.withValues(alpha: 0.4),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Favorite heart button — Spotify signature interaction.
+                      // Always visible; filled red when favorited, subtle outline otherwise.
+                      if (!isNarrow)
+                        GestureDetector(
+                          onTap: () async {
+                            safeHaptic(HapticType.light);
+                            final db = ref.read(databaseServiceProvider);
+                            if (widget.song.id != null) {
+                              await db.toggleFavorite(widget.song.id!);
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 8,
+                            ),
+                            child: Icon(
+                              widget.song.isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 16,
+                              color: widget.song.isFavorite
+                                  ? Theme.of(context).colorScheme.primary
+                                  : context.adaptive.withValues(alpha: 0.35),
+                            ),
                           ),
-                          const SizedBox(height: 1),
-                          Text(
-                            widget.song.artist ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 11,
+                        ),
+
+                      // Add to playlist button (on hover) — hidden on narrow
+                      // because there is no room and it is a desktop-only
+                      // convenience.
+                      if (_isHovered && !isNarrow)
+                        GestureDetector(
+                          onTap: () => PlaylistManagerWidget.showAddToPlaylist(
+                            context,
+                            widget.song,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.playlist_add_rounded,
+                              size: 18,
                               color: context.adaptive.withValues(alpha: 0.4),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Favorite heart button — Spotify signature interaction.
-                    // Always visible; filled red when favorited, subtle outline otherwise.
-                    if (!isNarrow)
-                      GestureDetector(
-                        onTap: () async {
-                          safeHaptic(HapticType.light);
-                          final db = ref.read(databaseServiceProvider);
-                          if (widget.song.id != null) {
-                            await db.toggleFavorite(widget.song.id!);
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 8,
-                          ),
-                          child: Icon(
-                            widget.song.isFavorite
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            size: 16,
-                            color: widget.song.isFavorite
-                                ? Theme.of(context).colorScheme.primary
-                                : context.adaptive.withValues(alpha: 0.35),
                           ),
                         ),
-                      ),
 
-                    // Add to playlist button (on hover) — hidden on narrow
-                    // because there is no room and it is a desktop-only
-                    // convenience.
-                    if (_isHovered && !isNarrow)
-                      GestureDetector(
-                        onTap: () => PlaylistManagerWidget.showAddToPlaylist(
-                          context,
-                          widget.song,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.playlist_add_rounded,
-                            size: 18,
-                            color: context.adaptive.withValues(alpha: 0.4),
+                      if (!isNarrow) const SizedBox(width: 8),
+
+                      // Duration
+                      SizedBox(
+                        width: durationWidth,
+                        child: Text(
+                          _formatDuration(widget.song.durationMs),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.adaptive.withValues(alpha: 0.35),
                           ),
+                          textAlign: TextAlign.right,
                         ),
                       ),
-
-                    if (!isNarrow) const SizedBox(width: 8),
-
-                    // Duration
-                    SizedBox(
-                      width: durationWidth,
-                      child: Text(
-                        _formatDuration(widget.song.durationMs),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.adaptive.withValues(alpha: 0.35),
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }

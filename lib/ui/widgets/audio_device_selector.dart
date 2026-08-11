@@ -11,10 +11,10 @@ import '../utils/theme_helpers.dart';
 class AudioDeviceSelector extends StatefulWidget {
   const AudioDeviceSelector({super.key});
 
-  static Future<void> show(BuildContext context) async {
+  static Future<void> show(final BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (context) => const Dialog(child: AudioDeviceSelector()),
+      builder: (final context) => const Dialog(child: AudioDeviceSelector()),
     );
   }
 
@@ -58,10 +58,11 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
     }
   }
 
-  Future<void> _selectDevice(PlaybackDevice? device) async {
+  Future<void> _selectDevice(final PlaybackDevice? device) async {
     try {
       final soloud = SoLoud.instance;
       soloud.changeDevice(newDevice: device);
+      if (!mounted) return;
       setState(() {
         _currentDevice = device;
       });
@@ -87,7 +88,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final spacing = ThemeSpacing.of(context);
     final radius = ThemeRadius.of(context);
@@ -169,7 +170,7 @@ class _AudioDeviceSelectorState extends State<AudioDeviceSelector> {
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: _devices.length,
-                  itemBuilder: (context, index) {
+                  itemBuilder: (final context, final index) {
                     final device = _devices[index];
                     final isSelected = _currentDevice?.id == device.id;
 
@@ -216,7 +217,7 @@ class _DeviceTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final tileBg = AppColors.adaptive(
       context,
       dark: AppColors.darkSurface,

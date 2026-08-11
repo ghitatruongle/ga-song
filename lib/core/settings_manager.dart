@@ -9,16 +9,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ─── Default Constants ───────────────────────────────────────────────────────
 
 /// Default blur level (0–100 scale).
-const double _kDefaultBlurLevel = 30.0;
+const double _kDefaultBlurLevel = 30;
 
 /// Default window opacity (0.1–1.0).
 const double _kDefaultWindowOpacity = 0.7;
 
 /// Default crossfade duration in seconds (0–10).
-const double _kDefaultCrossfadeDuration = 3.0;
+const double _kDefaultCrossfadeDuration = 3;
 
 /// Target normalization level in dB (−24 ... 0).
-const double _kDefaultNormalizationLevel = -12.0;
+const double _kDefaultNormalizationLevel = -12;
 
 /// Equalizer band count.
 const int _kEqBandCount = 5;
@@ -81,31 +81,31 @@ class SettingsManager {
 
   // Desktop Lyrics Window
   final ValueNotifier<bool> desktopLyricsEnabledNotifier = ValueNotifier(false);
-  final ValueNotifier<double> desktopLyricsFontSizeNotifier = ValueNotifier(
-    24.0,
-  );
+  final ValueNotifier<double> desktopLyricsFontSizeNotifier = ValueNotifier(24);
   final ValueNotifier<double> desktopLyricsOpacityNotifier = ValueNotifier(0.9);
   final ValueNotifier<bool> desktopLyricsClickThroughNotifier = ValueNotifier(
     false,
   );
-  final ValueNotifier<double> sensitivityNotifier = ValueNotifier(1.0);
+  final ValueNotifier<double> sensitivityNotifier = ValueNotifier(1);
   final ValueNotifier<Color> customPrimaryColorNotifier = ValueNotifier(
     const Color(0xFF1DB954),
   );
   final ValueNotifier<Color?> dynamicPrimaryColorNotifier = ValueNotifier(null);
 
   // In-app lyric font size (12-36px, default 24 for active / 17 for inactive)
-  final ValueNotifier<double> lyricFontSizeNotifier = ValueNotifier(1.0);
+  final ValueNotifier<double> lyricFontSizeNotifier = ValueNotifier(1);
 
   // Show lyrics inside the mini player
-  final ValueNotifier<bool> showLyricsInMiniPlayerNotifier = ValueNotifier(true);
+  final ValueNotifier<bool> showLyricsInMiniPlayerNotifier = ValueNotifier(
+    true,
+  );
 
   // Current tab index (0=home, 1=library, 2=online, 3=ktv, 4=personal, 5=settings)
   final ValueNotifier<int> currentTabIndexNotifier = ValueNotifier(0);
 
   // Equalizer
   final ValueNotifier<List<double>> eqBandsNotifier = ValueNotifier(
-    List<double>.filled(_kEqBandCount, 0.0),
+    List<double>.filled(_kEqBandCount, 0),
   );
   final ValueNotifier<int> eqBassNotifier = ValueNotifier(0);
   final ValueNotifier<String> eqPresetNotifier = ValueNotifier('Normal');
@@ -121,20 +121,20 @@ class SettingsManager {
     _kDefaultNormalizationLevel,
   );
   final ValueNotifier<bool> normalizationEnabledNotifier = ValueNotifier(false);
-  final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1.0);
-  final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0.0);
-  final ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1.0);
+  final ValueNotifier<double> pitchShiftNotifier = ValueNotifier(1);
+  final ValueNotifier<double> reverbMixNotifier = ValueNotifier(0);
+  final ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1);
 
   // Reverb (Freeverb) advanced params
   final ValueNotifier<double> reverbRoomSizeNotifier = ValueNotifier(0.5);
   final ValueNotifier<double> reverbDampNotifier = ValueNotifier(0.5);
 
   // Compressor advanced params
-  final ValueNotifier<double> compThresholdNotifier = ValueNotifier(-6.0);
-  final ValueNotifier<double> compAttackNotifier = ValueNotifier(10.0);
-  final ValueNotifier<double> compReleaseNotifier = ValueNotifier(100.0);
-  final ValueNotifier<double> compKneeWidthNotifier = ValueNotifier(2.0);
-  final ValueNotifier<double> compMakeupGainNotifier = ValueNotifier(0.0);
+  final ValueNotifier<double> compThresholdNotifier = ValueNotifier(-6);
+  final ValueNotifier<double> compAttackNotifier = ValueNotifier(10);
+  final ValueNotifier<double> compReleaseNotifier = ValueNotifier(100);
+  final ValueNotifier<double> compKneeWidthNotifier = ValueNotifier(2);
+  final ValueNotifier<double> compMakeupGainNotifier = ValueNotifier(0);
 
   // Sort & Filter
   final ValueNotifier<int> sortModeNotifier = ValueNotifier(0);
@@ -163,7 +163,7 @@ class SettingsManager {
   /// Schedules a debounced SharedPreferences write for a continuous setting.
   /// The [ValueNotifier] is updated immediately (UI stays responsive); only
   /// the disk I/O is deferred.
-  void _debouncePersist(String key, Future<void> Function() write) {
+  void _debouncePersist(final String key, final Future<void> Function() write) {
     _pendingWrites[key]?.timer.cancel();
     _pendingWrites[key] = _DebouncedWrite(
       timer: Timer(const Duration(milliseconds: _persistDebounceMs), () {
@@ -192,11 +192,20 @@ class SettingsManager {
   );
 
   // Sleep Timer v2 settings (persisted)
-  final ValueNotifier<int> sleepTimerDurationPresetNotifier = ValueNotifier(0); // 0=custom, 1=15min, 2=30min, 3=45min, 4=60min, 5=end of song
-  final ValueNotifier<Duration> sleepTimerCustomDurationNotifier = ValueNotifier(const Duration(minutes: 30));
-  final ValueNotifier<int> sleepTimerFadeOutDurationNotifier = ValueNotifier(30); // seconds
-  final ValueNotifier<bool> sleepTimerStopAtEndOfSongNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> sleepTimerFadeOutEnabledNotifier = ValueNotifier(true);
+  final ValueNotifier<int> sleepTimerDurationPresetNotifier = ValueNotifier(
+    0,
+  ); // 0=custom, 1=15min, 2=30min, 3=45min, 4=60min, 5=end of song
+  final ValueNotifier<Duration> sleepTimerCustomDurationNotifier =
+      ValueNotifier(const Duration(minutes: 30));
+  final ValueNotifier<int> sleepTimerFadeOutDurationNotifier = ValueNotifier(
+    30,
+  ); // seconds
+  final ValueNotifier<bool> sleepTimerStopAtEndOfSongNotifier = ValueNotifier(
+    false,
+  );
+  final ValueNotifier<bool> sleepTimerFadeOutEnabledNotifier = ValueNotifier(
+    true,
+  );
 
   // Preset definitions: [60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz], bassLevel
   static const Map<String, List<double>> _presetBands = {
@@ -258,21 +267,24 @@ class SettingsManager {
     desktopLyricsClickThroughNotifier.value =
         _prefs.getBool('desktopLyricsClickThrough') ?? false;
     sensitivityNotifier.value = _prefs.getDouble('sensitivity') ?? 1.0;
-    lyricFontSizeNotifier.value =
-        _prefs.getDouble('lyricFontSize') ?? 1.0;
+    lyricFontSizeNotifier.value = _prefs.getDouble('lyricFontSize') ?? 1.0;
     showLyricsInMiniPlayerNotifier.value =
         _prefs.getBool('showLyricsInMiniPlayer') ?? true;
     soundFeedbackEnabledNotifier.value =
         _prefs.getBool('soundFeedbackEnabled') ?? false;
 
     // Sleep Timer v2 settings
-    sleepTimerDurationPresetNotifier.value = _prefs.getInt('sleepTimerDurationPreset') ?? 0;
+    sleepTimerDurationPresetNotifier.value =
+        _prefs.getInt('sleepTimerDurationPreset') ?? 0;
     sleepTimerCustomDurationNotifier.value = Duration(
       seconds: _prefs.getInt('sleepTimerCustomDuration') ?? 1800,
     );
-    sleepTimerFadeOutDurationNotifier.value = _prefs.getInt('sleepTimerFadeOutDuration') ?? 30;
-    sleepTimerStopAtEndOfSongNotifier.value = _prefs.getBool('sleepTimerStopAtEndOfSong') ?? false;
-    sleepTimerFadeOutEnabledNotifier.value = _prefs.getBool('sleepTimerFadeOutEnabled') ?? true;
+    sleepTimerFadeOutDurationNotifier.value =
+        _prefs.getInt('sleepTimerFadeOutDuration') ?? 30;
+    sleepTimerStopAtEndOfSongNotifier.value =
+        _prefs.getBool('sleepTimerStopAtEndOfSong') ?? false;
+    sleepTimerFadeOutEnabledNotifier.value =
+        _prefs.getBool('sleepTimerFadeOutEnabled') ?? true;
 
     // C3 fix: Load saved window state that was previously forgotten
     final w = _prefs.getDouble('savedWindowWidth');
@@ -305,7 +317,7 @@ class SettingsManager {
     final savedBands = _prefs.getStringList('eqBands');
     if (savedBands != null && savedBands.length == 5) {
       eqBandsNotifier.value = savedBands
-          .map((s) => double.tryParse(s) ?? 0.0)
+          .map((final s) => double.tryParse(s) ?? 0.0)
           .toList();
     }
 
@@ -343,7 +355,7 @@ class SettingsManager {
       try {
         final Map<String, dynamic> decoded = jsonDecode(hotkeysJson);
         final hotkeys = decoded.map(
-          (key, value) => MapEntry(key, value.toString()),
+          (final key, final value) => MapEntry(key, value.toString()),
         );
         customHotkeysNotifier.value = hotkeys;
       } catch (e, stack) {
@@ -356,7 +368,10 @@ class SettingsManager {
         // Fallback to old format
         try {
           final hotkeys = Map<String, String>.from(
-            (hotkeysJson.split(';')).fold<Map<String, String>>({}, (map, pair) {
+            hotkeysJson.split(';').fold<Map<String, String>>({}, (
+              final map,
+              final pair,
+            ) {
               final parts = pair.split(':');
               if (parts.length == 2) {
                 map[parts[0]] = parts[1];
@@ -385,37 +400,37 @@ class SettingsManager {
     // sau khi SoLoud.instance.init() hoàn tất.
   }
 
-  Future<void> setIsGridView(bool isGrid) async {
+  Future<void> setIsGridView(final bool isGrid) async {
     isGridViewNotifier.value = isGrid;
     await _prefs.setBool('isGridView', isGrid);
   }
 
-  Future<void> setSidebarCollapsed(bool collapsed) async {
+  Future<void> setSidebarCollapsed(final bool collapsed) async {
     sidebarCollapsedNotifier.value = collapsed;
     await _prefs.setBool('sidebarCollapsed', collapsed);
   }
 
-  Future<void> setDesktopLyricsEnabled(bool enabled) async {
+  Future<void> setDesktopLyricsEnabled(final bool enabled) async {
     desktopLyricsEnabledNotifier.value = enabled;
     await _prefs.setBool('desktopLyricsEnabled', enabled);
   }
 
-  Future<void> setDesktopLyricsFontSize(double size) async {
+  Future<void> setDesktopLyricsFontSize(final double size) async {
     desktopLyricsFontSizeNotifier.value = size;
     await _prefs.setDouble('desktopLyricsFontSize', size);
   }
 
-  Future<void> setDesktopLyricsOpacity(double opacity) async {
+  Future<void> setDesktopLyricsOpacity(final double opacity) async {
     desktopLyricsOpacityNotifier.value = opacity;
     await _prefs.setDouble('desktopLyricsOpacity', opacity);
   }
 
-  Future<void> setDesktopLyricsClickThrough(bool clickThrough) async {
+  Future<void> setDesktopLyricsClickThrough(final bool clickThrough) async {
     desktopLyricsClickThroughNotifier.value = clickThrough;
     await _prefs.setBool('desktopLyricsClickThrough', clickThrough);
   }
 
-  Future<void> setCustomBackgroundImage(String? path) async {
+  Future<void> setCustomBackgroundImage(final String? path) async {
     customBackgroundImageNotifier.value = path;
     if (path == null) {
       await _prefs.remove('customBackgroundImage');
@@ -424,19 +439,19 @@ class SettingsManager {
     }
   }
 
-  Future<void> setVisualizerShape(int shape) async {
+  Future<void> setVisualizerShape(final int shape) async {
     visualizerShapeNotifier.value = shape;
     await _prefs.setInt('visualizerShape', shape);
   }
 
-  void setIsMiniPlayer(bool isMini) {
+  void setIsMiniPlayer(final bool isMini) {
     isMiniPlayerNotifier.value = isMini;
   }
 
   Future<void> setSavedWindowState(
-    Size size,
-    bool isMaximized,
-    bool isFullScreen,
+    final Size size,
+    final bool isMaximized,
+    final bool isFullScreen,
   ) async {
     _savedWindowSize = size;
     _savedWindowMaximized = isMaximized;
@@ -452,13 +467,13 @@ class SettingsManager {
   bool get savedWindowMaximized => _savedWindowMaximized;
   bool get savedWindowFullScreen => _savedWindowFullScreen;
 
-  Future<void> setSavedWindowPosition(Offset position) async {
+  Future<void> setSavedWindowPosition(final Offset position) async {
     _savedWindowPosition = position;
     await _prefs.setDouble('savedWindowX', position.dx);
     await _prefs.setDouble('savedWindowY', position.dy);
   }
 
-  Future<void> setThemeMode(ThemeMode mode) async {
+  Future<void> setThemeMode(final ThemeMode mode) async {
     themeModeNotifier.value = mode;
     String val = 'system';
     if (mode == ThemeMode.light) {
@@ -469,12 +484,12 @@ class SettingsManager {
     await _prefs.setString('themeMode', val);
   }
 
-  Future<void> setEnableBlur(bool enable) async {
+  Future<void> setEnableBlur(final bool enable) async {
     enableBlurNotifier.value = enable;
     await _prefs.setBool('enableBlur', enable);
   }
 
-  Future<void> setBlurLevel(double level) async {
+  Future<void> setBlurLevel(final double level) async {
     blurLevelNotifier.value = level.clamp(0.0, 100.0);
     _debouncePersist(
       'blurLevel',
@@ -482,12 +497,12 @@ class SettingsManager {
     );
   }
 
-  Future<void> setUseNativeWindowEffect(bool enable) async {
+  Future<void> setUseNativeWindowEffect(final bool enable) async {
     useNativeWindowEffectNotifier.value = enable;
     await _prefs.setBool('useNativeWindowEffect', enable);
   }
 
-  Future<void> setWindowOpacity(double opacity) async {
+  Future<void> setWindowOpacity(final double opacity) async {
     windowOpacityNotifier.value = opacity.clamp(0.1, 1.0);
     _debouncePersist(
       'windowOpacity',
@@ -495,17 +510,17 @@ class SettingsManager {
     );
   }
 
-  Future<void> setMinimizeToTray(bool minimize) async {
+  Future<void> setMinimizeToTray(final bool minimize) async {
     minimizeToTrayNotifier.value = minimize;
     await _prefs.setBool('minimizeToTray', minimize);
   }
 
-  Future<void> setAutoHidePlayerBar(bool autoHide) async {
+  Future<void> setAutoHidePlayerBar(final bool autoHide) async {
     autoHidePlayerBarNotifier.value = autoHide;
     await _prefs.setBool('autoHidePlayerBar', autoHide);
   }
 
-  Future<void> setVisualizerEnabled(bool enable) async {
+  Future<void> setVisualizerEnabled(final bool enable) async {
     visualizerEnabledNotifier.value = enable;
     await _prefs.setBool('visualizerEnabled', enable);
     try {
@@ -520,7 +535,7 @@ class SettingsManager {
     }
   }
 
-  Future<void> setSensitivity(double value) async {
+  Future<void> setSensitivity(final double value) async {
     sensitivityNotifier.value = value.clamp(0.3, 2.5);
     _debouncePersist(
       'sensitivity',
@@ -528,29 +543,29 @@ class SettingsManager {
     );
   }
 
-  Future<void> setLyricFontSize(double scale) async {
+  Future<void> setLyricFontSize(final double scale) async {
     lyricFontSizeNotifier.value = scale.clamp(0.5, 1.5);
     await _prefs.setDouble('lyricFontSize', lyricFontSizeNotifier.value);
   }
 
-  Future<void> setShowLyricsInMiniPlayer(bool show) async {
+  Future<void> setShowLyricsInMiniPlayer(final bool show) async {
     showLyricsInMiniPlayerNotifier.value = show;
     await _prefs.setBool('showLyricsInMiniPlayer', show);
   }
 
-  Future<void> setUseDynamicColor(bool useDynamic) async {
+  Future<void> setUseDynamicColor(final bool useDynamic) async {
     useDynamicColorNotifier.value = useDynamic;
     await _prefs.setBool('useDynamicColor', useDynamic);
   }
 
-  Future<void> setCustomPrimaryColor(Color color) async {
+  Future<void> setCustomPrimaryColor(final Color color) async {
     customPrimaryColorNotifier.value = color;
     await _prefs.setInt('customPrimaryColor', color.toARGB32());
   }
 
   // ─── Equalizer ──────────────────────────────────────────────────────────────
 
-  Future<void> setEqBand(int index, double value) async {
+  Future<void> setEqBand(final int index, final double value) async {
     final bands = List<double>.from(eqBandsNotifier.value);
     bands[index] = value.clamp(-1.0, 1.0);
     eqBandsNotifier.value = bands;
@@ -558,17 +573,20 @@ class SettingsManager {
       'eqBands',
       () => _prefs.setStringList(
         'eqBands',
-        bands.map((b) => b.toStringAsFixed(3)).toList(),
+        bands.map((final b) => b.toStringAsFixed(3)).toList(),
       ),
     );
   }
 
-  Future<void> setEqBass(int level) async {
-    eqBassNotifier.value = level.clamp(0, 100);
-    await _prefs.setInt('eqBass', level);
+  Future<void> setEqBass(final int level) async {
+    // Persist the clamped value — otherwise restoring shows a different
+    // number than the slider range (0..100) after a restart.
+    final clamped = level.clamp(0, 100);
+    eqBassNotifier.value = clamped;
+    await _prefs.setInt('eqBass', clamped);
   }
 
-  Future<void> applyEqPreset(String preset) async {
+  Future<void> applyEqPreset(final String preset) async {
     eqPresetNotifier.value = preset;
     await _prefs.setString('eqPreset', preset);
 
@@ -577,7 +595,7 @@ class SettingsManager {
       eqBandsNotifier.value = List<double>.from(bands);
       await _prefs.setStringList(
         'eqBands',
-        bands.map((b) => b.toStringAsFixed(3)).toList(),
+        bands.map((final b) => b.toStringAsFixed(3)).toList(),
       );
     }
 
@@ -590,7 +608,7 @@ class SettingsManager {
 
   // ─── Audio Effects Setters ─────────────────────────────────────────────────
 
-  Future<void> setCrossfadeDuration(double duration) async {
+  Future<void> setCrossfadeDuration(final double duration) async {
     crossfadeDurationNotifier.value = duration.clamp(0.0, 10.0);
     _debouncePersist(
       'crossfadeDuration',
@@ -601,12 +619,12 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCrossfadeCurve(int curve) async {
+  Future<void> setCrossfadeCurve(final int curve) async {
     crossfadeCurveNotifier.value = curve.clamp(0, 2);
     await _prefs.setInt('crossfadeCurve', crossfadeCurveNotifier.value);
   }
 
-  Future<void> setNormalizationLevel(double level) async {
+  Future<void> setNormalizationLevel(final double level) async {
     normalizationLevelNotifier.value = level.clamp(-24.0, 0.0);
     _debouncePersist(
       'normalizationLevel',
@@ -617,12 +635,12 @@ class SettingsManager {
     );
   }
 
-  Future<void> setNormalizationEnabled(bool enabled) async {
+  Future<void> setNormalizationEnabled(final bool enabled) async {
     normalizationEnabledNotifier.value = enabled;
     await _prefs.setBool('normalizationEnabled', enabled);
   }
 
-  Future<void> setPitchShift(double pitch) async {
+  Future<void> setPitchShift(final double pitch) async {
     pitchShiftNotifier.value = pitch.clamp(0.5, 2.0);
     _debouncePersist(
       'pitchShift',
@@ -630,7 +648,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setReverbMix(double mix) async {
+  Future<void> setReverbMix(final double mix) async {
     reverbMixNotifier.value = mix.clamp(0.0, 1.0);
     _debouncePersist(
       'reverbMix',
@@ -638,7 +656,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCompressionRatio(double ratio) async {
+  Future<void> setCompressionRatio(final double ratio) async {
     compressionRatioNotifier.value = ratio.clamp(1.0, 10.0);
     _debouncePersist(
       'compressionRatio',
@@ -647,7 +665,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setReverbRoomSize(double size) async {
+  Future<void> setReverbRoomSize(final double size) async {
     reverbRoomSizeNotifier.value = size.clamp(0.0, 1.0);
     _debouncePersist(
       'reverbRoomSize',
@@ -655,7 +673,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setReverbDamp(double damp) async {
+  Future<void> setReverbDamp(final double damp) async {
     reverbDampNotifier.value = damp.clamp(0.0, 1.0);
     _debouncePersist(
       'reverbDamp',
@@ -663,7 +681,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCompThreshold(double threshold) async {
+  Future<void> setCompThreshold(final double threshold) async {
     compThresholdNotifier.value = threshold.clamp(-80.0, 0.0);
     _debouncePersist(
       'compThreshold',
@@ -671,7 +689,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCompAttack(double attack) async {
+  Future<void> setCompAttack(final double attack) async {
     compAttackNotifier.value = attack.clamp(0.0, 100.0);
     _debouncePersist(
       'compAttack',
@@ -679,7 +697,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCompRelease(double release) async {
+  Future<void> setCompRelease(final double release) async {
     compReleaseNotifier.value = release.clamp(0.0, 1000.0);
     _debouncePersist(
       'compRelease',
@@ -687,7 +705,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCompKneeWidth(double knee) async {
+  Future<void> setCompKneeWidth(final double knee) async {
     compKneeWidthNotifier.value = knee.clamp(0.0, 40.0);
     _debouncePersist(
       'compKneeWidth',
@@ -695,7 +713,7 @@ class SettingsManager {
     );
   }
 
-  Future<void> setCompMakeupGain(double gain) async {
+  Future<void> setCompMakeupGain(final double gain) async {
     compMakeupGainNotifier.value = gain.clamp(-40.0, 40.0);
     _debouncePersist(
       'compMakeupGain',
@@ -705,26 +723,26 @@ class SettingsManager {
 
   // ─── Sort Mode Setters ────────────────────────────────────────────────────
 
-  Future<void> setSortMode(int mode) async {
+  Future<void> setSortMode(final int mode) async {
     sortModeNotifier.value = mode.clamp(0, _kSortModeCount - 1);
     await _prefs.setInt('sortMode', sortModeNotifier.value);
   }
 
-  Future<void> setSortAscending(bool ascending) async {
+  Future<void> setSortAscending(final bool ascending) async {
     sortAscendingNotifier.value = ascending;
     await _prefs.setBool('sortAscending', ascending);
   }
 
   // ─── Custom Hotkeys Setters ───────────────────────────────────────────────
 
-  Future<void> setCustomHotkey(String action, String keys) async {
+  Future<void> setCustomHotkey(final String action, final String keys) async {
     final hotkeys = Map<String, String>.from(customHotkeysNotifier.value);
     hotkeys[action] = keys;
     customHotkeysNotifier.value = hotkeys;
     await _prefs.setString('customHotkeys', jsonEncode(hotkeys));
   }
 
-  Future<void> removeCustomHotkey(String action) async {
+  Future<void> removeCustomHotkey(final String action) async {
     final hotkeys = Map<String, String>.from(customHotkeysNotifier.value);
     hotkeys.remove(action);
     customHotkeysNotifier.value = hotkeys;
@@ -733,44 +751,50 @@ class SettingsManager {
 
   // ─── Media Key Setters ───────────────────────────────────────────────────
 
-  Future<void> setMediaKeyEnabled(bool enabled) async {
+  Future<void> setMediaKeyEnabled(final bool enabled) async {
     mediaKeyEnabledNotifier.value = enabled;
     await _prefs.setBool('mediaKeyEnabled', enabled);
   }
 
-  Future<void> setSoundFeedbackEnabled(bool enabled) async {
+  Future<void> setSoundFeedbackEnabled(final bool enabled) async {
     soundFeedbackEnabledNotifier.value = enabled;
     await _prefs.setBool('soundFeedbackEnabled', enabled);
   }
 
   // ─── Sleep Timer v2 Setters ───────────────────────────────────────────────────
 
-  Future<void> setSleepTimerDurationPreset(int preset) async {
+  Future<void> setSleepTimerDurationPreset(final int preset) async {
     sleepTimerDurationPresetNotifier.value = preset.clamp(0, 5);
-    await _prefs.setInt('sleepTimerDurationPreset', sleepTimerDurationPresetNotifier.value);
+    await _prefs.setInt(
+      'sleepTimerDurationPreset',
+      sleepTimerDurationPresetNotifier.value,
+    );
   }
 
-  Future<void> setSleepTimerCustomDuration(Duration duration) async {
+  Future<void> setSleepTimerCustomDuration(final Duration duration) async {
     sleepTimerCustomDurationNotifier.value = duration;
     await _prefs.setInt('sleepTimerCustomDuration', duration.inSeconds);
   }
 
-  Future<void> setSleepTimerFadeOutDuration(int seconds) async {
+  Future<void> setSleepTimerFadeOutDuration(final int seconds) async {
     sleepTimerFadeOutDurationNotifier.value = seconds.clamp(0, 300);
-    await _prefs.setInt('sleepTimerFadeOutDuration', sleepTimerFadeOutDurationNotifier.value);
+    await _prefs.setInt(
+      'sleepTimerFadeOutDuration',
+      sleepTimerFadeOutDurationNotifier.value,
+    );
   }
 
-  Future<void> setSleepTimerStopAtEndOfSong(bool enabled) async {
+  Future<void> setSleepTimerStopAtEndOfSong(final bool enabled) async {
     sleepTimerStopAtEndOfSongNotifier.value = enabled;
     await _prefs.setBool('sleepTimerStopAtEndOfSong', enabled);
   }
 
-  Future<void> setSleepTimerFadeOutEnabled(bool enabled) async {
+  Future<void> setSleepTimerFadeOutEnabled(final bool enabled) async {
     sleepTimerFadeOutEnabledNotifier.value = enabled;
     await _prefs.setBool('sleepTimerFadeOutEnabled', enabled);
   }
 
-  Future<void> setLocale(Locale locale) async {
+  Future<void> setLocale(final Locale locale) async {
     localeNotifier.value = locale;
     await _prefs.setString('localeCode', locale.languageCode);
   }
@@ -779,7 +803,7 @@ class SettingsManager {
   // ── Dominant Color Cache ──────────────────────────────────────────
 
   /// Returns the cached dominant color for [fileName], or null if not yet computed.
-  Color? getSongColor(String fileName) {
+  Color? getSongColor(final String fileName) {
     // Check in-memory first
     if (_songColorCache.containsKey(fileName)) {
       return _songColorCache[fileName];
@@ -795,7 +819,7 @@ class SettingsManager {
   }
 
   /// Saves the dominant [color] for [fileName] to both memory and disk.
-  Future<void> saveSongColor(String fileName, Color color) async {
+  Future<void> saveSongColor(final String fileName, final Color color) async {
     _songColorCache[fileName] = color;
     await _prefs.setInt('songColor_$fileName', color.toARGB32());
   }
@@ -907,6 +931,17 @@ class SettingsManager {
     sleepTimerFadeOutEnabledNotifier.dispose();
     soundFeedbackEnabledNotifier.dispose();
     hapticFeedbackEnabledNotifier.dispose();
+    // Notifiers missed by the original dispose — all changed/hot-reload-safe.
+    autoHidePlayerBarNotifier.dispose();
+    sidebarCollapsedNotifier.dispose();
+    desktopLyricsEnabledNotifier.dispose();
+    desktopLyricsOpacityNotifier.dispose();
+    desktopLyricsFontSizeNotifier.dispose();
+    desktopLyricsClickThroughNotifier.dispose();
+    lyricFontSizeNotifier.dispose();
+    showLyricsInMiniPlayerNotifier.dispose();
+    currentTabIndexNotifier.dispose();
+    crossfadeCurveNotifier.dispose();
   }
 }
 

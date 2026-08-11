@@ -29,15 +29,9 @@ android {
         versionName = flutter.versionName
     }
 
-    // ABI splits — tạo APK riêng cho từng architecture
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = true
-        }
-    }
+    // ABI splits are handled by `flutter build apk --split-per-abi` so the
+    // classic `splits {}` block is not used here — it conflicts with
+    // `flutter build appbundle` (AGP issue 402800800).
 
     buildTypes {
         release {
@@ -45,11 +39,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
-            // Chỉ build arm64-v8a cho release — giảm 40% native libs size
-            // (armeabi-v7a được build qua ABI splits riêng)
+            // Hỗ trợ cả arm64-v8a và armeabi-v7a (cho thiết bị 32-bit như SM J610F)
             ndk {
                 debugSymbolLevel = "full"
-                abiFilters += setOf("arm64-v8a")
             }
 
             // TODO: Add your own signing config for the release build.
@@ -64,8 +56,8 @@ android {
         }
 
         debug {
-            // Bật R8 cho debug để giảm startup time (không shrink resources)
-            isMinifyEnabled = true
+            // Tắt R8 trong debug build để tăng tốc độ biên dịch và thử nghiệm
+            isMinifyEnabled = false
             isShrinkResources = false
         }
     }

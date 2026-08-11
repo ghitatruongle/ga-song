@@ -4,18 +4,12 @@ import 'package:ga_song/ui/widgets/debounced_slider.dart';
 
 void main() {
   testWidgets('DebouncedSlider passes divisions through to underlying Slider', (
-    tester,
+    final tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: DebouncedSlider(
-            value: 0.5,
-            min: 0,
-            max: 1,
-            divisions: 10,
-            onChanged: (_) {},
-          ),
+          body: DebouncedSlider(value: 0.5, divisions: 10, onChanged: (_) {}),
         ),
       ),
     );
@@ -25,15 +19,15 @@ void main() {
   });
 
   testWidgets('DebouncedSlider passes label through to underlying Slider', (
-    tester,
+    final tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: DebouncedSlider(
-            value: -12.0,
-            min: -24.0,
-            max: 0.0,
+            value: -12,
+            min: -24,
+            max: 0,
             label: '-12 dB',
             onChanged: (_) {},
           ),

@@ -27,73 +27,63 @@ class AppAnimations {
 
   /// Creates a fade transition.
   static Widget fadeTransition({
-    required Widget child,
-    required Animation<double> animation,
-  }) {
-    return FadeTransition(
-      opacity: CurvedAnimation(parent: animation, curve: standard),
-      child: child,
-    );
-  }
+    required final Widget child,
+    required final Animation<double> animation,
+  }) => FadeTransition(
+    opacity: CurvedAnimation(parent: animation, curve: standard),
+    child: child,
+  );
 
   /// Creates a slide transition from bottom.
   static Widget slideFromBottom({
-    required Widget child,
-    required Animation<double> animation,
-  }) {
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, 0.3),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: animation, curve: enter)),
-      child: FadeTransition(opacity: animation, child: child),
-    );
-  }
+    required final Widget child,
+    required final Animation<double> animation,
+  }) => SlideTransition(
+    position: Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: animation, curve: enter)),
+    child: FadeTransition(opacity: animation, child: child),
+  );
 
   /// Creates a scale transition.
   static Widget scaleTransition({
-    required Widget child,
-    required Animation<double> animation,
-  }) {
-    return ScaleTransition(
-      scale: CurvedAnimation(parent: animation, curve: standard),
-      child: child,
-    );
-  }
+    required final Widget child,
+    required final Animation<double> animation,
+  }) => ScaleTransition(
+    scale: CurvedAnimation(parent: animation, curve: standard),
+    child: child,
+  );
 
   /// Creates an animated container with smooth transitions.
   static Widget animatedContainer({
-    required Widget child,
-    required bool condition,
-    Duration? duration,
-    Curve? curve,
-  }) {
-    return AnimatedContainer(
-      duration: duration ?? medium,
-      curve: curve ?? standard,
-      child: child,
-    );
-  }
+    required final Widget child,
+    required final bool condition,
+    final Duration? duration,
+    final Curve? curve,
+  }) => AnimatedContainer(
+    duration: duration ?? medium,
+    curve: curve ?? standard,
+    child: child,
+  );
 
   /// Creates a hero animation wrapper.
-  static Widget hero({required String tag, required Widget child}) {
-    return Hero(tag: tag, child: child);
-  }
+  static Widget hero({
+    required final String tag,
+    required final Widget child,
+  }) => Hero(tag: tag, child: child);
 
   /// Creates an animated switcher for swapping widgets.
   static Widget animatedSwitcher({
-    required Widget child,
-    Duration? duration,
-    Widget Function(Widget, Animation<double>)? transitionBuilder,
-  }) {
-    return AnimatedSwitcher(
-      duration: duration ?? medium,
-      transitionBuilder:
-          transitionBuilder ??
-          (child, animation) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-      child: child,
-    );
-  }
+    required final Widget child,
+    final Duration? duration,
+    final Widget Function(Widget, Animation<double>)? transitionBuilder,
+  }) => AnimatedSwitcher(
+    duration: duration ?? medium,
+    transitionBuilder:
+        transitionBuilder ??
+        (final child, final animation) =>
+            FadeTransition(opacity: animation, child: child),
+    child: child,
+  );
 }

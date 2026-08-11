@@ -9,6 +9,7 @@
 /// ```
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:ga_song/main.dart' as app;
@@ -22,18 +23,20 @@ void main() {
       // On headless CI, use `flutter test integration_test --device-id=web`
       // or ensure a virtual display is available for desktop.
 
-      await tester.pumpWidget(const app.GASongApp());
+      await tester.pumpWidget(
+        ProviderScope(child: const app.GASongApp()),
+      );
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       // Verify the app renders the home screen
-      expect(find.text('G.A'), findsOneWidget);
+      expect(find.text('Trang chủ'), findsOneWidget);
 
       // Navigate to the library tab via sidebar
       await tester.tap(find.text('Thư viện'));
       await tester.pumpAndSettle();
 
       // Navigate to KTV tab
-      await tester.tap(find.text('Phòng Hát (KTV)'));
+      await tester.tap(find.text('KTV'));
       await tester.pumpAndSettle();
 
       // Navigate to Settings

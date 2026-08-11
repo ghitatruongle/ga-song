@@ -4,8 +4,8 @@ class AudioSourceCachePolicy {
   const AudioSourceCachePolicy();
 
   Set<int> linearWindow({
-    required int currentIndex,
-    required int playlistLength,
+    required final int currentIndex,
+    required final int playlistLength,
   }) {
     if (playlistLength <= 0 ||
         currentIndex < 0 ||
@@ -26,9 +26,9 @@ class AudioSourceCachePolicy {
   }
 
   Set<int> shuffleWindow({
-    required int currentIndex,
-    required int playlistLength,
-    int? plannedNextIndex,
+    required final int currentIndex,
+    required final int playlistLength,
+    final int? plannedNextIndex,
   }) {
     if (playlistLength <= 0 ||
         currentIndex < 0 ||

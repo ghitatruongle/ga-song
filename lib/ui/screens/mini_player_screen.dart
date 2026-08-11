@@ -26,15 +26,17 @@ class MiniPlayerScreen extends ConsumerWidget {
   const MiniPlayerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     if (_isDesktopPlatform) {
       return const _DesktopMiniPlayer();
     }
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
       final pipService = ref.read(pipServiceProvider);
       return ValueListenableBuilder<bool>(
         valueListenable: pipService.isInPipNotifier,
-        builder: (context, isInPip, _) {
+        builder: (final context, final isInPip, _) {
           if (isInPip) return const _PipCompactPlayer();
           return const _MobileMiniPlayer();
         },
@@ -50,8 +52,8 @@ class MiniPlayerScreen extends ConsumerWidget {
 
 /// Restores the window from mini player mode to normal size.
 Future<void> _restoreFromMiniPlayer(
-  BuildContext context,
-  SettingsManager settings,
+  final BuildContext context,
+  final SettingsManager settings,
 ) async {
   final screenSize = MediaQuery.sizeOf(context);
   settings.setIsMiniPlayer(false);
@@ -77,20 +79,20 @@ Future<void> _restoreFromMiniPlayer(
 
 /// Dismisses the mini player (closes it without restoring).
 Future<void> _dismissMiniPlayer(
-  BuildContext context,
-  SettingsManager settings,
+  final BuildContext context,
+  final SettingsManager settings,
 ) async {
   settings.setIsMiniPlayer(false);
   await windowManager.hide();
 }
 
 /// Shows the queue management sheet.
-void _showQueueSheet(BuildContext context) {
+void _showQueueSheet(final BuildContext context) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => const QueueManagementSheet(),
+    builder: (final context) => const QueueManagementSheet(),
   );
 }
 
@@ -98,7 +100,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
   const _DesktopMiniPlayer();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final settings = ref.read(settingsManagerProvider);
     final playlist = ref.read(playlistServiceProvider);
 
@@ -114,7 +116,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
           // Background Image
           Positioned.fill(
             child: Builder(
-              builder: (context) {
+              builder: (final context) {
                 if (song != null) {
                   const maxCacheSize = 256;
                   final mediaSize = MediaQuery.sizeOf(context);
@@ -129,7 +131,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
                     song: song,
                     cacheWidth: cacheWidth,
                     cacheHeight: cacheHeight,
-                    fallbackBuilder: (context) =>
+                    fallbackBuilder: (final context) =>
                         Container(color: AppColors.darkBackground),
                   );
                 }
@@ -153,7 +155,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
           // Drag Area - handles both horizontal (next/prev) and vertical (expand/dismiss) swipes
           Positioned.fill(
             child: GestureDetector(
-              onHorizontalDragEnd: (details) {
+              onHorizontalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -300) {
                   ref.read(playlistServiceProvider).next();
@@ -161,7 +163,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
                   ref.read(playlistServiceProvider).previous();
                 }
               },
-              onVerticalDragEnd: (details) {
+              onVerticalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -500) {
                   // Swipe up → expand to full player
@@ -178,7 +180,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
           // Content
           Positioned.fill(
             child: Builder(
-              builder: (context) {
+              builder: (final context) {
                 if (song == null) return const SizedBox.shrink();
 
                 final textColor = context.adaptive;
@@ -198,7 +200,7 @@ class _DesktopMiniPlayer extends ConsumerWidget {
                         song: song,
                         cacheWidth: 128,
                         cacheHeight: 128,
-                        fallbackBuilder: (context) => DecoratedBox(
+                        fallbackBuilder: (final context) => DecoratedBox(
                           decoration: BoxDecoration(
                             color: Theme.of(
                               context,
@@ -347,7 +349,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
   const _MobileMiniPlayer();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final playlist = ref.read(playlistServiceProvider);
     final settings = ref.read(settingsManagerProvider);
     final song = playlist.currentSong;
@@ -359,13 +361,13 @@ class _MobileMiniPlayer extends ConsumerWidget {
           // Background — blurred cover art
           Positioned.fill(
             child: Builder(
-              builder: (context) {
+              builder: (final context) {
                 if (song != null) {
                   return CoverArtImage(
                     song: song,
                     cacheWidth: 256,
                     cacheHeight: 256,
-                    fallbackBuilder: (context) =>
+                    fallbackBuilder: (final context) =>
                         Container(color: AppColors.darkBackground),
                   );
                 }
@@ -392,7 +394,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
           // - Vertical down: dismiss mini player
           SafeArea(
             child: GestureDetector(
-              onHorizontalDragEnd: (details) {
+              onHorizontalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -300) {
                   ref.read(playlistServiceProvider).next();
@@ -400,7 +402,7 @@ class _MobileMiniPlayer extends ConsumerWidget {
                   ref.read(playlistServiceProvider).previous();
                 }
               },
-              onVerticalDragEnd: (details) {
+              onVerticalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -500) {
                   // Swipe up → expand to full now playing screen
@@ -435,7 +437,7 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
   final Song song;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final textColor = context.adaptive;
     final isPlaying =
         ref.watch(engineStateProvider) == AudioEngineState.playing;
@@ -497,7 +499,7 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
                     song: song,
                     cacheWidth: 512,
                     cacheHeight: 512,
-                    fallbackBuilder: (context) => Container(
+                    fallbackBuilder: (final context) => ColoredBox(
                       color: Theme.of(
                         context,
                       ).cardColor.withValues(alpha: 0.16),
@@ -551,7 +553,7 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Consumer(
-            builder: (context, ref, _) {
+            builder: (final context, final ref, _) {
               final position = ref.watch(positionProvider);
               final duration = ref.watch(trackDurationProvider);
               final progress = duration.inMilliseconds > 0
@@ -578,7 +580,7 @@ class _MobileMiniPlayerContent extends ConsumerWidget {
                     ),
                     child: Slider(
                       value: progress.clamp(0.0, 1.0),
-                      onChanged: (value) {
+                      onChanged: (final value) {
                         final newPosition = Duration(
                           milliseconds: (value * duration.inMilliseconds)
                               .round(),
@@ -688,7 +690,7 @@ class _PipCompactPlayer extends ConsumerWidget {
   const _PipCompactPlayer();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final playlist = ref.read(playlistServiceProvider);
     final isPlaying =
         ref.watch(engineStateProvider) == AudioEngineState.playing;
@@ -705,7 +707,7 @@ class _PipCompactPlayer extends ConsumerWidget {
               song: song,
               cacheWidth: 256,
               cacheHeight: 144,
-              fallbackBuilder: (context) =>
+              fallbackBuilder: (final context) =>
                   Container(color: AppColors.darkSurface),
             )
           else
@@ -717,7 +719,7 @@ class _PipCompactPlayer extends ConsumerWidget {
           // Centered play/pause button & swipe
           Positioned.fill(
             child: GestureDetector(
-              onHorizontalDragEnd: (details) {
+              onHorizontalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -300) {
                   ref.read(playlistServiceProvider).next();
@@ -725,7 +727,7 @@ class _PipCompactPlayer extends ConsumerWidget {
                   ref.read(playlistServiceProvider).previous();
                 }
               },
-              onVerticalDragEnd: (details) {
+              onVerticalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -500) {
                   // Swipe up → expand to full now playing screen
@@ -775,7 +777,7 @@ class _PipCompactPlayer extends ConsumerWidget {
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black)],
+                  shadows: [Shadow(blurRadius: 4)],
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -795,7 +797,7 @@ class _MiniPlayerLyricLine extends ConsumerWidget {
   const _MiniPlayerLyricLine({required this.song});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final song = this.song;
     if (song == null) return const SizedBox.shrink();
 
@@ -821,7 +823,12 @@ class _MiniPlayerLyricLine extends ConsumerWidget {
 
     // If line has syllables, show karaoke style
     if (currentLine.hasSyllables) {
-      return _buildKaraokeLine(currentLine, currentSyllableIndex, textColor, context);
+      return _buildKaraokeLine(
+        currentLine,
+        currentSyllableIndex,
+        textColor,
+        context,
+      );
     }
 
     // Standard line
@@ -843,13 +850,12 @@ class _MiniPlayerLyricLine extends ConsumerWidget {
   }
 
   Widget _buildKaraokeLine(
-    LyricLine line,
-    int currentSyllableIndex,
-    Color textColor,
-    BuildContext context,
+    final LyricLine line,
+    final int currentSyllableIndex,
+    final Color textColor,
+    final BuildContext context,
   ) {
     final syllables = line.syllables!;
-    final baseFontSize = 11.0;
 
     return SizedBox(
       height: 18,
@@ -858,18 +864,21 @@ class _MiniPlayerLyricLine extends ConsumerWidget {
         child: Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: syllables.asMap().entries.map((entry) {
+          children: syllables.asMap().entries.map((final entry) {
             final i = entry.key;
             final syllable = entry.value;
             final isCurrentSyllable = i == currentSyllableIndex;
             final isPastSyllable = i < currentSyllableIndex;
 
             return ShaderMask(
-              shaderCallback: (bounds) {
+              shaderCallback: (final bounds) {
                 if (isPastSyllable) {
                   // Past syllables: solid accent color
                   return LinearGradient(
-                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary],
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary,
+                    ],
                   ).createShader(bounds);
                 } else if (isCurrentSyllable) {
                   // Current syllable: gradient from dim to accent to white
@@ -897,7 +906,9 @@ class _MiniPlayerLyricLine extends ConsumerWidget {
                 curve: Curves.easeOut,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: isCurrentSyllable ? FontWeight.w800 : FontWeight.w500,
+                  fontWeight: isCurrentSyllable
+                      ? FontWeight.w800
+                      : FontWeight.w500,
                   fontStyle: FontStyle.italic,
                   letterSpacing: isCurrentSyllable ? 0.5 : 0,
                   height: 1.4,

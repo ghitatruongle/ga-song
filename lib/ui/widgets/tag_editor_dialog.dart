@@ -18,10 +18,10 @@ class TagEditorDialog extends ConsumerStatefulWidget {
   const TagEditorDialog({super.key, required this.song});
 
   /// Show the tag editor dialog
-  static Future<void> show(BuildContext context, Song song) async {
+  static Future<void> show(final BuildContext context, final Song song) async {
     await showDialog(
       context: context,
-      builder: (context) => TagEditorDialog(song: song),
+      builder: (final context) => TagEditorDialog(song: song),
     );
   }
 
@@ -68,6 +68,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
   Future<void> _loadTags() async {
     try {
       final tag = await AudioTags.read(widget.song.sourcePath);
+      if (!mounted) return; // dialog closed while reading tags
       setState(() {
         _originalTag = tag;
         _isLoading = false;
@@ -82,6 +83,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
         }
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Không thể đọc tags: $e';
         _isLoading = false;
@@ -146,7 +148,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
 
     return AlertDialog(
@@ -186,7 +188,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Cover art preview
-                      if (_originalTag?.pictures.isNotEmpty == true)
+                      if (_originalTag?.pictures.isNotEmpty ?? false)
                         Center(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
@@ -206,7 +208,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
                             ),
                           ),
                         ),
-                      if (_originalTag?.pictures.isNotEmpty == true)
+                      if (_originalTag?.pictures.isNotEmpty ?? false)
                         const SizedBox(height: 16),
 
                       // Title
@@ -216,7 +218,7 @@ class _TagEditorDialogState extends ConsumerState<TagEditorDialog> {
                           labelText: 'Tiêu đề',
                           prefixIcon: Icon(Icons.title),
                         ),
-                        validator: (value) {
+                        validator: (final value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Vui lòng nhập tiêu đề';
                           }

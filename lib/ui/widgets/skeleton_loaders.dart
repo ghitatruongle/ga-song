@@ -2,20 +2,18 @@
 ///
 /// Placeholder widgets that mimic the layout of content while loading.
 /// Provides better perceived performance than spinners.
+library;
 
 import 'package:flutter/material.dart';
-import '../../core/theme/tokens.dart';
-import '../../core/theme_utils.dart';
+import '../../core/platform_capabilities.dart';
 
 /// Base skeleton shimmer animation
 class _SkeletonShimmer extends StatefulWidget {
   final Widget child;
   final Duration duration;
-  
-  const _SkeletonShimmer({
-    required this.child,
-    this.duration = const Duration(milliseconds: 1500),
-  });
+
+  const _SkeletonShimmer({required this.child})
+    : duration = const Duration(milliseconds: 1500);
 
   @override
   State<_SkeletonShimmer> createState() => _SkeletonShimmerState();
@@ -29,13 +27,12 @@ class _SkeletonShimmerState extends State<_SkeletonShimmer>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat(reverse: true);
+    _animation = Tween<double>(
+      begin: 0.4,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -45,15 +42,16 @@ class _SkeletonShimmerState extends State<_SkeletonShimmer>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
+    // Skip animation on low-end devices for better performance
+    if (!PlatformCapabilities.instance.allowShimmerLoading) {
+      return Opacity(opacity: 0.6, child: widget.child);
+    }
+
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _animation.value,
-          child: child,
-        );
-      },
+      builder: (final context, final child) =>
+          Opacity(opacity: _animation.value, child: child),
       child: widget.child,
     );
   }
@@ -62,22 +60,20 @@ class _SkeletonShimmerState extends State<_SkeletonShimmer>
 /// Skeleton for song list tile
 class SongListTileSkeleton extends StatelessWidget {
   final bool isDark;
-  
+
   const SongListTileSkeleton({super.key, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final baseColor = isDark ? Colors.white12 : Colors.black12;
     final highlightColor = isDark ? Colors.white24 : Colors.black26;
-    
+
     return _SkeletonShimmer(
       child: Container(
         height: 52,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: baseColor, width: 1),
-          ),
+          border: Border(bottom: BorderSide(color: baseColor)),
         ),
         child: Row(
           children: [
@@ -146,16 +142,16 @@ class SongListTileSkeleton extends StatelessWidget {
 /// Skeleton for song grid tile
 class SongGridTileSkeleton extends StatelessWidget {
   final bool isDark;
-  
+
   const SongGridTileSkeleton({super.key, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final baseColor = isDark ? Colors.white12 : Colors.black12;
     final highlightColor = isDark ? Colors.white24 : Colors.black26;
-    
+
     return _SkeletonShimmer(
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: baseColor,
           borderRadius: BorderRadius.circular(16),
@@ -169,7 +165,9 @@ class SongGridTileSkeleton extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: highlightColor,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                 ),
               ),
             ),
@@ -214,42 +212,37 @@ class SongGridTileSkeleton extends StatelessWidget {
 class AlbumGridSkeleton extends StatelessWidget {
   final bool isDark;
   final int count;
-  
-  const AlbumGridSkeleton({
-    super.key, 
-    required this.isDark,
-    this.count = 6,
-  });
+
+  const AlbumGridSkeleton({super.key, required this.isDark, this.count = 6});
 
   @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
-        childAspectRatio: 0.8,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: count,
-      itemBuilder: (context, index) => AlbumTileSkeleton(isDark: isDark),
-    );
-  }
+  Widget build(final BuildContext context) => GridView.builder(
+    padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
+    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: 200,
+      childAspectRatio: 0.8,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+    ),
+    itemCount: count,
+    itemBuilder: (final context, final index) =>
+        AlbumTileSkeleton(isDark: isDark),
+  );
 }
 
 /// Skeleton for single album tile
 class AlbumTileSkeleton extends StatelessWidget {
   final bool isDark;
-  
+
   const AlbumTileSkeleton({super.key, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final baseColor = isDark ? Colors.white12 : Colors.black12;
     final highlightColor = isDark ? Colors.white24 : Colors.black26;
-    
+
     return _SkeletonShimmer(
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: baseColor,
           borderRadius: BorderRadius.circular(16),
@@ -262,7 +255,9 @@ class AlbumTileSkeleton extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: highlightColor,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                 ),
               ),
             ),
@@ -306,35 +301,30 @@ class AlbumTileSkeleton extends StatelessWidget {
 class PlaylistViewSkeleton extends StatelessWidget {
   final bool isDark;
   final int count;
-  
-  const PlaylistViewSkeleton({
-    super.key, 
-    required this.isDark,
-    this.count = 8,
-  });
+
+  const PlaylistViewSkeleton({super.key, required this.isDark, this.count = 8});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
-      itemExtent: 86.0,
-      itemCount: count,
-      itemBuilder: (context, index) => SongListTileSkeleton(isDark: isDark),
-    );
-  }
+  Widget build(final BuildContext context) => ListView.builder(
+    padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
+    itemExtent: 86,
+    itemCount: count,
+    itemBuilder: (final context, final index) =>
+        SongListTileSkeleton(isDark: isDark),
+  );
 }
 
 /// Skeleton for KTV screen
 class KTVScreenSkeleton extends StatelessWidget {
   final bool isDark;
-  
+
   const KTVScreenSkeleton({super.key, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final baseColor = isDark ? Colors.white12 : Colors.black12;
     final highlightColor = isDark ? Colors.white24 : Colors.black26;
-    
+
     return _SkeletonShimmer(
       child: Center(
         child: Column(
@@ -369,14 +359,14 @@ class KTVScreenSkeleton extends StatelessWidget {
 /// Skeleton for online screen (YouTube)
 class OnlineScreenSkeleton extends StatelessWidget {
   final bool isDark;
-  
+
   const OnlineScreenSkeleton({super.key, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final baseColor = isDark ? Colors.white12 : Colors.black12;
     final highlightColor = isDark ? Colors.white24 : Colors.black26;
-    
+
     return _SkeletonShimmer(
       child: Column(
         children: [
@@ -398,7 +388,7 @@ class OnlineScreenSkeleton extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
               itemExtent: 120,
               itemCount: 6,
-              itemBuilder: (context, index) => _VideoItemSkeleton(
+              itemBuilder: (final context, final index) => _VideoItemSkeleton(
                 isDark: isDark,
                 baseColor: baseColor,
                 highlightColor: highlightColor,
@@ -415,7 +405,7 @@ class _VideoItemSkeleton extends StatelessWidget {
   final bool isDark;
   final Color baseColor;
   final Color highlightColor;
-  
+
   const _VideoItemSkeleton({
     required this.isDark,
     required this.baseColor,
@@ -423,60 +413,58 @@ class _VideoItemSkeleton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return _SkeletonShimmer(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            // Thumbnail
-            Container(
-              width: 160,
-              height: 90,
-              decoration: BoxDecoration(
-                color: highlightColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
+  Widget build(final BuildContext context) => _SkeletonShimmer(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          // Thumbnail
+          Container(
+            width: 160,
+            height: 90,
+            decoration: BoxDecoration(
+              color: highlightColor,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(width: 12),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: baseColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+          ),
+          const SizedBox(width: 12),
+          // Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: baseColor,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 150,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: highlightColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 150,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: highlightColor,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 100,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: highlightColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 100,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: highlightColor,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

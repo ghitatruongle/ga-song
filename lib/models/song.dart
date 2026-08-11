@@ -50,19 +50,20 @@ class Song {
     this.year,
   });
 
-  factory Song.fromJson(Map<String, dynamic> json) => _$SongFromJson(json);
+  factory Song.fromJson(final Map<String, dynamic> json) =>
+      _$SongFromJson(json);
 
   Map<String, dynamic> toJson() => _$SongToJson(this);
 
   /// Handles both bool and int (SQLite 0/1) formats.
-  static bool _boolFromJson(dynamic value) {
+  static bool _boolFromJson(final dynamic value) {
     if (value is bool) return value;
     if (value is int) return value == 1;
     return false;
   }
 
   /// Handles invalid date strings gracefully.
-  static DateTime? _dateTimeFromJson(dynamic value) {
+  static DateTime? _dateTimeFromJson(final dynamic value) {
     if (value == null) return null;
     if (value is String) return DateTime.tryParse(value);
     return null;
@@ -80,41 +81,39 @@ class Song {
 
   /// Copy with new values
   Song copyWith({
-    int? id,
-    String? name,
-    String? artist,
-    String? album,
-    int? durationMs,
-    double? peakDb,
-    String? sourcePath,
-    bool? isBuiltIn,
-    bool? isFavorite,
-    DateTime? dateAdded,
-    int? playCount,
-    DateTime? lastPlayed,
-    String? genre,
-    int? year,
-  }) {
-    return Song(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      artist: artist ?? this.artist,
-      album: album ?? this.album,
-      durationMs: durationMs ?? this.durationMs,
-      peakDb: peakDb ?? this.peakDb,
-      sourcePath: sourcePath ?? this.sourcePath,
-      isBuiltIn: isBuiltIn ?? this.isBuiltIn,
-      isFavorite: isFavorite ?? this.isFavorite,
-      dateAdded: dateAdded ?? this.dateAdded,
-      playCount: playCount ?? this.playCount,
-      lastPlayed: lastPlayed ?? this.lastPlayed,
-      genre: genre ?? this.genre,
-      year: year ?? this.year,
-    );
-  }
+    final int? id,
+    final String? name,
+    final String? artist,
+    final String? album,
+    final int? durationMs,
+    final double? peakDb,
+    final String? sourcePath,
+    final bool? isBuiltIn,
+    final bool? isFavorite,
+    final DateTime? dateAdded,
+    final int? playCount,
+    final DateTime? lastPlayed,
+    final String? genre,
+    final int? year,
+  }) => Song(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    artist: artist ?? this.artist,
+    album: album ?? this.album,
+    durationMs: durationMs ?? this.durationMs,
+    peakDb: peakDb ?? this.peakDb,
+    sourcePath: sourcePath ?? this.sourcePath,
+    isBuiltIn: isBuiltIn ?? this.isBuiltIn,
+    isFavorite: isFavorite ?? this.isFavorite,
+    dateAdded: dateAdded ?? this.dateAdded,
+    playCount: playCount ?? this.playCount,
+    lastPlayed: lastPlayed ?? this.lastPlayed,
+    genre: genre ?? this.genre,
+    year: year ?? this.year,
+  );
 
   @override
-  bool operator ==(Object other) =>
+  bool operator ==(final Object other) =>
       identical(this, other) || other is Song && id == other.id;
 
   @override

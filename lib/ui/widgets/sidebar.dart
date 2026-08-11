@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/service_providers.dart';
@@ -12,10 +11,10 @@ enum TabItem { home, library, smart, online, ktv, personal, settings }
 // ─── Layout Constants ────────────────────────────────────────────────────────
 // Public so other widgets (e.g. home_screen.dart overlay layers) can
 // align to the sidebar without duplicating the magic numbers.
-const double kSidebarExpandedWidth = 220.0;
-const double kSidebarCollapsedWidth = 64.0;
-const double _kItemHeight = 40.0;
-const double _kActiveIndicatorWidth = 3.0;
+const double kSidebarExpandedWidth = 220;
+const double kSidebarCollapsedWidth = 64;
+const double _kItemHeight = 40;
+const double _kActiveIndicatorWidth = 3;
 const Duration _kCollapseDuration = Duration(milliseconds: 250);
 const Duration _kHoverDuration = Duration(milliseconds: 150);
 
@@ -54,195 +53,188 @@ class _SidebarWidgetState extends ConsumerState<SidebarWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _settingsManager.sidebarCollapsedNotifier,
-      builder: (context, isCollapsed, _) {
-        return AnimatedContainer(
-          duration: _kCollapseDuration,
-          curve: Curves.easeInOut,
-          width: isCollapsed ? kSidebarCollapsedWidth : kSidebarExpandedWidth,
-          color: Colors.transparent,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ─── Header ──────────────────────────────────────────────────
-              _SidebarHeader(
-                isCollapsed: isCollapsed,
-                textColor: textColor,
-                onToggle: _toggleCollapse,
-              ),
+      builder: (final context, final isCollapsed, _) => AnimatedContainer(
+        duration: _kCollapseDuration,
+        curve: Curves.easeInOut,
+        width: isCollapsed ? kSidebarCollapsedWidth : kSidebarExpandedWidth,
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── Header ──────────────────────────────────────────────────
+            _SidebarHeader(
+              isCollapsed: isCollapsed,
+              textColor: textColor,
+              onToggle: _toggleCollapse,
+            ),
 
-              const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-              // ─── Main Navigation ─────────────────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isCollapsed ? 8 : 12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SidebarMenuItem(
-                        icon: Icons.home_filled,
-                        title: 'Trang chủ',
-                        tab: TabItem.home,
-                        currentTab: widget.currentTab,
-                        onTabChanged: widget.onTabChanged,
-                        isCollapsed: isCollapsed,
-                      ),
-                      _SidebarMenuItem(
-                        icon: Icons.library_music_outlined,
-                        title: 'Thư viện',
-                        tab: TabItem.library,
-                        currentTab: widget.currentTab,
-                        onTabChanged: widget.onTabChanged,
-                        isCollapsed: isCollapsed,
-                      ),
-                      if (!kIsWeb &&
-                          defaultTargetPlatform == TargetPlatform.android)
-                        _SidebarMenuItem(
-                          icon: Icons.language_rounded,
-                          title: 'Online',
-                          tab: TabItem.online,
-                          currentTab: widget.currentTab,
-                          onTabChanged: widget.onTabChanged,
-                          isCollapsed: isCollapsed,
-                        ),
-
-                      // ─── Separator ───────────────────────────────────────
-                      _SidebarSeparator(
-                        isCollapsed: isCollapsed,
-                        label: isCollapsed ? null : 'PHÒNG NGHE NHẠC',
-                        textColor: textColor,
-                      ),
-
-                      _SidebarMenuItem(
-                        icon: Icons.mic_external_on_rounded,
-                        title: 'KTV',
-                        tab: TabItem.ktv,
-                        currentTab: widget.currentTab,
-                        onTabChanged: widget.onTabChanged,
-                        isCollapsed: isCollapsed,
-                      ),
-                      _SidebarMenuItem(
-                        icon: Icons.graphic_eq_rounded,
-                        title: 'Visualizer',
-                        tab: TabItem.personal,
-                        currentTab: widget.currentTab,
-                        onTabChanged: widget.onTabChanged,
-                        isCollapsed: isCollapsed,
-                        showNowPlaying: true,
-                      ),
-
-                      // ─── Smart Playlists ─────────────────────────────────
-                      if (widget.onSmartPlaylistSelected != null) ...[
-                        _SidebarSeparator(
-                          isCollapsed: isCollapsed,
-                          label: isCollapsed ? null : 'PLAYLIST THÔNG MINH',
-                          textColor: textColor,
-                        ),
-                        _SidebarSmartPlaylistItem(
-                          icon: '🔥',
-                          title: 'Nghe nhiều nhất',
-                          type: 'mostPlayed',
-                          isCollapsed: isCollapsed,
-                          onTap: widget.onSmartPlaylistSelected,
-                        ),
-                        _SidebarSmartPlaylistItem(
-                          icon: '🕐',
-                          title: 'Nghe gần đây',
-                          type: 'recentlyPlayed',
-                          isCollapsed: isCollapsed,
-                          onTap: widget.onSmartPlaylistSelected,
-                        ),
-                        _SidebarSmartPlaylistItem(
-                          icon: '❤️',
-                          title: 'Yêu thích',
-                          type: 'favorites',
-                          isCollapsed: isCollapsed,
-                          onTap: widget.onSmartPlaylistSelected,
-                        ),
-                        _SidebarSmartPlaylistItem(
-                          icon: '🆕',
-                          title: 'Thêm gần đây',
-                          type: 'recentlyAdded',
-                          isCollapsed: isCollapsed,
-                          onTap: widget.onSmartPlaylistSelected,
-                        ),
-                        _SidebarSmartPlaylistItem(
-                          icon: '🎲',
-                          title: 'Khám phá',
-                          type: 'discovery',
-                          isCollapsed: isCollapsed,
-                          onTap: widget.onSmartPlaylistSelected,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              // ─── Footer ──────────────────────────────────────────────────
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  isCollapsed ? 8 : 12,
-                  0,
-                  isCollapsed ? 8 : 12,
-                  8,
-                ),
+            // ─── Main Navigation ─────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SidebarSeparator(
-                      isCollapsed: isCollapsed,
-                      label: null,
-                      textColor: textColor,
-                    ),
-                    if (!isCollapsed) ...[
-                      _SidebarActionButton(
-                        icon: Icons.add_rounded,
-                        title: 'Import nhạc',
-                        onPressed: widget.onImportMusic,
-                      ),
-                      _SidebarActionButton(
-                        icon: Icons.playlist_add_rounded,
-                        title: 'Quản lý Playlist',
-                        onPressed: widget.onManagePlaylists,
-                      ),
-                      const SizedBox(height: 4),
-                    ] else ...[
-                      _SidebarIconButton(
-                        icon: Icons.add_rounded,
-                        tooltip: 'Import nhạc',
-                        onPressed: widget.onImportMusic,
-                        textColor: textColor,
-                      ),
-                      _SidebarIconButton(
-                        icon: Icons.playlist_add_rounded,
-                        tooltip: 'Quản lý Playlist',
-                        onPressed: widget.onManagePlaylists,
-                        textColor: textColor,
-                      ),
-                      const SizedBox(height: 4),
-                    ],
                     _SidebarMenuItem(
-                      icon: Icons.settings_outlined,
-                      title: 'Cài đặt',
-                      tab: TabItem.settings,
+                      icon: Icons.home_filled,
+                      title: 'Trang chủ',
+                      tab: TabItem.home,
                       currentTab: widget.currentTab,
                       onTabChanged: widget.onTabChanged,
                       isCollapsed: isCollapsed,
                     ),
+                    _SidebarMenuItem(
+                      icon: Icons.library_music_outlined,
+                      title: 'Thư viện',
+                      tab: TabItem.library,
+                      currentTab: widget.currentTab,
+                      onTabChanged: widget.onTabChanged,
+                      isCollapsed: isCollapsed,
+                    ),
+                    _SidebarMenuItem(
+                      icon: Icons.language_rounded,
+                      title: 'Online',
+                      tab: TabItem.online,
+                      currentTab: widget.currentTab,
+                      onTabChanged: widget.onTabChanged,
+                      isCollapsed: isCollapsed,
+                    ),
+
+                    // ─── Separator ───────────────────────────────────────
+                    _SidebarSeparator(
+                      isCollapsed: isCollapsed,
+                      label: isCollapsed ? null : 'PHÒNG NGHE NHẠC',
+                      textColor: textColor,
+                    ),
+
+                    _SidebarMenuItem(
+                      icon: Icons.mic_external_on_rounded,
+                      title: 'KTV',
+                      tab: TabItem.ktv,
+                      currentTab: widget.currentTab,
+                      onTabChanged: widget.onTabChanged,
+                      isCollapsed: isCollapsed,
+                    ),
+                    _SidebarMenuItem(
+                      icon: Icons.graphic_eq_rounded,
+                      title: 'Visualizer',
+                      tab: TabItem.personal,
+                      currentTab: widget.currentTab,
+                      onTabChanged: widget.onTabChanged,
+                      isCollapsed: isCollapsed,
+                      showNowPlaying: true,
+                    ),
+
+                    // ─── Smart Playlists ─────────────────────────────────
+                    if (widget.onSmartPlaylistSelected != null) ...[
+                      _SidebarSeparator(
+                        isCollapsed: isCollapsed,
+                        label: isCollapsed ? null : 'PLAYLIST THÔNG MINH',
+                        textColor: textColor,
+                      ),
+                      _SidebarSmartPlaylistItem(
+                        icon: '🔥',
+                        title: 'Nghe nhiều nhất',
+                        type: 'mostPlayed',
+                        isCollapsed: isCollapsed,
+                        onTap: widget.onSmartPlaylistSelected,
+                      ),
+                      _SidebarSmartPlaylistItem(
+                        icon: '🕐',
+                        title: 'Nghe gần đây',
+                        type: 'recentlyPlayed',
+                        isCollapsed: isCollapsed,
+                        onTap: widget.onSmartPlaylistSelected,
+                      ),
+                      _SidebarSmartPlaylistItem(
+                        icon: '❤️',
+                        title: 'Yêu thích',
+                        type: 'favorites',
+                        isCollapsed: isCollapsed,
+                        onTap: widget.onSmartPlaylistSelected,
+                      ),
+                      _SidebarSmartPlaylistItem(
+                        icon: '🆕',
+                        title: 'Thêm gần đây',
+                        type: 'recentlyAdded',
+                        isCollapsed: isCollapsed,
+                        onTap: widget.onSmartPlaylistSelected,
+                      ),
+                      _SidebarSmartPlaylistItem(
+                        icon: '🎲',
+                        title: 'Khám phá',
+                        type: 'discovery',
+                        isCollapsed: isCollapsed,
+                        onTap: widget.onSmartPlaylistSelected,
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+
+            // ─── Footer ──────────────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                isCollapsed ? 8 : 12,
+                0,
+                isCollapsed ? 8 : 12,
+                8,
+              ),
+              child: Column(
+                children: [
+                  _SidebarSeparator(
+                    isCollapsed: isCollapsed,
+                    textColor: textColor,
+                  ),
+                  if (!isCollapsed) ...[
+                    _SidebarActionButton(
+                      icon: Icons.add_rounded,
+                      title: 'Import nhạc',
+                      onPressed: widget.onImportMusic,
+                    ),
+                    _SidebarActionButton(
+                      icon: Icons.playlist_add_rounded,
+                      title: 'Quản lý Playlist',
+                      onPressed: widget.onManagePlaylists,
+                    ),
+                    const SizedBox(height: 4),
+                  ] else ...[
+                    _SidebarIconButton(
+                      icon: Icons.add_rounded,
+                      tooltip: 'Import nhạc',
+                      onPressed: widget.onImportMusic,
+                      textColor: textColor,
+                    ),
+                    _SidebarIconButton(
+                      icon: Icons.playlist_add_rounded,
+                      tooltip: 'Quản lý Playlist',
+                      onPressed: widget.onManagePlaylists,
+                      textColor: textColor,
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  _SidebarMenuItem(
+                    icon: Icons.settings_outlined,
+                    title: 'Cài đặt',
+                    tab: TabItem.settings,
+                    currentTab: widget.currentTab,
+                    onTabChanged: widget.onTabChanged,
+                    isCollapsed: isCollapsed,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -261,46 +253,40 @@ class _SidebarHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        isCollapsed ? 12 : 20,
-        36,
-        isCollapsed ? 12 : 16,
-        12,
-      ),
-      child: isCollapsed
-          ? Center(
-              child: GestureDetector(
-                onTap: onToggle,
-                child: Icon(
-                  Icons.music_note_rounded,
-                  color: textColor,
-                  size: 24,
+  Widget build(final BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      isCollapsed ? 12 : 20,
+      36,
+      isCollapsed ? 12 : 16,
+      12,
+    ),
+    child: isCollapsed
+        ? Center(
+            child: GestureDetector(
+              onTap: onToggle,
+              child: Icon(Icons.music_note_rounded, color: textColor, size: 24),
+            ),
+          )
+        : Row(
+            children: [
+              Icon(Icons.music_note_rounded, color: textColor, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _AutoGreetingText(
+                  color: textColor.withValues(alpha: 0.5),
                 ),
               ),
-            )
-          : Row(
-              children: [
-                Icon(Icons.music_note_rounded, color: textColor, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _AutoGreetingText(
-                    color: textColor.withValues(alpha: 0.5),
-                  ),
+              GestureDetector(
+                onTap: onToggle,
+                child: Icon(
+                  Icons.chevron_left_rounded,
+                  color: textColor.withValues(alpha: 0.4),
+                  size: 20,
                 ),
-                GestureDetector(
-                  onTap: onToggle,
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    color: textColor.withValues(alpha: 0.4),
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
+              ),
+            ],
+          ),
+  );
 }
 
 // ─── Separator ───────────────────────────────────────────────────────────────
@@ -317,31 +303,26 @@ class _SidebarSeparator extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: 8,
-        horizontal: isCollapsed ? 4 : 8,
-      ),
-      child: Column(
-        children: [
-          Divider(color: textColor.withValues(alpha: 0.08), height: 1),
-          if (label != null && !isCollapsed) ...[
-            const SizedBox(height: 8),
-            Text(
-              label!,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: textColor.withValues(alpha: 0.35),
-                letterSpacing: 1.2,
-              ),
+  Widget build(final BuildContext context) => Padding(
+    padding: EdgeInsets.symmetric(vertical: 8, horizontal: isCollapsed ? 4 : 8),
+    child: Column(
+      children: [
+        Divider(color: textColor.withValues(alpha: 0.08), height: 1),
+        if (label != null && !isCollapsed) ...[
+          const SizedBox(height: 8),
+          Text(
+            label!,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: textColor.withValues(alpha: 0.35),
+              letterSpacing: 1.2,
             ),
-          ],
+          ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
 
 // ─── Menu Item ───────────────────────────────────────────────────────────────
@@ -373,7 +354,7 @@ class _SidebarMenuItemState extends State<_SidebarMenuItem> {
   bool _isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
     final isSelected = widget.currentTab == widget.tab;
 
@@ -390,8 +371,8 @@ class _SidebarMenuItemState extends State<_SidebarMenuItem> {
             color: isSelected
                 ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                 : (_isHovered && !isSelected
-                    ? textColor.withValues(alpha: 0.06)
-                    : Colors.transparent),
+                      ? textColor.withValues(alpha: 0.06)
+                      : Colors.transparent),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -472,36 +453,34 @@ class _SidebarIconButtonState extends State<_SidebarIconButton> {
   bool _isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: Tooltip(
-        message: widget.tooltip,
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: AnimatedContainer(
-            duration: _kHoverDuration,
-            height: _kItemHeight,
-            margin: const EdgeInsets.only(bottom: 2),
-            decoration: BoxDecoration(
-              color: _isHovered
-                  ? widget.textColor.withValues(alpha: 0.06)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Icon(
-                widget.icon,
-                size: 20,
-                color: widget.textColor.withValues(alpha: 0.55),
-              ),
+  Widget build(final BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _isHovered = true),
+    onExit: (_) => setState(() => _isHovered = false),
+    child: Tooltip(
+      message: widget.tooltip,
+      child: GestureDetector(
+        onTap: widget.onPressed,
+        child: AnimatedContainer(
+          duration: _kHoverDuration,
+          height: _kItemHeight,
+          margin: const EdgeInsets.only(bottom: 2),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? widget.textColor.withValues(alpha: 0.06)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Icon(
+              widget.icon,
+              size: 20,
+              color: widget.textColor.withValues(alpha: 0.55),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ─── Action Button ───────────────────────────────────────────────────────────
@@ -525,7 +504,7 @@ class _SidebarActionButtonState extends State<_SidebarActionButton> {
   bool _isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -597,47 +576,47 @@ class _NowPlayingIndicatorState extends State<_NowPlayingIndicator>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final engineState = ref.watch(engineStateProvider);
-        final isPlaying = engineState == AudioEngineState.playing;
+  Widget build(final BuildContext context) => Consumer(
+    builder: (final context, final ref, _) {
+      final engineState = ref.watch(engineStateProvider);
+      final isPlaying = engineState == AudioEngineState.playing;
 
-        // Start/stop the animation based on playing state.
-        // This prevents the controller from burning CPU when no song is playing.
-        if (isPlaying != _wasPlaying) {
-          _wasPlaying = isPlaying;
-          if (isPlaying) {
-            _controller.repeat(reverse: true);
-          } else {
-            _controller.stop();
-          }
+      // Start/stop the animation based on playing state.
+      // This prevents the controller from burning CPU when no song is playing.
+      if (isPlaying != _wasPlaying) {
+        _wasPlaying = isPlaying;
+        if (isPlaying) {
+          _controller.repeat(reverse: true);
+        } else {
+          _controller.stop();
         }
+      }
 
-        if (!isPlaying) return const SizedBox.shrink();
+      if (!isPlaying) return const SizedBox.shrink();
 
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).colorScheme.primary.withValues(
-                  alpha: 0.5 + _controller.value * 0.5,
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+      return AnimatedBuilder(
+        animation: _controller,
+        builder: (final context, final child) => Container(
+          width: 6,
+          height: 6,
+          margin: const EdgeInsets.only(right: 12),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.primary.withValues(
+              alpha: 0.5 + _controller.value * 0.5,
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 // ─── Auto Greeting Text ──────────────────────────────────────────────────────
+
+/// Injectable clock so tests can pin the greeting text (golden tests).
+@visibleForTesting
+DateTime Function() greetingClock = DateTime.now;
 
 class _AutoGreetingText extends StatefulWidget {
   final Color color;
@@ -666,7 +645,7 @@ class _AutoGreetingTextState extends State<_AutoGreetingText> {
 
   void _scheduleNextGreetingChange() {
     _timer?.cancel();
-    final now = DateTime.now();
+    final now = greetingClock();
     final nextChange = _getNextChangeTime(now);
     final delay = nextChange.difference(now);
 
@@ -679,11 +658,11 @@ class _AutoGreetingTextState extends State<_AutoGreetingText> {
     });
   }
 
-  DateTime _getNextChangeTime(DateTime now) {
+  DateTime _getNextChangeTime(final DateTime now) {
     if (now.hour < 12) {
-      return DateTime(now.year, now.month, now.day, 12, 0, 0);
+      return DateTime(now.year, now.month, now.day, 12);
     } else if (now.hour < 18) {
-      return DateTime(now.year, now.month, now.day, 18, 0, 0);
+      return DateTime(now.year, now.month, now.day, 18);
     } else {
       return DateTime(
         now.year,
@@ -694,21 +673,19 @@ class _AutoGreetingTextState extends State<_AutoGreetingText> {
   }
 
   String _getGreeting() {
-    final hour = DateTime.now().hour;
+    final hour = greetingClock().hour;
     if (hour < 12) return 'Chào buổi sáng';
     if (hour < 18) return 'Chào buổi chiều';
     return 'Chào buổi tối';
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Text(
-      _greeting,
-      style: TextStyle(fontSize: 11, color: widget.color),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
+  Widget build(final BuildContext context) => Text(
+    _greeting,
+    style: TextStyle(fontSize: 11, color: widget.color),
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+  );
 }
 
 // ─── Smart Playlist Item ─────────────────────────────────────────────────────
@@ -737,7 +714,7 @@ class _SidebarSmartPlaylistItemState extends State<_SidebarSmartPlaylistItem> {
   bool _isHovered = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = context.adaptive;
 
     return MouseRegion(

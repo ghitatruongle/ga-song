@@ -6,11 +6,11 @@ import '../utils/theme_helpers.dart';
 import 'debounced_slider.dart';
 
 class AudioEffectsDialog {
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (context) => const _AudioEffectsDialog(),
+      builder: (final context) => const _AudioEffectsDialog(),
     );
   }
 }
@@ -28,7 +28,7 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
   late final _settings = ref.read(settingsManagerProvider);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.white
         : Colors.black87;
@@ -151,506 +151,450 @@ class _AudioEffectsDialogState extends ConsumerState<_AudioEffectsDialog> {
     );
   }
 
-  Widget _buildDivider(Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.sm + AppSpacing.xxs,
-      ),
-      child: Divider(color: textColor.withValues(alpha: 0.08), height: 1),
-    );
-  }
+  Widget _buildDivider(final Color textColor) => Padding(
+    padding: const EdgeInsets.symmetric(
+      vertical: AppSpacing.sm + AppSpacing.xxs,
+    ),
+    child: Divider(color: textColor.withValues(alpha: 0.08), height: 1),
+  );
 
   // ─── Crossfade ─────────────────────────────────────────────────────────────
 
-  Widget _buildCrossfadeSection(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Crossfade',
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-            ),
-            ValueListenableBuilder<double>(
-              valueListenable: _settings.crossfadeDurationNotifier,
-              builder: (context, value, _) {
-                return Text(
-                  '${value.toStringAsFixed(1)}s',
-                  style: TextStyle(color: textColor.withValues(alpha: 0.6)),
-                );
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Pha trộn mượt giữa các bài hát',
-          style: TextStyle(
-            color: textColor.withValues(alpha: 0.5),
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<double>(
-          valueListenable: _settings.crossfadeDurationNotifier,
-          builder: (context, value, _) {
-            return DebouncedSlider(
-              sliderTheme: SliderThemeData(
-                activeTrackColor: Theme.of(context).primaryColor,
-                thumbColor: Theme.of(context).primaryColor,
-              ),
-              value: value,
-              min: 0,
-              max: 10,
-              divisions: 20,
-              debounceMs: 200,
-              onChanged: (v) {
-                _settings.setCrossfadeDuration(v);
-                _effectService.setCrossfadeDuration(v);
-              },
-            );
-          },
-        ),
-        // Crossfade curve selector
-        ValueListenableBuilder<int>(
-          valueListenable: _settings.crossfadeCurveNotifier,
-          builder: (context, curveIndex, _) {
-            return Row(
-              children: [
-                Text(
-                  'Đường cong:',
-                  style: TextStyle(
-                    color: textColor.withValues(alpha: 0.6),
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 0, label: Text('Tuyến tính')),
-                      ButtonSegment(value: 1, label: Text('Mũ')),
-                      ButtonSegment(value: 2, label: Text('S-curve')),
-                    ],
-                    selected: {curveIndex},
-                    onSelectionChanged: (Set<int> selected) {
-                      final newIndex = selected.first;
-                      _settings.setCrossfadeCurve(newIndex);
-                      _effectService.crossfadeCurveNotifier.value = newIndex;
-                    },
-                    style: ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      textStyle: WidgetStatePropertyAll(
-                        TextStyle(fontSize: 11, color: textColor),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  // ─── Normalization ─────────────────────────────────────────────────────────
-
-  Widget _buildNormalizationSection(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Volume Normalization',
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-            ),
-            ValueListenableBuilder<bool>(
-              valueListenable: _settings.normalizationEnabledNotifier,
-              builder: (context, enabled, _) {
-                return Switch(
-                  value: enabled,
-                  activeThumbColor: Theme.of(context).primaryColor,
-                  onChanged: (v) {
-                    _settings.setNormalizationEnabled(v);
-                    _effectService.enableNormalization(v);
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-        Text(
-          'Tự động cân bằng âm lượng giữa các bài hát',
-          style: TextStyle(
-            color: textColor.withValues(alpha: 0.5),
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<double>(
-          valueListenable: _settings.normalizationLevelNotifier,
-          builder: (context, value, _) {
-            return DebouncedSlider(
-              sliderTheme: SliderThemeData(
-                activeTrackColor: Theme.of(context).primaryColor,
-                thumbColor: Theme.of(context).primaryColor,
-              ),
-              value: value,
-              min: -24,
-              max: 0,
-              divisions: 24,
-              label: '${value.toStringAsFixed(0)} dB',
-              debounceMs: 200,
-              onChanged: (v) {
-                _settings.setNormalizationLevel(v);
-                _effectService.setNormalizationLevel(v);
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  // ─── Pitch Shift ───────────────────────────────────────────────────────────
-
-  Widget _buildPitchShiftSection(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Pitch Shift',
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-            ),
-            ValueListenableBuilder<double>(
-              valueListenable: _settings.pitchShiftNotifier,
-              builder: (context, value, _) {
-                return Text(
-                  '${value.toStringAsFixed(2)}x',
-                  style: TextStyle(color: textColor.withValues(alpha: 0.6)),
-                );
-              },
-            ),
-          ],
-        ),
-        Text(
-          'Thay đổi cao độ bài hát (0.5x thấp hơn — 2.0x cao hơn)',
-          style: TextStyle(
-            color: textColor.withValues(alpha: 0.5),
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<double>(
-          valueListenable: _settings.pitchShiftNotifier,
-          builder: (context, value, _) {
-            return DebouncedSlider(
-              sliderTheme: SliderThemeData(
-                activeTrackColor: Theme.of(context).primaryColor,
-                thumbColor: Theme.of(context).primaryColor,
-              ),
-              value: value,
-              min: 0.5,
-              max: 2.0,
-              divisions: 30,
-              debounceMs: 200,
-              onChanged: (v) {
-                _settings.setPitchShift(v);
-                _effectService.setPitchShift(v);
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  // ─── Reverb ────────────────────────────────────────────────────────────────
-
-  Widget _buildReverbSection(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Reverb',
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-            ),
-            ValueListenableBuilder<double>(
-              valueListenable: _settings.reverbMixNotifier,
-              builder: (context, value, _) {
-                return Text(
-                  '${(value * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(color: textColor.withValues(alpha: 0.6)),
-                );
-              },
-            ),
-          ],
-        ),
-        Text(
-          'Hiệu ứng vang âm thanh phòng thu',
-          style: TextStyle(
-            color: textColor.withValues(alpha: 0.5),
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Wet / Mix slider
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Mix',
-          notifier: _settings.reverbMixNotifier,
-          min: 0,
-          max: 1,
-          divisions: 20,
-          format: (v) => '${(v * 100).toStringAsFixed(0)}%',
-          onChanged: (v) {
-            _settings.setReverbMix(v);
-            _effectService.setReverbMix(v);
-          },
-        ),
-
-        // Room Size slider
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Room Size',
-          notifier: _settings.reverbRoomSizeNotifier,
-          min: 0,
-          max: 1,
-          divisions: 20,
-          format: (v) => '${(v * 100).toStringAsFixed(0)}%',
-          onChanged: (v) {
-            _settings.setReverbRoomSize(v);
-            _effectService.setReverbRoomSize(v);
-          },
-        ),
-
-        // Damp slider
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Damp',
-          notifier: _settings.reverbDampNotifier,
-          min: 0,
-          max: 1,
-          divisions: 20,
-          format: (v) => '${(v * 100).toStringAsFixed(0)}%',
-          onChanged: (v) {
-            _settings.setReverbDamp(v);
-            _effectService.setReverbDamp(v);
-          },
-        ),
-      ],
-    );
-  }
-
-  // ─── Compression ───────────────────────────────────────────────────────────
-
-  Widget _buildCompressionSection(Color textColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Compressor',
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-            ),
-            ValueListenableBuilder<double>(
-              valueListenable: _settings.compressionRatioNotifier,
-              builder: (context, value, _) {
-                return Text(
-                  '${value.toStringAsFixed(1)}:1',
-                  style: TextStyle(color: textColor.withValues(alpha: 0.6)),
-                );
-              },
-            ),
-          ],
-        ),
-        Text(
-          'Nén dynamic range — âm thanh đều hơn',
-          style: TextStyle(
-            color: textColor.withValues(alpha: 0.5),
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Ratio
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Ratio',
-          notifier: _settings.compressionRatioNotifier,
-          min: 1,
-          max: 10,
-          divisions: 18,
-          format: (v) => '${v.toStringAsFixed(1)}:1',
-          onChanged: (v) {
-            _settings.setCompressionRatio(v);
-            _effectService.setCompressionRatio(v);
-          },
-        ),
-
-        // Threshold
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Threshold',
-          notifier: _settings.compThresholdNotifier,
-          min: -80,
-          max: 0,
-          divisions: 80,
-          format: (v) => '${v.toStringAsFixed(0)} dB',
-          onChanged: (v) {
-            _settings.setCompThreshold(v);
-            _effectService.setCompThreshold(v);
-          },
-        ),
-
-        // Attack
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Attack',
-          notifier: _settings.compAttackNotifier,
-          min: 0,
-          max: 100,
-          divisions: 20,
-          format: (v) => '${v.toStringAsFixed(0)} ms',
-          onChanged: (v) {
-            _settings.setCompAttack(v);
-            _effectService.setCompAttack(v);
-          },
-        ),
-
-        // Release
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Release',
-          notifier: _settings.compReleaseNotifier,
-          min: 0,
-          max: 1000,
-          divisions: 20,
-          format: (v) => '${v.toStringAsFixed(0)} ms',
-          onChanged: (v) {
-            _settings.setCompRelease(v);
-            _effectService.setCompRelease(v);
-          },
-        ),
-
-        // Knee Width
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Knee',
-          notifier: _settings.compKneeWidthNotifier,
-          min: 0,
-          max: 40,
-          divisions: 20,
-          format: (v) => '${v.toStringAsFixed(1)} dB',
-          onChanged: (v) {
-            _settings.setCompKneeWidth(v);
-            _effectService.setCompKneeWidth(v);
-          },
-        ),
-
-        // Makeup Gain
-        _buildSubParam(
-          textColor: textColor,
-          label: 'Makeup Gain',
-          notifier: _settings.compMakeupGainNotifier,
-          min: -40,
-          max: 40,
-          divisions: 80,
-          format: (v) => '${v.toStringAsFixed(1)} dB',
-          onChanged: (v) {
-            _settings.setCompMakeupGain(v);
-            _effectService.setCompMakeupGain(v);
-          },
-        ),
-      ],
-    );
-  }
-
-  // ─── Shared sub-parameter row ──────────────────────────────────────────────
-
-  Widget _buildSubParam({
-    required Color textColor,
-    required String label,
-    required ValueNotifier<double> notifier,
-    required double min,
-    required double max,
-    required int divisions,
-    required String Function(double) format,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.sm),
-      child: Row(
+  Widget _buildCrossfadeSection(final Color textColor) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
+          Text(
+            'Crossfade',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+          ),
+          ValueListenableBuilder<double>(
+            valueListenable: _settings.crossfadeDurationNotifier,
+            builder: (final context, final value, _) => Text(
+              '${value.toStringAsFixed(1)}s',
+              style: TextStyle(color: textColor.withValues(alpha: 0.6)),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Pha trộn mượt giữa các bài hát',
+        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+      ),
+      const SizedBox(height: 8),
+      ValueListenableBuilder<double>(
+        valueListenable: _settings.crossfadeDurationNotifier,
+        builder: (final context, final value, _) => DebouncedSlider(
+          sliderTheme: SliderThemeData(
+            activeTrackColor: Theme.of(context).primaryColor,
+            thumbColor: Theme.of(context).primaryColor,
+          ),
+          value: value,
+          max: 10,
+          divisions: 20,
+          debounceMs: 200,
+          onChanged: (final v) {
+            _settings.setCrossfadeDuration(v);
+            _effectService.setCrossfadeDuration(v);
+          },
+        ),
+      ),
+      // Crossfade curve selector
+      ValueListenableBuilder<int>(
+        valueListenable: _settings.crossfadeCurveNotifier,
+        builder: (final context, final curveIndex, _) => Row(
+          children: [
+            Text(
+              'Đường cong:',
               style: TextStyle(
-                color: textColor.withValues(alpha: 0.55),
+                color: textColor.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),
-          ),
-          Expanded(
-            child: ValueListenableBuilder<double>(
-              valueListenable: notifier,
-              builder: (context, value, _) {
-                return DebouncedSlider(
-                  sliderTheme: SliderTheme.of(context).copyWith(
-                    trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 6,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 12,
-                    ),
-                    activeTrackColor: Theme.of(context).primaryColor,
-                    thumbColor: Theme.of(context).primaryColor,
+            const SizedBox(width: 8),
+            Expanded(
+              child: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('Tuyến tính')),
+                  ButtonSegment(value: 1, label: Text('Mũ')),
+                  ButtonSegment(value: 2, label: Text('S-curve')),
+                ],
+                selected: {curveIndex},
+                onSelectionChanged: (final Set<int> selected) {
+                  final newIndex = selected.first;
+                  _settings.setCrossfadeCurve(newIndex);
+                  _effectService.crossfadeCurveNotifier.value = newIndex;
+                },
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  textStyle: WidgetStatePropertyAll(
+                    TextStyle(fontSize: 11, color: textColor),
                   ),
-                  debounceMs: 200,
-                  value: value,
-                  min: min,
-                  max: max,
-                  divisions: divisions,
-                  onChanged: onChanged,
-                );
-              },
+                ),
+              ),
             ),
+          ],
+        ),
+      ),
+    ],
+  );
+
+  // ─── Normalization ─────────────────────────────────────────────────────────
+
+  Widget _buildNormalizationSection(final Color textColor) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Volume Normalization',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
           ),
-          SizedBox(
-            width: 65,
-            child: ValueListenableBuilder<double>(
-              valueListenable: notifier,
-              builder: (context, value, _) {
-                return Text(
-                  format(value),
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: textColor.withValues(alpha: 0.5),
-                    fontSize: 11,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                );
+          ValueListenableBuilder<bool>(
+            valueListenable: _settings.normalizationEnabledNotifier,
+            builder: (final context, final enabled, _) => Switch(
+              value: enabled,
+              activeThumbColor: Theme.of(context).primaryColor,
+              onChanged: (final v) {
+                _settings.setNormalizationEnabled(v);
+                _effectService.enableNormalization(v);
               },
             ),
           ),
         ],
       ),
-    );
-  }
+      Text(
+        'Tự động cân bằng âm lượng giữa các bài hát',
+        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+      ),
+      const SizedBox(height: 8),
+      ValueListenableBuilder<double>(
+        valueListenable: _settings.normalizationLevelNotifier,
+        builder: (final context, final value, _) => DebouncedSlider(
+          sliderTheme: SliderThemeData(
+            activeTrackColor: Theme.of(context).primaryColor,
+            thumbColor: Theme.of(context).primaryColor,
+          ),
+          value: value,
+          min: -24,
+          max: 0,
+          divisions: 24,
+          label: '${value.toStringAsFixed(0)} dB',
+          debounceMs: 200,
+          onChanged: (final v) {
+            _settings.setNormalizationLevel(v);
+            _effectService.setNormalizationLevel(v);
+          },
+        ),
+      ),
+    ],
+  );
+
+  // ─── Pitch Shift ───────────────────────────────────────────────────────────
+
+  Widget _buildPitchShiftSection(final Color textColor) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Pitch Shift',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+          ),
+          ValueListenableBuilder<double>(
+            valueListenable: _settings.pitchShiftNotifier,
+            builder: (final context, final value, _) => Text(
+              '${value.toStringAsFixed(2)}x',
+              style: TextStyle(color: textColor.withValues(alpha: 0.6)),
+            ),
+          ),
+        ],
+      ),
+      Text(
+        'Thay đổi cao độ bài hát (0.5x thấp hơn — 2.0x cao hơn)',
+        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+      ),
+      const SizedBox(height: 8),
+      ValueListenableBuilder<double>(
+        valueListenable: _settings.pitchShiftNotifier,
+        builder: (final context, final value, _) => DebouncedSlider(
+          sliderTheme: SliderThemeData(
+            activeTrackColor: Theme.of(context).primaryColor,
+            thumbColor: Theme.of(context).primaryColor,
+          ),
+          value: value,
+          min: 0.5,
+          max: 2,
+          divisions: 30,
+          debounceMs: 200,
+          onChanged: (final v) {
+            _settings.setPitchShift(v);
+            _effectService.setPitchShift(v);
+          },
+        ),
+      ),
+    ],
+  );
+
+  // ─── Reverb ────────────────────────────────────────────────────────────────
+
+  Widget _buildReverbSection(final Color textColor) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Reverb',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+          ),
+          ValueListenableBuilder<double>(
+            valueListenable: _settings.reverbMixNotifier,
+            builder: (final context, final value, _) => Text(
+              '${(value * 100).toStringAsFixed(0)}%',
+              style: TextStyle(color: textColor.withValues(alpha: 0.6)),
+            ),
+          ),
+        ],
+      ),
+      Text(
+        'Hiệu ứng vang âm thanh phòng thu',
+        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+      ),
+      const SizedBox(height: 8),
+
+      // Wet / Mix slider
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Mix',
+        notifier: _settings.reverbMixNotifier,
+        min: 0,
+        max: 1,
+        divisions: 20,
+        format: (final v) => '${(v * 100).toStringAsFixed(0)}%',
+        onChanged: (final v) {
+          _settings.setReverbMix(v);
+          _effectService.setReverbMix(v);
+        },
+      ),
+
+      // Room Size slider
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Room Size',
+        notifier: _settings.reverbRoomSizeNotifier,
+        min: 0,
+        max: 1,
+        divisions: 20,
+        format: (final v) => '${(v * 100).toStringAsFixed(0)}%',
+        onChanged: (final v) {
+          _settings.setReverbRoomSize(v);
+          _effectService.setReverbRoomSize(v);
+        },
+      ),
+
+      // Damp slider
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Damp',
+        notifier: _settings.reverbDampNotifier,
+        min: 0,
+        max: 1,
+        divisions: 20,
+        format: (final v) => '${(v * 100).toStringAsFixed(0)}%',
+        onChanged: (final v) {
+          _settings.setReverbDamp(v);
+          _effectService.setReverbDamp(v);
+        },
+      ),
+    ],
+  );
+
+  // ─── Compression ───────────────────────────────────────────────────────────
+
+  Widget _buildCompressionSection(final Color textColor) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Compressor',
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+          ),
+          ValueListenableBuilder<double>(
+            valueListenable: _settings.compressionRatioNotifier,
+            builder: (final context, final value, _) => Text(
+              '${value.toStringAsFixed(1)}:1',
+              style: TextStyle(color: textColor.withValues(alpha: 0.6)),
+            ),
+          ),
+        ],
+      ),
+      Text(
+        'Nén dynamic range — âm thanh đều hơn',
+        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+      ),
+      const SizedBox(height: 8),
+
+      // Ratio
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Ratio',
+        notifier: _settings.compressionRatioNotifier,
+        min: 1,
+        max: 10,
+        divisions: 18,
+        format: (final v) => '${v.toStringAsFixed(1)}:1',
+        onChanged: (final v) {
+          _settings.setCompressionRatio(v);
+          _effectService.setCompressionRatio(v);
+        },
+      ),
+
+      // Threshold
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Threshold',
+        notifier: _settings.compThresholdNotifier,
+        min: -80,
+        max: 0,
+        divisions: 80,
+        format: (final v) => '${v.toStringAsFixed(0)} dB',
+        onChanged: (final v) {
+          _settings.setCompThreshold(v);
+          _effectService.setCompThreshold(v);
+        },
+      ),
+
+      // Attack
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Attack',
+        notifier: _settings.compAttackNotifier,
+        min: 0,
+        max: 100,
+        divisions: 20,
+        format: (final v) => '${v.toStringAsFixed(0)} ms',
+        onChanged: (final v) {
+          _settings.setCompAttack(v);
+          _effectService.setCompAttack(v);
+        },
+      ),
+
+      // Release
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Release',
+        notifier: _settings.compReleaseNotifier,
+        min: 0,
+        max: 1000,
+        divisions: 20,
+        format: (final v) => '${v.toStringAsFixed(0)} ms',
+        onChanged: (final v) {
+          _settings.setCompRelease(v);
+          _effectService.setCompRelease(v);
+        },
+      ),
+
+      // Knee Width
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Knee',
+        notifier: _settings.compKneeWidthNotifier,
+        min: 0,
+        max: 40,
+        divisions: 20,
+        format: (final v) => '${v.toStringAsFixed(1)} dB',
+        onChanged: (final v) {
+          _settings.setCompKneeWidth(v);
+          _effectService.setCompKneeWidth(v);
+        },
+      ),
+
+      // Makeup Gain
+      _buildSubParam(
+        textColor: textColor,
+        label: 'Makeup Gain',
+        notifier: _settings.compMakeupGainNotifier,
+        min: -40,
+        max: 40,
+        divisions: 80,
+        format: (final v) => '${v.toStringAsFixed(1)} dB',
+        onChanged: (final v) {
+          _settings.setCompMakeupGain(v);
+          _effectService.setCompMakeupGain(v);
+        },
+      ),
+    ],
+  );
+
+  // ─── Shared sub-parameter row ──────────────────────────────────────────────
+
+  Widget _buildSubParam({
+    required final Color textColor,
+    required final String label,
+    required final ValueNotifier<double> notifier,
+    required final double min,
+    required final double max,
+    required final int divisions,
+    required final String Function(double) format,
+    required final ValueChanged<double> onChanged,
+  }) => Padding(
+    padding: const EdgeInsets.only(left: AppSpacing.sm),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: textColor.withValues(alpha: 0.55),
+              fontSize: 12,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ValueListenableBuilder<double>(
+            valueListenable: notifier,
+            builder: (final context, final value, _) => DebouncedSlider(
+              sliderTheme: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: Theme.of(context).primaryColor,
+                thumbColor: Theme.of(context).primaryColor,
+              ),
+              debounceMs: 200,
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 65,
+          child: ValueListenableBuilder<double>(
+            valueListenable: notifier,
+            builder: (final context, final value, _) => Text(
+              format(value),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: textColor.withValues(alpha: 0.5),
+                fontSize: 11,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

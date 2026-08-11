@@ -9,27 +9,19 @@ import '../../models/song.dart';
 import 'player_bar/song_info.dart';
 import 'player_bar/center_controls.dart';
 import 'player_bar/right_controls.dart';
-import '../screens/now_playing_screen.dart';
-import '../../core/motion/app_motion.dart';
+import '../screens/ios_fullscreen_player_screen.dart';
 
-/// Width below which the player bar switches to a compact vertical
-/// layout (SongInfo on top, controls below) instead of the wide
-/// 3-column horizontal layout.  Picked so any viewport narrower than
-/// ~half a desktop window collapses gracefully.
-const double _kNarrowPlayerBarThreshold = 400.0;
-const double _kPlayerBarHeightWide = 72.0;
-const double _kPlayerBarHeightNarrow = 130.0;
+const double _kNarrowPlayerBarThreshold = 400;
+const double _kPlayerBarHeightWide = 72;
+const double _kPlayerBarHeightNarrow = 130;
 
-/// Opacity of the per-song dominant color blended into the player bar
-/// background.  Low enough to preserve readability, high enough to be
-/// noticeably different per-song.
 const double _kDominantColorBgBlendOpacity = 0.18;
 
 class BottomPlayerBarWidget extends ConsumerWidget {
   const BottomPlayerBarWidget({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     // Phase 2.2: read state from Riverpod providers (was PlayerViewModel).
     final playlist = ref.watch(playlistServiceProvider);
     final index = ref.watch(currentPlayingIndexProvider);
@@ -46,7 +38,7 @@ class BottomPlayerBarWidget extends ConsumerWidget {
     };
 
     return LayoutBuilder(
-      builder: (context, constraints) {
+      builder: (final context, final constraints) {
         // Phase 4 device-debug fix: at narrow widths (mobile portrait with
         // sidebar visible, ~191 logical px), the 3-column horizontal
         // layout overflows by ~50 px.  Collapse to a vertical layout
@@ -70,32 +62,34 @@ class BottomPlayerBarWidget extends ConsumerWidget {
             : baseColor;
         final borderColor = dominantColor != null
             ? (isDark
-                ? dominantColor.withValues(alpha: 0.35)
-                : dominantColor.withValues(alpha: 0.25))
+                  ? dominantColor.withValues(alpha: 0.35)
+                  : dominantColor.withValues(alpha: 0.25))
             : (isDark
-                ? AppColors.darkPlayerBarBorder
-                : AppColors.lightPlayerBarBorder);
+                  ? AppColors.darkPlayerBarBorder
+                  : AppColors.lightPlayerBarBorder);
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
+        // v0.9.5: Replaced AnimatedContainer with plain Container.
+        // The per-song color blend (18% opacity) is subtle enough that
+        // a 500ms animation is unnecessary and wastes GPU cycles on mobile.
+        return Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           height: barHeight,
           decoration: BoxDecoration(
             color: blendedBg,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor, width: 1),
+            border: Border.all(color: borderColor),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: GestureDetector(
-              // v0.8.0: Swipe-up gesture to open Now Playing full-screen.
-              // This is the signature Spotify interaction.
-              // Only swipe-up triggers navigation — tap is handled by
-              // individual controls (play/pause, next, prev, cover art).
-              onVerticalDragUpdate: (details) {
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (song != null && context.mounted) {
+                  _openNowPlaying(context);
+                }
+              },
+              onVerticalDragUpdate: (final details) {
                 if (details.delta.dy < -8) {
-                  // Swipe up detected — open NowPlayingScreen
                   if (song != null && context.mounted) {
                     _openNowPlaying(context);
                   }
@@ -132,29 +126,8 @@ class BottomPlayerBarWidget extends ConsumerWidget {
     );
   }
 
-  void _openNowPlaying(BuildContext context) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const NowPlayingScreen(),
-        transitionDuration: AppDurations.medium,
-        reverseTransitionDuration: AppDurations.medium,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Fade + slight slide up, matching the motion language
-          final offsetAnimation = Tween<Offset>(
-            begin: const Offset(0, 0.05),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: AppCurves.decelerate,
-          ));
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(position: offsetAnimation, child: child),
-          );
-        },
-      ),
-    );
+  void _openNowPlaying(final BuildContext context) {
+    IOSFullscreenPlayerScreen.show(context);
   }
 }
 
@@ -164,53 +137,22 @@ class _WidePlayerContent extends StatelessWidget {
   final Song song;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SongInfo(
-              song: song,
-              onCoverTap: () {
-                // Tap cover art opens Now Playing
-                final nav = Navigator.of(context);
-                if (nav.canPop()) {
-                  nav.push(
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          const NowPlayingScreen(),
-                      transitionDuration: AppDurations.medium,
-                      reverseTransitionDuration: AppDurations.medium,
-                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                        final offsetAnimation = Tween<Offset>(
-                          begin: const Offset(0, 0.05),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: animation,
-                          curve: AppCurves.decelerate,
-                        ));
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(position: offsetAnimation, child: child),
-                        );
-                      },
-                    ),
-                  );
-                }
-              },
-            ),
+  Widget build(final BuildContext context) => Row(
+    children: [
+      Expanded(
+        flex: 3,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: SongInfo(
+            song: song,
+            onCoverTap: () => IOSFullscreenPlayerScreen.show(context),
           ),
         ),
-        const Expanded(
-          flex: 4,
-          child: RepaintBoundary(child: CenterControls()),
-        ),
-        const Expanded(flex: 3, child: RepaintBoundary(child: RightControls())),
-      ],
-    );
-  }
+      ),
+      const Expanded(flex: 4, child: RepaintBoundary(child: CenterControls())),
+      const Expanded(flex: 3, child: RepaintBoundary(child: RightControls())),
+    ],
+  );
 }
 
 //// Narrow vertical layout: SongInfo on top, CenterControls below.
@@ -223,29 +165,30 @@ class _CompactPlayerContent extends StatelessWidget {
   final Song song;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // SongInfo needs 52 px for the cover image; an undersized
-        // SizedBox triggers a "BOTTOM OVERFLOWED" warning.
-        SizedBox(
-          height: 52,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SongInfo(song: song),
+  Widget build(final BuildContext context) => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // SongInfo needs 52 px for the cover image; an undersized
+      // SizedBox triggers a "BOTTOM OVERFLOWED" warning.
+      SizedBox(
+        height: 52,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: SongInfo(
+            song: song,
+            onCoverTap: () => IOSFullscreenPlayerScreen.show(context),
           ),
         ),
-        const SizedBox(height: 4),
-        const Expanded(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: CenterControls(),
-          ),
+      ),
+      const SizedBox(height: 4),
+      const Expanded(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: CenterControls(),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
 
 /// Thin 2px progress indicator at the top of the player bar.
@@ -253,7 +196,7 @@ class _TopProgressBar extends ConsumerWidget {
   const _TopProgressBar();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final position = ref.watch(positionProvider);
     final duration = ref.watch(trackDurationProvider);
     final progress = duration.inMilliseconds > 0

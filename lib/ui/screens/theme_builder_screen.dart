@@ -8,16 +8,15 @@
 /// - Advanced color customization
 /// - Live preview with sample UI elements
 /// - Theme mode switching (light/dark/system)
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/settings_manager.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/service_providers.dart';
-import '../utils/haptic_helper.dart';
 
 /// Theme Builder Screen
 class ThemeBuilderScreen extends ConsumerStatefulWidget {
@@ -61,16 +60,11 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
     if (settings.useDynamicColorNotifier.value &&
         settings.dynamicPrimaryColorNotifier.value != null) {
       seedColor = settings.dynamicPrimaryColorNotifier.value!;
-    } else if (settings.customPrimaryColorNotifier.value != null) {
-      seedColor = settings.customPrimaryColorNotifier.value!;
     } else {
-      seedColor = const Color(0xFF1DB954);
+      seedColor = settings.customPrimaryColorNotifier.value;
     }
 
-    final lightScheme = ColorScheme.fromSeed(
-      seedColor: seedColor,
-      brightness: Brightness.light,
-    );
+    final lightScheme = ColorScheme.fromSeed(seedColor: seedColor);
     final darkScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
@@ -83,7 +77,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
       _previewPrimary = scheme.primary;
       _previewSecondary = scheme.secondary;
       _previewSurface = scheme.surface;
-      _previewBackground = scheme.background;
+      _previewBackground = scheme.surface;
       _previewOnPrimary = scheme.onPrimary;
       _previewOnSurface = scheme.onSurface;
     });
@@ -95,7 +89,8 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
   Future<void> _pickSeedColor() async {
     final color = await showDialog<Color>(
       context: context,
-      builder: (context) => _ColorPickerDialog(initialColor: _previewPrimary),
+      builder: (final context) =>
+          _ColorPickerDialog(initialColor: _previewPrimary),
     );
     if (color != null) {
       await ref.read(settingsManagerProvider).setCustomPrimaryColor(color);
@@ -104,21 +99,21 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
   }
 
   void _resetToDefaults() {
-    ref.read(settingsManagerProvider).setCustomPrimaryColor(
-      const Color(0xFF1DB954),
-    );
+    ref
+        .read(settingsManagerProvider)
+        .setCustomPrimaryColor(const Color(0xFF1DB954));
     ref.read(settingsManagerProvider).setUseDynamicColor(true);
     _updatePreviewColors();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final settings = ref.watch(settingsManagerProvider);
     final isDark = context.isDark;
     final l10n = AppLocalizations.of(context)!;
 
     // Keep preview in sync with settings changes
-    ref.listen(settingsManagerProvider, (_, __) {
+    ref.listen(settingsManagerProvider, (_, final _) {
       _updatePreviewColors();
     });
 
@@ -141,9 +136,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
             Container(
               width: 380,
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkSurface
-                    : AppColors.lightSurface,
+                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
                 border: Border(
                   right: BorderSide(color: Theme.of(context).dividerColor),
                 ),
@@ -156,10 +149,9 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                     // Seed Color
                     Text(
                       l10n.customPrimaryColor,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -176,7 +168,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                               ),
                               filled: true,
                             ),
-                            onChanged: (value) {
+                            onChanged: (final value) {
                               if (value.length == 7 && value.startsWith('#')) {
                                 try {
                                   final color = Color(
@@ -211,7 +203,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                         title: Text(l10n.useDynamicColor),
                         subtitle: Text(l10n.useDynamicColor),
                         value: settings.useDynamicColorNotifier.value,
-                        onChanged: (value) {
+                        onChanged: (final value) {
                           ref
                               .read(settingsManagerProvider)
                               .setUseDynamicColor(value);
@@ -228,10 +220,9 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                     // Theme Mode
                     Text(
                       l10n.themeMode,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     SegmentedButton<ThemeMode>(
@@ -253,10 +244,8 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                         ),
                       ],
                       selected: {settings.themeModeNotifier.value},
-                      onSelectionChanged: (v) {
-                        ref
-                            .read(settingsManagerProvider)
-                            .setThemeMode(v.first);
+                      onSelectionChanged: (final v) {
+                        ref.read(settingsManagerProvider).setThemeMode(v.first);
                       },
                     ),
                     const SizedBox(height: 24),
@@ -271,7 +260,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                         initiallyExpanded: _showAdvanced,
-                        onExpansionChanged: (v) =>
+                        onExpansionChanged: (final v) =>
                             setState(() => _showAdvanced = v),
                         children: [
                           _buildColorPreviewRow(
@@ -328,7 +317,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
 
             // ─── Preview Pane ─────────────────────────────────────────────
             Expanded(
-              child: Container(
+              child: ColoredBox(
                 color: isDark
                     ? AppColors.darkBackground
                     : AppColors.lightBackground,
@@ -351,9 +340,7 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
                         children: [
                           Text(
                             'Preview',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const Spacer(),
@@ -386,326 +373,311 @@ class _ThemeBuilderScreenState extends ConsumerState<ThemeBuilderScreen> {
     );
   }
 
-  Widget _buildPreviewCard(BuildContext context) {
-    return Card(
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(
+  Widget _buildPreviewCard(final BuildContext context) => Card(
+    elevation: 8,
+    shadowColor: Colors.black.withValues(alpha: 0.3),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _previewSurface,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: _previewSurface,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: _previewPrimary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.music_note,
-                    color: _previewOnPrimary,
-                    size: 28,
-                  ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _previewPrimary,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Theme Preview',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: _previewOnSurface,
-                        ),
-                      ),
-                      Text(
-                        'Live preview of your theme',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: _previewOnSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Icon(
+                  Icons.music_note,
+                  color: _previewOnPrimary,
+                  size: 28,
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Color Palette
-            Text(
-              'Color Palette',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildColorSwatch('Primary', _previewPrimary, _previewOnPrimary),
-                _buildColorSwatch(
-                  'Secondary',
-                  _previewSecondary,
-                  Colors.white,
-                ),
-                _buildColorSwatch('Surface', _previewSurface, _previewOnSurface),
-                _buildColorSwatch(
-                  'Background',
-                  _previewBackground,
-                  _previewOnSurface,
-                ),
-                _buildColorSwatch(
-                  'On Primary',
-                  _previewOnPrimary,
-                  _previewPrimary,
-                ),
-                _buildColorSwatch(
-                  'On Surface',
-                  _previewOnSurface,
-                  _previewSurface,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Sample UI Elements
-            Text(
-              'Sample UI Elements',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-
-            // Buttons
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                FilledButton.icon(
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Filled Button'),
-                  onPressed: () {},
-                ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Outlined Button'),
-                  onPressed: () {},
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.favorite),
-                  label: const Text('Text Button'),
-                  onPressed: () {},
-                ),
-                IconButton.filled(
-                  icon: const Icon(Icons.favorite),
-                  onPressed: () {},
-                  tooltip: 'Favorite',
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Song Card
-            Card(
-              elevation: 2,
-              color: _previewSurface,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: _previewPrimary,
-                          child: Icon(
-                            Icons.music_note,
-                            color: _previewOnPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Sample Song Title',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: _previewOnSurface,
-                                ),
-                              ),
-                              Text(
-                                'Sample Artist',
-                                style: TextStyle(
-                                  color: _previewOnSurface.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.more_vert,
-                            color: _previewOnSurface.withValues(alpha: 0.7),
-                          ),
-                          onPressed: () {},
-                        ),
-                      ],
+                    Text(
+                      'Theme Preview',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _previewOnSurface,
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    LinearProgressIndicator(
-                      value: 0.6,
-                      backgroundColor: _previewOnSurface.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation(_previewPrimary),
+                    Text(
+                      'Live preview of your theme',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _previewOnSurface.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 16),
-
-            // Text Field
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Search...',
-                hintText: 'Search songs, artists...',
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: _previewOnSurface.withValues(alpha: 0.5),
-                ),
-                filled: true,
-                fillColor: _previewSurface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: _previewPrimary, width: 2),
-                ),
+          // Color Palette
+          Text(
+            'Color Palette',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildColorSwatch('Primary', _previewPrimary, _previewOnPrimary),
+              _buildColorSwatch('Secondary', _previewSecondary, Colors.white),
+              _buildColorSwatch('Surface', _previewSurface, _previewOnSurface),
+              _buildColorSwatch(
+                'Background',
+                _previewBackground,
+                _previewOnSurface,
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Slider
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Volume',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 8),
-                Slider(
-                  value: 0.7,
-                  onChanged: (_) {},
-                  activeColor: _previewPrimary,
-                  inactiveColor: _previewPrimary.withValues(alpha: 0.3),
-                  thumbColor: _previewPrimary,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildColorSwatch(String label, Color color, Color onColor) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+              _buildColorSwatch(
+                'On Primary',
+                _previewOnPrimary,
+                _previewPrimary,
+              ),
+              _buildColorSwatch(
+                'On Surface',
+                _previewOnSurface,
+                _previewSurface,
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
-              style: TextStyle(
-                color: onColor,
-                fontSize: 8,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'monospace',
+
+          const SizedBox(height: 24),
+
+          // Sample UI Elements
+          Text(
+            'Sample UI Elements',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 16),
+
+          // Buttons
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              FilledButton.icon(
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Filled Button'),
+                onPressed: () {},
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Outlined Button'),
+                onPressed: () {},
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.favorite),
+                label: const Text('Text Button'),
+                onPressed: () {},
+              ),
+              IconButton.filled(
+                icon: const Icon(Icons.favorite),
+                onPressed: () {},
+                tooltip: 'Favorite',
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Song Card
+          Card(
+            elevation: 2,
+            color: _previewSurface,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: _previewPrimary,
+                        child: Icon(Icons.music_note, color: _previewOnPrimary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sample Song Title',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: _previewOnSurface,
+                              ),
+                            ),
+                            Text(
+                              'Sample Artist',
+                              style: TextStyle(
+                                color: _previewOnSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: _previewOnSurface.withValues(alpha: 0.7),
+                        ),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: 0.6,
+                    backgroundColor: _previewOnSurface.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation(_previewPrimary),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall,
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
 
-  Widget _buildColorPreviewRow(String label, Color color) {
-    return Material(
-      color: Colors.transparent,
-      child: ListTile(
-        dense: true,
-        title: Text(label),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Theme.of(context).dividerColor),
+          const SizedBox(height: 16),
+
+          // Text Field
+          TextField(
+            decoration: InputDecoration(
+              labelText: 'Search...',
+              hintText: 'Search songs, artists...',
+              prefixIcon: Icon(
+                Icons.search,
+                color: _previewOnSurface.withValues(alpha: 0.5),
+              ),
+              filled: true,
+              fillColor: _previewSurface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: _previewPrimary, width: 2),
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
-              style: Theme.of(context).textTheme.labelSmall,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Slider
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Volume', style: Theme.of(context).textTheme.labelMedium),
+              const SizedBox(height: 8),
+              Slider(
+                value: 0.7,
+                onChanged: (_) {},
+                activeColor: _previewPrimary,
+                inactiveColor: _previewPrimary.withValues(alpha: 0.3),
+                thumbColor: _previewPrimary,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildColorSwatch(
+    final String label,
+    final Color color,
+    final Color onColor,
+  ) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
+        child: Center(
+          child: Text(
+            '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+            style: TextStyle(
+              color: onColor,
+              fontSize: 8,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ),
       ),
-    );
-  }
+      const SizedBox(height: 8),
+      Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall,
+        textAlign: TextAlign.center,
+      ),
+    ],
+  );
+
+  Widget _buildColorPreviewRow(
+    final String label,
+    final Color color,
+  ) => Material(
+    color: Colors.transparent,
+    child: ListTile(
+      dense: true,
+      title: Text(label),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Simple color picker dialog
@@ -728,7 +700,7 @@ class _ColorPickerDialogState extends State<_ColorPickerDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final presetColors = [
       const Color(0xFF1DB954), // Spotify Green
       const Color(0xFF1E88E5), // Blue
@@ -788,7 +760,7 @@ class _ColorPickerDialogState extends State<_ColorPickerDialog> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: presetColors.map((color) {
+            children: presetColors.map((final color) {
               final isSelected = color == _selectedColor;
               return GestureDetector(
                 onTap: () => setState(() => _selectedColor = color),

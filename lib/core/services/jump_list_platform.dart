@@ -6,11 +6,9 @@
 ///
 /// This defines the contract that platform-specific implementations
 /// (Windows, macOS, Linux) must fulfill for Jump List integration.
+library;
 
 import 'package:flutter/foundation.dart';
-
-import '../../models/playlist.dart';
-import '../../models/song.dart';
 
 /// Platform interface for Jump List operations.
 abstract class JumpListPlatform {
@@ -18,19 +16,19 @@ abstract class JumpListPlatform {
   Future<void> initialize();
 
   /// Set the list of Jump List items.
-  Future<void> setJumpListItems(List<JumpListItem> items);
+  Future<void> setJumpListItems(final List<JumpListItem> items);
 
   /// Add a single item to the Jump List.
-  Future<void> addItem(JumpListItem item);
+  Future<void> addItem(final JumpListItem item);
 
   /// Remove an item from the Jump List.
-  Future<void> removeItem(String itemId);
+  Future<void> removeItem(final String itemId);
 
   /// Clear all items from the Jump List.
   Future<void> clear();
 
   /// Set the list of tasks (common actions like Play, Pause, etc.)
-  Future<void> setTasks(List<JumpListTask> tasks);
+  Future<void> setTasks(final List<JumpListTask> tasks);
 
   /// Dispose of resources.
   void dispose();
@@ -57,24 +55,18 @@ class JumpListItem {
   final Map<String, dynamic> arguments;
   final bool pinned;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'subtitle': subtitle,
-      'iconPath': iconPath,
-      'type': type.name,
-      'arguments': arguments,
-      'pinned': pinned,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'subtitle': subtitle,
+    'iconPath': iconPath,
+    'type': type.name,
+    'arguments': arguments,
+    'pinned': pinned,
+  };
 }
 
-enum JumpListItemType {
-  recent,
-  pinned,
-  task,
-}
+enum JumpListItemType { recent, pinned, task }
 
 /// Represents a Jump List task (common action).
 @immutable
@@ -91,14 +83,12 @@ class JumpListTask {
   final String? iconPath;
   final Map<String, dynamic> arguments;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'iconPath': iconPath,
-      'arguments': arguments,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'iconPath': iconPath,
+    'arguments': arguments,
+  };
 }
 
 /// Factory for creating platform-specific JumpListPlatform implementations.
@@ -123,7 +113,7 @@ class JumpListPlatformFactory {
   }
 
   /// Override the instance (useful for testing).
-  static void setInstance(JumpListPlatform instance) {
+  static void setInstance(final JumpListPlatform instance) {
     _instance = instance;
   }
 }
@@ -134,19 +124,19 @@ class StubJumpListPlatform implements JumpListPlatform {
   Future<void> initialize() async {}
 
   @override
-  Future<void> setJumpListItems(List<JumpListItem> items) async {}
+  Future<void> setJumpListItems(final List<JumpListItem> items) async {}
 
   @override
-  Future<void> addItem(JumpListItem item) async {}
+  Future<void> addItem(final JumpListItem item) async {}
 
   @override
-  Future<void> removeItem(String itemId) async {}
+  Future<void> removeItem(final String itemId) async {}
 
   @override
   Future<void> clear() async {}
 
   @override
-  Future<void> setTasks(List<JumpListTask> tasks) async {}
+  Future<void> setTasks(final List<JumpListTask> tasks) async {}
 
   @override
   void dispose() {}
@@ -158,19 +148,19 @@ class MacOSJumpListPlatform implements JumpListPlatform {
   Future<void> initialize() async {}
 
   @override
-  Future<void> setJumpListItems(List<JumpListItem> items) async {}
+  Future<void> setJumpListItems(final List<JumpListItem> items) async {}
 
   @override
-  Future<void> addItem(JumpListItem item) async {}
+  Future<void> addItem(final JumpListItem item) async {}
 
   @override
-  Future<void> removeItem(String itemId) async {}
+  Future<void> removeItem(final String itemId) async {}
 
   @override
   Future<void> clear() async {}
 
   @override
-  Future<void> setTasks(List<JumpListTask> tasks) async {}
+  Future<void> setTasks(final List<JumpListTask> tasks) async {}
 
   @override
   void dispose() {}
@@ -182,19 +172,19 @@ class LinuxJumpListPlatform implements JumpListPlatform {
   Future<void> initialize() async {}
 
   @override
-  Future<void> setJumpListItems(List<JumpListItem> items) async {}
+  Future<void> setJumpListItems(final List<JumpListItem> items) async {}
 
   @override
-  Future<void> addItem(JumpListItem item) async {}
+  Future<void> addItem(final JumpListItem item) async {}
 
   @override
-  Future<void> removeItem(String itemId) async {}
+  Future<void> removeItem(final String itemId) async {}
 
   @override
   Future<void> clear() async {}
 
   @override
-  Future<void> setTasks(List<JumpListTask> tasks) async {}
+  Future<void> setTasks(final List<JumpListTask> tasks) async {}
 
   @override
   void dispose() {}

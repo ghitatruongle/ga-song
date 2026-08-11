@@ -4,11 +4,11 @@ import 'package:ga_song/core/logging/app_logger.dart';
 void main() {
   group('AppLogger', () {
     final lines = <String>[];
-    void capture(String line) => lines.add(line);
+    void capture(final String line) => lines.add(line);
 
     setUp(() {
       lines.clear();
-      AppLogger.init(minLevel: LogLevel.debug, sink: capture);
+      AppLogger.init(sink: capture);
     });
 
     test('debug message is captured at LogLevel.debug', () {
@@ -54,7 +54,7 @@ void main() {
 
     test('init can swap sink', () {
       final other = <String>[];
-      AppLogger.init(minLevel: LogLevel.debug, sink: other.add);
+      AppLogger.init(sink: other.add);
       AppLogger.i('test', 'redirected');
       expect(other, hasLength(1));
       expect(lines, isEmpty);

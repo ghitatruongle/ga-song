@@ -4,11 +4,11 @@ import '../../providers/service_providers.dart';
 import '../../core/theme/tokens.dart';
 
 class SleepTimerDialog {
-  static void show(BuildContext context) {
+  static void show(final BuildContext context) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (context) => const _SleepTimerDialog(),
+      builder: (final context) => const _SleepTimerDialog(),
     );
   }
 }
@@ -28,7 +28,7 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
   static const _presetMinutes = [5, 10, 15, 30, 45, 60, 90, 120];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final textColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.white
         : Colors.black87;
@@ -57,7 +57,7 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
           ),
           child: ValueListenableBuilder<Duration?>(
             valueListenable: _playlistService.sleepTimerRemainingNotifier,
-            builder: (context, remaining, child) {
+            builder: (final context, final remaining, final child) {
               if (remaining != null) {
                 // C6 fix: Show active timer state and cancel button
                 final minutes = remaining.inMinutes;
@@ -168,8 +168,9 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                     runSpacing: 8,
                     alignment: WrapAlignment.center,
                     children: [
-                      ..._presetMinutes.map((minutes) {
-                        final isSelected = _selectedMinutes == minutes && !_selectedEndOfSong;
+                      ..._presetMinutes.map((final minutes) {
+                        final isSelected =
+                            _selectedMinutes == minutes && !_selectedEndOfSong;
                         return ChoiceChip(
                           label: Text(
                             minutes < 60
@@ -223,7 +224,7 @@ class _SleepTimerDialogState extends ConsumerState<_SleepTimerDialog> {
                     divisions: 179,
                     label: '$_selectedMinutes phút',
                     activeColor: Theme.of(context).primaryColor,
-                    onChanged: (value) =>
+                    onChanged: (final value) =>
                         setState(() => _selectedMinutes = value.round()),
                   ),
                   Text(

@@ -4,7 +4,7 @@ import 'package:ga_song/ui/screens/blurred_background.dart';
 
 void main() {
   group('BlurredBackground', () {
-    testWidgets('renders child widget', (tester) async {
+    testWidgets('renders child widget', (final tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -16,7 +16,9 @@ void main() {
       expect(find.text('test child'), findsOneWidget);
     });
 
-    testWidgets('applies ImageFiltered when blurLevel > 0', (tester) async {
+    testWidgets('applies ImageFiltered when blurLevel > 0', (
+      final tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -31,7 +33,9 @@ void main() {
       expect(find.byType(ImageFiltered), findsOneWidget);
     });
 
-    testWidgets('skips ImageFiltered when blurLevel is 0', (tester) async {
+    testWidgets('skips ImageFiltered when blurLevel is 0', (
+      final tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(

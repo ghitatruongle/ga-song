@@ -31,11 +31,7 @@ void main() {
         expect(container.read(engineStateProvider), AudioEngineState.idle);
 
         // Read to force build
-        container.listen(
-          engineStateProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
+        container.listen(engineStateProvider, (_, _) {}, fireImmediately: true);
 
         // Bug verification: replace the engine and invalidate the provider.
         // If `late final` was used, this would throw LateInitializationError.

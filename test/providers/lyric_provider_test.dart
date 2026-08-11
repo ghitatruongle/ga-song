@@ -4,8 +4,8 @@ import 'package:ga_song/core/audio/lyric_parser.dart';
 void main() {
   group('LyricLine', () {
     test('stores startTime and text', () {
-      final line = LyricLine(
-        startTime: const Duration(seconds: 30),
+      const line = LyricLine(
+        startTime: Duration(seconds: 30),
         text: 'Hello world',
       );
 
@@ -62,14 +62,14 @@ void main() {
   group('CurrentLyricLineNotifier logic', () {
     test('finds correct lyric line for given position', () {
       final lines = [
-        LyricLine(startTime: Duration.zero, text: ''),
-        LyricLine(startTime: const Duration(seconds: 10), text: 'Line 1'),
-        LyricLine(startTime: const Duration(seconds: 20), text: 'Line 2'),
-        LyricLine(startTime: const Duration(seconds: 30), text: 'Line 3'),
+        const LyricLine(startTime: Duration.zero, text: ''),
+        const LyricLine(startTime: Duration(seconds: 10), text: 'Line 1'),
+        const LyricLine(startTime: Duration(seconds: 20), text: 'Line 2'),
+        const LyricLine(startTime: Duration(seconds: 30), text: 'Line 3'),
       ];
 
       // Helper to find line at position (same logic as CurrentLyricLineNotifier)
-      String findLine(Duration position) {
+      String findLine(final Duration position) {
         for (int i = lines.length - 1; i >= 0; i--) {
           if (lines[i].startTime <= position) {
             return lines[i].text;
@@ -91,7 +91,7 @@ void main() {
     test('returns empty string for empty lyrics', () {
       final lines = <LyricLine>[];
 
-      String findLine(Duration position) {
+      String findLine(final Duration position) {
         for (int i = lines.length - 1; i >= 0; i--) {
           if (lines[i].startTime <= position) {
             return lines[i].text;
@@ -105,10 +105,10 @@ void main() {
 
     test('handles position before first lyric line', () {
       final lines = [
-        LyricLine(startTime: const Duration(seconds: 10), text: 'First'),
+        const LyricLine(startTime: Duration(seconds: 10), text: 'First'),
       ];
 
-      String findLine(Duration position) {
+      String findLine(final Duration position) {
         for (int i = lines.length - 1; i >= 0; i--) {
           if (lines[i].startTime <= position) {
             return lines[i].text;

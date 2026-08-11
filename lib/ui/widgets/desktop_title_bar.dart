@@ -20,7 +20,7 @@ class DesktopTitleBar extends StatelessWidget {
   final double height;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     if (kIsWeb ||
         defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS) {
@@ -64,7 +64,7 @@ class DesktopTitleBar extends StatelessWidget {
     );
   }
 
-  static Color _defaultIconColor(BuildContext context) {
+  static Color _defaultIconColor(final BuildContext context) {
     final brightness = Theme.of(context).brightness;
     return brightness == Brightness.dark ? Colors.white : Colors.black87;
   }

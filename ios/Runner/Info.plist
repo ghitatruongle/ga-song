@@ -66,5 +66,28 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>G.A Song cần quyền truy cập Micro cho chế độ Karaoke và Visualizer.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>G.A Song cần quyền truy cập Thư viện Nhạc để quét và phát bài hát của bạn.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>G.A Song cần quyền truy cập Thư viện ảnh để tùy chỉnh ảnh nền và ảnh bìa bài hát.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.ghitatruongle.gasong</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gasong</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

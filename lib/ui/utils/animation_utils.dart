@@ -8,6 +8,5 @@ import 'package:flutter/widgets.dart';
 ///   // do animated thing
 /// }
 /// ```
-bool animationsEnabled(BuildContext context) {
-  return !MediaQuery.of(context).disableAnimations;
-}
+bool animationsEnabled(final BuildContext context) =>
+    !MediaQuery.of(context).disableAnimations;

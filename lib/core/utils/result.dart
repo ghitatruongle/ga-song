@@ -24,7 +24,7 @@ sealed class Result<T> {
   };
 
   /// Transforms the data if [Success], or returns the [Failure] unchanged.
-  Result<R> map<R>(R Function(T) transform) => switch (this) {
+  Result<R> map<R>(final R Function(T) transform) => switch (this) {
     Success(data: final d) => Success(transform(d)),
     Failure(message: final m, stackTrace: final s, exception: final e) =>
       Failure(m, s, e),
@@ -32,7 +32,7 @@ sealed class Result<T> {
 
   /// Transforms the data if [Success], or returns the [Failure] unchanged.
   /// The transform function can return a new [Result].
-  Result<R> flatMap<R>(Result<R> Function(T) transform) => switch (this) {
+  Result<R> flatMap<R>(final Result<R> Function(T) transform) => switch (this) {
     Success(data: final d) => transform(d),
     Failure(message: final m, stackTrace: final s, exception: final e) =>
       Failure(m, s, e),
@@ -40,8 +40,8 @@ sealed class Result<T> {
 
   /// Executes [onSuccess] if [Success] or [onFailure] if [Failure].
   R fold<R>({
-    required R Function(T data) onSuccess,
-    required R Function(String message, StackTrace? stackTrace) onFailure,
+    required final R Function(T data) onSuccess,
+    required final R Function(String message, StackTrace? stackTrace) onFailure,
   }) => switch (this) {
     Success(data: final d) => onSuccess(d),
     Failure(message: final m, stackTrace: final s) => onFailure(m, s),

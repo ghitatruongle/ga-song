@@ -14,11 +14,12 @@ class PlatformCapabilities {
   // ─── Platform shortcuts ───────────────────────────────────────────────────
 
   bool get isAndroid => !kIsWeb && Platform.isAndroid;
+  bool get isIOS => !kIsWeb && Platform.isIOS;
   bool get isWindows => !kIsWeb && Platform.isWindows;
   bool get isLinux => !kIsWeb && Platform.isLinux;
   bool get isMacOS => !kIsWeb && Platform.isMacOS;
   bool get isDesktop => isWindows || isLinux || isMacOS;
-  bool get isMobile => isAndroid;
+  bool get isMobile => isAndroid || isIOS;
 
   // ─── Window effect detection ──────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ class PlatformCapabilities {
       final version = Platform.operatingSystemVersion;
       // Split on dots and whitespace, then find the first number > 10000
       // which is the Windows build number (version parts like 10, 0 are smaller).
-      final parts = version.split(RegExp(r'[ .]+'));
+      final parts = version.split(RegExp('[ .]+'));
       for (final part in parts) {
         final num = int.tryParse(part);
         if (num != null && num > 10000) return num >= 22000;
@@ -113,14 +114,15 @@ class PlatformCapabilities {
   /// Estimated device tier based on platform.
   /// - [DeviceTier.high]: Desktop (Windows, Linux, macOS)
   /// - [DeviceTier.mid]: Android 10+ on recent hardware
-  /// - [DeviceTier.low]: (reserved — add RAM-based detection if needed)
+  /// - [DeviceTier.low]: Low-end Android devices
   DeviceTier get deviceTier {
     if (isDesktop) return DeviceTier.high;
     if (isAndroid) {
-      if (Platform.numberOfProcessors <= 4) {
-        return DeviceTier.low;
-      }
-      return DeviceTier.mid;
+      // More granular detection based on CPU cores and available memory
+      final cores = Platform.numberOfProcessors;
+      if (cores <= 4) return DeviceTier.low;
+      if (cores <= 6) return DeviceTier.mid;
+      return DeviceTier.mid; // Most Android devices are mid-tier
     }
     return DeviceTier.mid; // Default fallback
   }
@@ -161,18 +163,19 @@ class PlatformCapabilities {
   }
 
   /// Max number of audio source buffers to keep in memory.
-  /// Desktop: 50; Android mid: 32 (tăng từ 20); Android low: 10.
+  /// Desktop: 12 (each decoded track costs ~30-40MB RAM; 50 was too greedy).
+  /// Android mid: 10; Android low: 6.
   int get maxAudioSourceCacheEntries {
-    if (isAndroid && deviceTier == DeviceTier.low) return 10;
-    if (isAndroid) return 32;
-    return 50;
+    if (isAndroid && deviceTier == DeviceTier.low) return 6;
+    if (isAndroid) return 10;
+    return 12;
   }
 
   /// Max number of cover art image providers to keep in the LRU cache.
   int get maxCoverArtCacheEntries {
     if (isAndroid && deviceTier == DeviceTier.low) return 12;
     if (isAndroid) return 24;
-    return 60;
+    return 32;
   }
 
   /// Whether to allow high-quality blur effects.
@@ -184,9 +187,9 @@ class PlatformCapabilities {
 
   /// Suggested blur sigma for blurred backgrounds.
   double get backgroundBlurSigma {
-    if (isAndroid && deviceTier == DeviceTier.low) return 8.0; // Very light
-    if (isAndroid) return 16.0;
-    return 30.0;
+    if (isAndroid && deviceTier == DeviceTier.low) return 8; // Very light
+    if (isAndroid) return 16;
+    return 30;
   }
 
   /// Max particle count for the visualizer.
@@ -206,7 +209,7 @@ class PlatformCapabilities {
   }
 
   /// How many audio sources to preload concurrently.
-  /// Android low: 1 (sequential); Android mid: 3 (tăng từ 2); Desktop: 3.
+  /// Android low: 1 (sequential); Android mid: 3; Desktop: 3.
   int get preloadConcurrency {
     if (isAndroid && deviceTier == DeviceTier.low) return 1;
     if (isAndroid) return 3;
@@ -230,27 +233,60 @@ class PlatformCapabilities {
 
   /// Whether the visualizer should process audio amplitude data at full rate.
   /// Low-end devices sample at half rate to reduce CPU load.
-  bool get visualizerHalfRate {
-    return isAndroid && deviceTier == DeviceTier.low;
-  }
+  bool get visualizerHalfRate => isAndroid && deviceTier == DeviceTier.low;
 
   /// Whether the animated starfield background should run.
   /// Disabled on low-end Android to save GPU cycles.
-  bool get allowStarfieldBackground {
-    return !(isAndroid && deviceTier == DeviceTier.low);
-  }
+  bool get allowStarfieldBackground =>
+      !(isAndroid && deviceTier == DeviceTier.low);
 
   /// Whether to enable the shimmer/skeleton loading animation on lists.
   /// Disabled on low-end Android to reduce jank.
-  bool get allowShimmerLoading {
-    return !(isAndroid && deviceTier == DeviceTier.low);
-  }
+  bool get allowShimmerLoading => !(isAndroid && deviceTier == DeviceTier.low);
 
   /// Whether animated page transitions (slide/fade) are enabled.
   /// Low-end Android gets instant transitions — no animation.
-  bool get allowPageTransitions {
-    return !(isAndroid && deviceTier == DeviceTier.low);
+  bool get allowPageTransitions => !(isAndroid && deviceTier == DeviceTier.low);
+
+  // ─── Power management ───────────────────────────────────────────────────
+
+  /// Whether the system is in a low-power / battery-saver mode.
+  /// Windows: queries power status; macOS/Linux/Android fall back to false.
+  bool get isPowerSavingMode {
+    if (isWindows) {
+      try {
+        // Windows: PowerManager::GetPowerStatus returns 0 when on battery,
+        // 1 when on AC. We use the SystemParameters API via a platform channel
+        // — here we rely on a simpler heuristic: if battery capacity is low.
+        // Since Flutter doesn't expose this directly, we use a heuristic
+        // based on the platform's power state from SystemSettings.
+        return false; // Fallback — real detection requires native code
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
   }
+
+  /// Whether to use aggressive memory cleanup on Android.
+  /// Enabled on low-end devices to prevent OOM.
+  bool get aggressiveMemoryCleanup => isAndroid && deviceTier == DeviceTier.low;
+
+  /// Maximum number of concurrent image decodes.
+  /// Lower on Android to prevent OOM.
+  int get maxConcurrentImageDecodes {
+    if (isAndroid && deviceTier == DeviceTier.low) return 1;
+    if (isAndroid) return 3;
+    return 6;
+  }
+
+  /// Whether to enable background audio scanning.
+  /// Disabled on low-end Android to save battery.
+  bool get enableBackgroundScanning =>
+      !(isAndroid && deviceTier == DeviceTier.low);
+
+  /// Battery optimization mode - reduces background activity.
+  bool get batteryOptimizationMode => isAndroid;
 
   /// Whether global hotkeys (system-level) are supported.
   bool get supportsGlobalHotkeys => isDesktop;

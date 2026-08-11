@@ -19,60 +19,60 @@ import '../core/services/feedback_service.dart';
 import '../core/services/jump_list_service.dart';
 import '../core/services/protocol_handler_service.dart';
 import '../core/services/music_manager.dart';
-import '../providers/lyrics_editor_provider.dart';
+import '../ui/visualizer/visualizer_controller.dart';
 export '../core/settings/settings_notifier.dart';
 export 'state_providers.dart';
 
 // ─── Core services ─────────────────────────────────────────────────────
 
-final feedbackServiceProvider = Provider<FeedbackService>((ref) {
-  return FeedbackService(ref.watch(settingsManagerProvider));
-});
+final feedbackServiceProvider = Provider<FeedbackService>(
+  (final ref) => FeedbackService(ref.watch(settingsManagerProvider)),
+);
 
 /// Database service for songs, playlists, and cover art cache.
-final appDatabaseProvider = Provider<AppDatabase>((ref) {
+final appDatabaseProvider = Provider<AppDatabase>((final ref) {
   final db = AppDatabase();
   ref.onDispose(() => db.close());
   return db;
 });
 
 /// Database service for songs, playlists, and cover art cache.
-final databaseServiceProvider = Provider<DatabaseServiceWrapper>((ref) {
+final databaseServiceProvider = Provider<DatabaseServiceWrapper>((final ref) {
   final service = DatabaseServiceWrapper(ref.watch(appDatabaseProvider));
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// Low-level audio playback engine (SoLoud).
-final audioEngineServiceProvider = Provider<AudioEngineService>((ref) {
+final audioEngineServiceProvider = Provider<AudioEngineService>((final ref) {
   final service = AudioEngineService();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// Audio effects: EQ, bass, reverb, compressor, normalization.
-final audioEffectServiceProvider = Provider<AudioEffectService>((ref) {
+final audioEffectServiceProvider = Provider<AudioEffectService>((final ref) {
   final service = AudioEffectService();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// App settings with SharedPreferences persistence.
-final settingsManagerProvider = Provider<SettingsManager>((ref) {
+final settingsManagerProvider = Provider<SettingsManager>((final ref) {
   final service = SettingsManager();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// Cover art 3-tier cache (memory → disk → source).
-final coverArtRepositoryProvider = Provider<CoverArtRepository>((ref) {
+final coverArtRepositoryProvider = Provider<CoverArtRepository>((final ref) {
   final service = CoverArtRepository();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// Playlist management, shuffle, sort, sleep timer.
-final playlistServiceProvider = Provider<PlaylistService>((ref) {
+final playlistServiceProvider = Provider<PlaylistService>((final ref) {
   final engine = ref.read(audioEngineServiceProvider);
   final effect = ref.read(audioEffectServiceProvider);
   final db = ref.read(databaseServiceProvider);
@@ -82,20 +82,20 @@ final playlistServiceProvider = Provider<PlaylistService>((ref) {
 });
 
 /// Android Picture-in-Picture service.
-final pipServiceProvider = Provider<PipService>((ref) {
+final pipServiceProvider = Provider<PipService>((final ref) {
   final service = PipService.instance;
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// Global hotkey registration.
-final hotkeyServiceProvider = Provider<HotkeyService>((ref) {
+final hotkeyServiceProvider = Provider<HotkeyService>((final ref) {
   final settings = ref.read(settingsManagerProvider);
   return HotkeyService(settingsManager: settings);
 });
 
 /// System tray icon and context menu.
-final systemTrayServiceProvider = Provider<SystemTrayService>((ref) {
+final systemTrayServiceProvider = Provider<SystemTrayService>((final ref) {
   final engine = ref.read(audioEngineServiceProvider);
   final playlist = ref.read(playlistServiceProvider);
   return SystemTrayService(
@@ -105,44 +105,50 @@ final systemTrayServiceProvider = Provider<SystemTrayService>((ref) {
 });
 
 /// Desktop window management (resize, effects, lifecycle).
-final windowManagerServiceProvider = Provider<WindowManagerService>((ref) {
+final windowManagerServiceProvider = Provider<WindowManagerService>((
+  final ref,
+) {
   final settings = ref.read(settingsManagerProvider);
   return WindowManagerService(settingsManager: settings);
 });
 
 /// Desktop floating lyrics overlay.
-final desktopLyricsServiceProvider = Provider<DesktopLyricsService>((ref) {
+final desktopLyricsServiceProvider = Provider<DesktopLyricsService>((
+  final ref,
+) {
   final settings = ref.read(settingsManagerProvider);
   return DesktopLyricsService(settingsManager: settings);
 });
 
 /// Smart playlist generation from database.
-final smartPlaylistServiceProvider = Provider<SmartPlaylistService>((ref) {
+final smartPlaylistServiceProvider = Provider<SmartPlaylistService>((
+  final ref,
+) {
   final db = ref.read(databaseServiceProvider);
   return SmartPlaylistService(db);
 });
 
 /// Online lyrics fetching from lrclib.net.
-final onlineLyricsServiceProvider = Provider<OnlineLyricsService>((ref) {
-  return OnlineLyricsService();
-});
+final onlineLyricsServiceProvider = Provider<OnlineLyricsService>(
+  (final ref) => OnlineLyricsService(),
+);
 
 /// Smart shuffle service for weighted shuffle algorithm.
-final smartShuffleServiceProvider = Provider<SmartShuffleService>((ref) {
-  return SmartShuffleService();
-});
+final smartShuffleServiceProvider = Provider<SmartShuffleService>(
+  (final ref) => SmartShuffleService(),
+);
 
 /// Windows Jump List service for taskbar integration.
-final jumpListServiceProvider = Provider<JumpListService>((ref) {
-  final settings = ref.read(settingsManagerProvider);
-  final db = ref.read(databaseServiceProvider);
-  final service = JumpListService(settingsManager: settings, databaseService: db);
+final jumpListServiceProvider = Provider<JumpListService>((final ref) {
+  final service = JumpListService();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 /// Protocol handler for gasong:// URIs.
-final protocolHandlerServiceProvider = Provider<ProtocolHandlerService>((ref) {
+final protocolHandlerServiceProvider = Provider<ProtocolHandlerService>((
+  final ref,
+) {
   final db = ref.read(databaseServiceProvider);
   final playlist = ref.read(playlistServiceProvider);
   final engine = ref.read(audioEngineServiceProvider);
@@ -158,7 +164,14 @@ final protocolHandlerServiceProvider = Provider<ProtocolHandlerService>((ref) {
 });
 
 /// Music manager for importing/deleting local songs.
-final musicManagerProvider = Provider<MusicManager>((ref) {
+final musicManagerProvider = Provider<MusicManager>((final ref) {
   final db = ref.read(databaseServiceProvider);
   return MusicManager(db);
 });
+
+/// Visualizer controller — singleton per ProviderScope.
+/// v0.9.5: Kept for reference; GPU visualizer receives the controller
+/// directly via constructor from [PersonalVisualizerWidget].
+final visualizerControllerProvider = Provider<VisualizerController?>(
+  (final ref) => null,
+);

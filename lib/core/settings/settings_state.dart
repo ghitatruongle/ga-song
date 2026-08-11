@@ -11,69 +11,69 @@ part 'settings_state.freezed.dart';
 class SettingsState with _$SettingsState {
   const factory SettingsState({
     // ─── Theme ──────────────────────────────────────────────────────
-    @Default(ThemeMode.system) ThemeMode themeMode,
-    @Default(true) bool enableBlur,
-    @Default(30.0) double blurLevel,
-    @Default(false) bool useNativeWindowEffect,
-    @Default(0.7) double windowOpacity,
-    @Default(true) bool useDynamicColor,
-    @Default(Color(0xFF1DB954)) Color customPrimaryColor,
-    Color? dynamicPrimaryColor,
+    @Default(ThemeMode.system) final ThemeMode themeMode,
+    @Default(true) final bool enableBlur,
+    @Default(30.0) final double blurLevel,
+    @Default(false) final bool useNativeWindowEffect,
+    @Default(0.7) final double windowOpacity,
+    @Default(true) final bool useDynamicColor,
+    @Default(Color(0xFF1DB954)) final Color customPrimaryColor,
+    final Color? dynamicPrimaryColor,
 
     // ─── Window & Layout ────────────────────────────────────────────
-    @Default(false) bool isMiniPlayer,
-    @Default(false) bool isGridView,
-    @Default(false) bool sidebarCollapsed,
-    @Default(0) int currentTabIndex,
+    @Default(false) final bool isMiniPlayer,
+    @Default(false) final bool isGridView,
+    @Default(false) final bool sidebarCollapsed,
+    @Default(0) final int currentTabIndex,
 
     // ─── Equalizer ──────────────────────────────────────────────────
-    @Default([0.0, 0.0, 0.0, 0.0, 0.0]) List<double> eqBands,
-    @Default(0) int eqBassLevel,
-    @Default('Normal') String eqPreset,
+    @Default([0.0, 0.0, 0.0, 0.0, 0.0]) final List<double> eqBands,
+    @Default(0) final int eqBassLevel,
+    @Default('Normal') final String eqPreset,
 
     // ─── Audio Effects ──────────────────────────────────────────────
-    @Default(3.0) double crossfadeDuration,
-    @Default(0) int crossfadeCurve, // 0=linear, 1=exponential, 2=sCurve
-    @Default(-12.0) double normalizationLevel,
-    @Default(false) bool normalizationEnabled,
-    @Default(1.0) double pitchShift,
-    @Default(0.0) double reverbMix,
-    @Default(0.5) double reverbRoomSize,
-    @Default(0.5) double reverbDamp,
-    @Default(1.0) double compressionRatio,
-    @Default(-6.0) double compThreshold,
-    @Default(10.0) double compAttack,
-    @Default(100.0) double compRelease,
-    @Default(2.0) double compKneeWidth,
-    @Default(0.0) double compMakeupGain,
+    @Default(3.0) final double crossfadeDuration,
+    @Default(0) final int crossfadeCurve, // 0=linear, 1=exponential, 2=sCurve
+    @Default(-12.0) final double normalizationLevel,
+    @Default(false) final bool normalizationEnabled,
+    @Default(1.0) final double pitchShift,
+    @Default(0.0) final double reverbMix,
+    @Default(0.5) final double reverbRoomSize,
+    @Default(0.5) final double reverbDamp,
+    @Default(1.0) final double compressionRatio,
+    @Default(-6.0) final double compThreshold,
+    @Default(10.0) final double compAttack,
+    @Default(100.0) final double compRelease,
+    @Default(2.0) final double compKneeWidth,
+    @Default(0.0) final double compMakeupGain,
 
     // ─── Sort & Filter ──────────────────────────────────────────────
-    @Default(0) int sortMode,
-    @Default(true) bool sortAscending,
+    @Default(0) final int sortMode,
+    @Default(true) final bool sortAscending,
 
     // ─── Desktop Lyrics ─────────────────────────────────────────────
-    @Default(false) bool desktopLyricsEnabled,
-    @Default(24.0) double desktopLyricsFontSize,
-    @Default(0.9) double desktopLyricsOpacity,
-    @Default(false) bool desktopLyricsClickThrough,
+    @Default(false) final bool desktopLyricsEnabled,
+    @Default(24.0) final double desktopLyricsFontSize,
+    @Default(0.9) final double desktopLyricsOpacity,
+    @Default(false) final bool desktopLyricsClickThrough,
 
     // ─── In-app Lyric ──────────────────────────────────────────────
-    @Default(1.0) double lyricFontSize,
+    @Default(1.0) final double lyricFontSize,
 
     // ─── Visualizer ─────────────────────────────────────────────────
-    @Default(true) bool visualizerEnabled,
-    @Default(0) int visualizerShape,
+    @Default(true) final bool visualizerEnabled,
+    @Default(0) final int visualizerShape,
 
     // ─── Hotkeys & Media ────────────────────────────────────────────
-    @Default({}) Map<String, String> customHotkeys,
-    @Default(true) bool mediaKeyEnabled,
+    @Default({}) final Map<String, String> customHotkeys,
+    @Default(true) final bool mediaKeyEnabled,
 
     // ─── Feedback (Phase 4) ──────────────────────────────────────────
-    @Default(false) bool soundFeedbackEnabled,
+    @Default(false) final bool soundFeedbackEnabled,
 
     // ─── Other ──────────────────────────────────────────────────────
-    @Default(true) bool minimizeToTray,
-    @Default(1.0) double sensitivity,
-    String? customBackgroundImage,
+    @Default(true) final bool minimizeToTray,
+    @Default(1.0) final double sensitivity,
+    final String? customBackgroundImage,
   }) = _SettingsState;
 }

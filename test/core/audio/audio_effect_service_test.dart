@@ -46,22 +46,22 @@ void main() {
 
     group('setCrossfadeDuration', () {
       test('updates crossfadeDurationNotifier', () {
-        service.setCrossfadeDuration(5.0);
+        service.setCrossfadeDuration(5);
         expect(service.crossfadeDurationNotifier.value, 5.0);
       });
 
       test('clamps to 0 minimum', () {
-        service.setCrossfadeDuration(-1.0);
+        service.setCrossfadeDuration(-1);
         expect(service.crossfadeDurationNotifier.value, 0.0);
       });
 
       test('clamps to 10 maximum', () {
-        service.setCrossfadeDuration(15.0);
+        service.setCrossfadeDuration(15);
         expect(service.crossfadeDurationNotifier.value, 10.0);
       });
 
       test('accepts zero', () {
-        service.setCrossfadeDuration(0.0);
+        service.setCrossfadeDuration(0);
         expect(service.crossfadeDurationNotifier.value, 0.0);
       });
     });
@@ -70,17 +70,17 @@ void main() {
 
     group('setNormalizationLevel', () {
       test('updates normalizationLevelNotifier', () {
-        service.setNormalizationLevel(-12.0);
+        service.setNormalizationLevel(-12);
         expect(service.normalizationLevelNotifier.value, -12.0);
       });
 
       test('clamps to -24 minimum', () {
-        service.setNormalizationLevel(-30.0);
+        service.setNormalizationLevel(-30);
         expect(service.normalizationLevelNotifier.value, -24.0);
       });
 
       test('clamps to 0 maximum', () {
-        service.setNormalizationLevel(5.0);
+        service.setNormalizationLevel(5);
         expect(service.normalizationLevelNotifier.value, 0.0);
       });
     });
@@ -88,28 +88,28 @@ void main() {
     group('calculateNormalizationGain', () {
       test('returns 1.0 when normalization is disabled', () {
         service.enableNormalization(false);
-        final gain = service.calculateNormalizationGain(-12.0);
+        final gain = service.calculateNormalizationGain(-12);
         expect(gain, 1.0);
       });
 
       test('returns gain when normalization is enabled', () {
         service.enableNormalization(true);
-        service.setNormalizationLevel(-12.0);
-        final gain = service.calculateNormalizationGain(-12.0);
+        service.setNormalizationLevel(-12);
+        final gain = service.calculateNormalizationGain(-12);
         expect(gain, 1.0);
       });
 
       test('returns >1.0 when track is quieter than target', () {
         service.enableNormalization(true);
-        service.setNormalizationLevel(-12.0);
-        final gain = service.calculateNormalizationGain(-18.0);
+        service.setNormalizationLevel(-12);
+        final gain = service.calculateNormalizationGain(-18);
         expect(gain, greaterThan(1.0));
       });
 
       test('returns <1.0 when track is louder than target', () {
         service.enableNormalization(true);
-        service.setNormalizationLevel(-12.0);
-        final gain = service.calculateNormalizationGain(-6.0);
+        service.setNormalizationLevel(-12);
+        final gain = service.calculateNormalizationGain(-6);
         expect(gain, lessThan(1.0));
       });
     });
@@ -128,7 +128,7 @@ void main() {
       });
 
       test('clamps to 2.0 maximum', () {
-        service.setPitchShift(3.0);
+        service.setPitchShift(3);
         expect(service.pitchShiftNotifier.value, 2.0);
       });
     });
@@ -177,7 +177,7 @@ void main() {
 
     group('setCompressionRatio', () {
       test('updates compressionRatioNotifier', () {
-        service.setCompressionRatio(4.0);
+        service.setCompressionRatio(4);
         expect(service.compressionRatioNotifier.value, 4.0);
       });
 
@@ -187,77 +187,77 @@ void main() {
       });
 
       test('clamps to 10.0 maximum', () {
-        service.setCompressionRatio(15.0);
+        service.setCompressionRatio(15);
         expect(service.compressionRatioNotifier.value, 10.0);
       });
     });
 
     group('setCompThreshold', () {
       test('updates compThresholdNotifier', () {
-        service.setCompThreshold(-20.0);
+        service.setCompThreshold(-20);
         expect(service.compThresholdNotifier.value, -20.0);
       });
 
       test('clamps to -80 to 0 range', () {
-        service.setCompThreshold(-100.0);
+        service.setCompThreshold(-100);
         expect(service.compThresholdNotifier.value, -80.0);
-        service.setCompThreshold(10.0);
+        service.setCompThreshold(10);
         expect(service.compThresholdNotifier.value, 0.0);
       });
     });
 
     group('setCompAttack', () {
       test('updates compAttackNotifier', () {
-        service.setCompAttack(50.0);
+        service.setCompAttack(50);
         expect(service.compAttackNotifier.value, 50.0);
       });
 
       test('clamps to 0-100 range', () {
-        service.setCompAttack(-5.0);
+        service.setCompAttack(-5);
         expect(service.compAttackNotifier.value, 0.0);
-        service.setCompAttack(150.0);
+        service.setCompAttack(150);
         expect(service.compAttackNotifier.value, 100.0);
       });
     });
 
     group('setCompRelease', () {
       test('updates compReleaseNotifier', () {
-        service.setCompRelease(500.0);
+        service.setCompRelease(500);
         expect(service.compReleaseNotifier.value, 500.0);
       });
 
       test('clamps to 0-1000 range', () {
-        service.setCompRelease(-10.0);
+        service.setCompRelease(-10);
         expect(service.compReleaseNotifier.value, 0.0);
-        service.setCompRelease(1500.0);
+        service.setCompRelease(1500);
         expect(service.compReleaseNotifier.value, 1000.0);
       });
     });
 
     group('setCompKneeWidth', () {
       test('updates compKneeWidthNotifier', () {
-        service.setCompKneeWidth(10.0);
+        service.setCompKneeWidth(10);
         expect(service.compKneeWidthNotifier.value, 10.0);
       });
 
       test('clamps to 0-40 range', () {
-        service.setCompKneeWidth(-1.0);
+        service.setCompKneeWidth(-1);
         expect(service.compKneeWidthNotifier.value, 0.0);
-        service.setCompKneeWidth(50.0);
+        service.setCompKneeWidth(50);
         expect(service.compKneeWidthNotifier.value, 40.0);
       });
     });
 
     group('setCompMakeupGain', () {
       test('updates compMakeupGainNotifier', () {
-        service.setCompMakeupGain(6.0);
+        service.setCompMakeupGain(6);
         expect(service.compMakeupGainNotifier.value, 6.0);
       });
 
       test('clamps to -40 to 40 range', () {
-        service.setCompMakeupGain(-50.0);
+        service.setCompMakeupGain(-50);
         expect(service.compMakeupGainNotifier.value, -40.0);
-        service.setCompMakeupGain(50.0);
+        service.setCompMakeupGain(50);
         expect(service.compMakeupGainNotifier.value, 40.0);
       });
     });

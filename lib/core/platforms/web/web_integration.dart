@@ -48,10 +48,10 @@ class WebIntegration {
 
   /// Shows a web notification.
   static Future<void> showNotification({
-    required String title,
-    required String body,
-    String? icon,
-    String? tag,
+    required final String title,
+    required final String body,
+    final String? icon,
+    final String? tag,
   }) async {
     if (!isWeb) return;
 
@@ -88,7 +88,7 @@ class WebIntegration {
   }
 
   /// Checks if the browser supports a feature.
-  static bool supportsFeature(String feature) {
+  static bool supportsFeature(final String feature) {
     if (!isWeb) return false;
 
     // Map of supported features

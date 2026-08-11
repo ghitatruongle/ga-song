@@ -13,7 +13,7 @@ class RightControls extends ConsumerWidget {
   const RightControls({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final settingsManager = ref.read(settingsManagerProvider);
     final pipService = ref.read(pipServiceProvider);
     final desktopLyrics = ref.read(desktopLyricsServiceProvider);
@@ -74,7 +74,7 @@ class RightControls extends ConsumerWidget {
           },
         ),
         Consumer(
-          builder: (context, ref, _) {
+          builder: (final context, final ref, _) {
             final showLyrics = ref.watch(lyricVisibilityProvider);
             return IconButton(
               icon: Icon(
@@ -97,24 +97,19 @@ class RightControls extends ConsumerWidget {
         if (isDesktop)
           ValueListenableBuilder<bool>(
             valueListenable: desktopLyrics.isVisibleNotifier,
-            builder: (context, isVisible, _) {
-              return IconButton(
-                icon: Icon(
-                  Icons.lyrics_outlined,
-                  color: isVisible
-                      ? Theme.of(context).colorScheme.primary
-                      : context.adaptiveSecondary,
-                  size: 22,
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 36,
-                  height: 36,
-                ),
-                tooltip: 'Lời bài hát nổi (Desktop)',
-                onPressed: () => desktopLyrics.toggle(context),
-              );
-            },
+            builder: (final context, final isVisible, _) => IconButton(
+              icon: Icon(
+                Icons.lyrics_outlined,
+                color: isVisible
+                    ? Theme.of(context).colorScheme.primary
+                    : context.adaptiveSecondary,
+                size: 22,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+              tooltip: 'Lời bài hát nổi (Desktop)',
+              onPressed: () => desktopLyrics.toggle(context),
+            ),
           ),
         // Queue button — opens the playback queue panel
         IconButton(

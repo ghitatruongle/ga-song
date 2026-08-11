@@ -1,6 +1,7 @@
 /// Golden Test Suite for G.A - Song
 ///
 /// Tests visual regression across themes, locales, and screen sizes.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,10 +9,8 @@ import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ga_song/l10n/app_localizations.dart';
-import 'package:ga_song/main.dart' as app;
-import 'package:ga_song/core/settings_manager.dart';
-import 'package:ga_song/providers/service_providers.dart';
 import 'package:ga_song/ui/screens/home_screen.dart';
+import 'package:ga_song/ui/widgets/sidebar.dart';
 import 'test_helpers.dart';
 import 'mocks/mock_settings_manager.dart';
 import 'package:ga_song/ui/screens/now_playing_screen.dart';
@@ -21,6 +20,10 @@ import 'package:ga_song/ui/screens/theme_builder_screen.dart';
 import 'package:ga_song/ui/widgets/settings_search_dialog.dart';
 
 void main() {
+  // Pin the sidebar greeting clock to the morning so HomeScreen goldens
+  // are deterministic regardless of when the tests run (UTC hour changes).
+  greetingClock = () => DateTime(2026, 6, 1, 9);
+
   group('Golden Tests - Visual Regression', () {
     late MockServices mockServices;
 
@@ -34,7 +37,9 @@ void main() {
     });
 
     group('HomeScreen', () {
-      testGoldens('HomeScreen - Light Theme - Vietnamese', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Light Theme - Vietnamese', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_light_vi',
@@ -43,7 +48,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Dark Theme - Vietnamese', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Dark Theme - Vietnamese', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_dark_vi',
@@ -52,7 +59,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Light Theme - English', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Light Theme - English', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_light_en',
@@ -61,7 +70,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Dark Theme - English', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Dark Theme - English', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_dark_en',
@@ -70,7 +81,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Mobile Size - Light Theme', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Mobile Size - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_mobile_light',
@@ -80,7 +93,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Tablet Size - Light Theme', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Tablet Size - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_tablet_light',
@@ -90,7 +105,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Desktop Size - Light Theme', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Desktop Size - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_desktop_light',
@@ -100,7 +117,9 @@ void main() {
         );
       });
 
-      testGoldens('HomeScreen - Reduced Motion', (WidgetTester tester) async {
+      testGoldens('HomeScreen - Reduced Motion', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'home_screen_reduced_motion',
@@ -112,7 +131,9 @@ void main() {
     });
 
     group('NowPlayingScreen', () {
-      testGoldens('NowPlayingScreen - Light Theme', (WidgetTester tester) async {
+      testGoldens('NowPlayingScreen - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'now_playing_light',
@@ -122,7 +143,9 @@ void main() {
         );
       });
 
-      testGoldens('NowPlayingScreen - Dark Theme', (WidgetTester tester) async {
+      testGoldens('NowPlayingScreen - Dark Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'now_playing_dark',
@@ -134,7 +157,9 @@ void main() {
     });
 
     group('MiniPlayerScreen', () {
-      testGoldens('MiniPlayerScreen - Light Theme', (WidgetTester tester) async {
+      testGoldens('MiniPlayerScreen - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'mini_player_light',
@@ -144,7 +169,9 @@ void main() {
         );
       });
 
-      testGoldens('MiniPlayerScreen - Dark Theme', (WidgetTester tester) async {
+      testGoldens('MiniPlayerScreen - Dark Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'mini_player_dark',
@@ -156,7 +183,9 @@ void main() {
     });
 
     group('LyricsEditorScreen', () {
-      testGoldens('LyricsEditorScreen - Light Theme', (WidgetTester tester) async {
+      testGoldens('LyricsEditorScreen - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'lyrics_editor_light',
@@ -166,7 +195,9 @@ void main() {
         );
       });
 
-      testGoldens('LyricsEditorScreen - Dark Theme', (WidgetTester tester) async {
+      testGoldens('LyricsEditorScreen - Dark Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'lyrics_editor_dark',
@@ -178,7 +209,9 @@ void main() {
     });
 
     group('ThemeBuilderScreen', () {
-      testGoldens('ThemeBuilderScreen - Light Theme', (WidgetTester tester) async {
+      testGoldens('ThemeBuilderScreen - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'theme_builder_light',
@@ -188,7 +221,9 @@ void main() {
         );
       });
 
-      testGoldens('ThemeBuilderScreen - Dark Theme', (WidgetTester tester) async {
+      testGoldens('ThemeBuilderScreen - Dark Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testScreen(
           tester,
           'theme_builder_dark',
@@ -200,7 +235,9 @@ void main() {
     });
 
     group('SettingsSearchDialog', () {
-      testGoldens('SettingsSearchDialog - Light Theme', (WidgetTester tester) async {
+      testGoldens('SettingsSearchDialog - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testDialog(
           tester,
           'settings_search_light',
@@ -209,7 +246,9 @@ void main() {
         );
       });
 
-      testGoldens('SettingsSearchDialog - Dark Theme', (WidgetTester tester) async {
+      testGoldens('SettingsSearchDialog - Dark Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testDialog(
           tester,
           'settings_search_dark',
@@ -220,7 +259,9 @@ void main() {
     });
 
     group('QueueManagementSheet', () {
-      testGoldens('QueueManagementSheet - Light Theme', (WidgetTester tester) async {
+      testGoldens('QueueManagementSheet - Light Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testDialog(
           tester,
           'queue_management_light',
@@ -229,7 +270,9 @@ void main() {
         );
       });
 
-      testGoldens('QueueManagementSheet - Dark Theme', (WidgetTester tester) async {
+      testGoldens('QueueManagementSheet - Dark Theme', (
+        final WidgetTester tester,
+      ) async {
         await _testDialog(
           tester,
           'queue_management_dark',
@@ -240,7 +283,9 @@ void main() {
     });
 
     group('QueueManagementSheet - Multi Select', () {
-      testGoldens('QueueManagementSheet - Multi Select Light', (WidgetTester tester) async {
+      testGoldens('QueueManagementSheet - Multi Select Light', (
+        final WidgetTester tester,
+      ) async {
         await _testDialog(
           tester,
           'queue_management_multiselect_light',
@@ -253,13 +298,13 @@ void main() {
 }
 
 Future<void> _testScreen(
-  WidgetTester tester,
-  String name, {
-  required ThemeMode themeMode,
-  required Locale locale,
-  Widget? screen,
-  Size size = const Size(1000, 700),
-  bool disableAnimations = false,
+  final WidgetTester tester,
+  final String name, {
+  required final ThemeMode themeMode,
+  required final Locale locale,
+  final Widget? screen,
+  final Size size = const Size(1000, 700),
+  final bool disableAnimations = false,
 }) async {
   final settings = MockSettingsManager();
   await settings.init();
@@ -272,7 +317,7 @@ Future<void> _testScreen(
   await tester.pumpWidgetBuilder(
     screen ?? const HomeScreen(),
     surfaceSize: size,
-    wrapper: (widget) => MaterialApp(
+    wrapper: (final widget) => MaterialApp(
       locale: locale,
       supportedLocales: const [Locale('vi'), Locale('en')],
       localizationsDelegates: const [
@@ -282,31 +327,30 @@ Future<void> _testScreen(
         GlobalCupertinoLocalizations.delegate,
       ],
       home: MediaQuery(
-        data: MediaQueryData.fromView(
-          TestWidgetsFlutterBinding.instance.platformDispatcher.views.first,
-        ).copyWith(
-          size: size,
-          platformBrightness: themeMode == ThemeMode.dark ? Brightness.dark : Brightness.light,
-          disableAnimations: disableAnimations,
-        ),
-        child: ProviderScope(
-          overrides: mockServices.overrides,
-          child: widget,
-        ),
+        data:
+            MediaQueryData.fromView(
+              TestWidgetsFlutterBinding.instance.platformDispatcher.views.first,
+            ).copyWith(
+              size: size,
+              platformBrightness: themeMode == ThemeMode.dark
+                  ? Brightness.dark
+                  : Brightness.light,
+            ),
+        child: ProviderScope(overrides: mockServices.overrides, child: widget),
       ),
     ),
   );
 
-  await tester.pumpAndSettle(const Duration(seconds: 5));
+  await tester.pump(const Duration(milliseconds: 300));
 
   await screenMatchesGolden(tester, name);
 }
 
 Future<void> _testDialog(
-  WidgetTester tester,
-  String name, {
-  required ThemeMode themeMode,
-  required Locale locale,
+  final WidgetTester tester,
+  final String name, {
+  required final ThemeMode themeMode,
+  required final Locale locale,
 }) async {
   final settings = MockSettingsManager();
   await settings.init();
@@ -318,14 +362,10 @@ Future<void> _testDialog(
 
   await tester.pumpWidgetBuilder(
     const Dialog(
-      child: SizedBox(
-        width: 600,
-        height: 600,
-        child: SettingsSearchDialog(),
-      ),
+      child: SizedBox(width: 600, height: 600, child: SettingsSearchDialog()),
     ),
     surfaceSize: const Size(1000, 700),
-    wrapper: (widget) => MaterialApp(
+    wrapper: (final widget) => MaterialApp(
       locale: locale,
       supportedLocales: const [Locale('vi'), Locale('en')],
       localizationsDelegates: const [
@@ -335,16 +375,16 @@ Future<void> _testDialog(
         GlobalCupertinoLocalizations.delegate,
       ],
       home: MediaQuery(
-        data: MediaQueryData.fromView(
-          TestWidgetsFlutterBinding.instance.platformDispatcher.views.first,
-        ).copyWith(
-          size: const Size(1000, 700),
-          platformBrightness: themeMode == ThemeMode.dark ? Brightness.dark : Brightness.light,
-        ),
-        child: ProviderScope(
-          overrides: mockServices.overrides,
-          child: widget,
-        ),
+        data:
+            MediaQueryData.fromView(
+              TestWidgetsFlutterBinding.instance.platformDispatcher.views.first,
+            ).copyWith(
+              size: const Size(1000, 700),
+              platformBrightness: themeMode == ThemeMode.dark
+                  ? Brightness.dark
+                  : Brightness.light,
+            ),
+        child: ProviderScope(overrides: mockServices.overrides, child: widget),
       ),
     ),
   );

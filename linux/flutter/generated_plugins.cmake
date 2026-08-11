@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audiotags
   flutter_acrylic
+  gtk
   hotkey_manager_linux
   screen_retriever_linux
   sqlite3_flutter_libs

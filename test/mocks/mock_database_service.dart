@@ -1,5 +1,6 @@
 /// Mock implementation of [DatabaseServiceWrapper] for testing.
 /// Provides in-memory database operations without Drift/SQLite dependencies.
+library;
 
 import 'package:ga_song/core/services/db_service_wrapper.dart';
 import 'package:ga_song/models/song.dart';
@@ -64,7 +65,6 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
     _nextPlaylistId = 2;
   }
 
-  @override
   Future<void> close() async {
     _songs.clear();
     _playlists.clear();
@@ -79,13 +79,12 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   }
 
   @override
-  Future<Song?> getSong(int id) async {
+  Future<Song?> getSong(final int id) async {
     getSongCallCount++;
     return _songs[id];
   }
 
-  @override
-  Future<int> insertSong(Song song) async {
+  Future<int> insertSong(final Song song) async {
     insertSongCallCount++;
     final id = _nextSongId++;
     final newSong = song.copyWith(id: id);
@@ -93,8 +92,7 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
     return id;
   }
 
-  @override
-  Future<void> updateSong(Song song) async {
+  Future<void> updateSong(final Song song) async {
     updateSongCallCount++;
     if (song.id != null && _songs.containsKey(song.id)) {
       _songs[song.id!] = song;
@@ -102,7 +100,7 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   }
 
   @override
-  Future<void> deleteSong(int id) async {
+  Future<void> deleteSong(final int id) async {
     deleteSongCallCount++;
     _songs.remove(id);
     // Also remove from playlists
@@ -117,14 +115,12 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
     return _playlists.values.toList();
   }
 
-  @override
-  Future<Playlist?> getPlaylist(int id) async {
+  Future<Playlist?> getPlaylist(final int id) async {
     getPlaylistCallCount++;
     return _playlists[id];
   }
 
-  @override
-  Future<int> insertPlaylist(Playlist playlist) async {
+  Future<int> insertPlaylist(final Playlist playlist) async {
     insertPlaylistCallCount++;
     final id = _nextPlaylistId++;
     _playlists[id] = Playlist(
@@ -136,8 +132,7 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
     return id;
   }
 
-  @override
-  Future<void> updatePlaylist(Playlist playlist) async {
+  Future<void> updatePlaylist(final Playlist playlist) async {
     updatePlaylistCallCount++;
     if (playlist.id != null && _playlists.containsKey(playlist.id)) {
       _playlists[playlist.id!] = playlist;
@@ -145,21 +140,24 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   }
 
   @override
-  Future<void> deletePlaylist(int id) async {
+  Future<void> deletePlaylist(final int id) async {
     deletePlaylistCallCount++;
     _playlists.remove(id);
     _playlistSongs.remove(id);
   }
 
-  @override
-  Future<List<Song>> getPlaylistSongs(int playlistId) async {
+  Future<List<Song>> getPlaylistSongs(final int playlistId) async {
     getPlaylistSongsCallCount++;
     final songIds = _playlistSongs[playlistId] ?? [];
-    return songIds.map((id) => _songs[id]).whereType<Song>().toList();
+    return songIds.map((final id) => _songs[id]).whereType<Song>().toList();
   }
 
   @override
-  Future<void> addSongToPlaylist(int playlistId, int songId, {int? position}) async {
+  Future<void> addSongToPlaylist(
+    final int playlistId,
+    final int songId, {
+    final int? position,
+  }) async {
     addSongToPlaylistCallCount++;
     final songIds = _playlistSongs[playlistId] ?? [];
     if (position != null && position >= 0 && position <= songIds.length) {
@@ -168,7 +166,7 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
       songIds.add(songId);
     }
     _playlistSongs[playlistId] = songIds;
-    
+
     // Update playlist songIds
     if (_playlists.containsKey(playlistId)) {
       final p = _playlists[playlistId]!;
@@ -181,12 +179,15 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   }
 
   @override
-  Future<void> removeSongFromPlaylist(int playlistId, int songId) async {
+  Future<void> removeSongFromPlaylist(
+    final int playlistId,
+    final int songId,
+  ) async {
     removeSongFromPlaylistCallCount++;
     final songIds = _playlistSongs[playlistId] ?? [];
     songIds.remove(songId);
     _playlistSongs[playlistId] = songIds;
-    
+
     if (_playlists.containsKey(playlistId)) {
       final p = _playlists[playlistId]!;
       _playlists[playlistId] = Playlist(
@@ -198,7 +199,10 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   }
 
   @override
-  Future<void> reorderPlaylistSongs(int playlistId, List<int> songIds) async {
+  Future<void> reorderPlaylistSongs(
+    final int playlistId,
+    final List<int> songIds,
+  ) async {
     reorderPlaylistSongsCallCount++;
     _playlistSongs[playlistId] = List.from(songIds);
 
@@ -212,27 +216,23 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
     }
   }
 
-  @override
-  Future<CoverArtCache?> getCoverArt(String fileName) async {
+  Future<CoverArtCache?> getCoverArt(final String fileName) async {
     getCoverArtCallCount++;
     return _coverArtCache[fileName];
   }
 
-  @override
-  Future<void> putCoverArt(CoverArtCache cache) async {
+  Future<void> putCoverArt(final CoverArtCache cache) async {
     putCoverArtCallCount++;
     final id = _nextCacheId++;
     cache.id = id;
     _coverArtCache[cache.fileName] = cache;
   }
 
-  @override
-  Future<void> deleteCoverArt(String fileName) async {
+  Future<void> deleteCoverArt(final String fileName) async {
     deleteCoverArtCallCount++;
     _coverArtCache.remove(fileName);
   }
 
-  @override
   Future<void> clearCoverArtCache() async {
     clearCoverArtCacheCallCount++;
     _coverArtCache.clear();
@@ -241,11 +241,10 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   @override
   Future<int> getSongCount() async => _songs.length;
 
-  @override
   Future<int> getPlaylistCount() async => _playlists.length;
 
   @override
-  Future<void> incrementPlayCount(int songId) async {
+  Future<void> incrementPlayCount(final int songId) async {
     incrementPlayCountCallCount++;
     final song = _songs[songId];
     if (song != null) {
@@ -254,5 +253,6 @@ class MockDatabaseServiceWrapper implements DatabaseServiceWrapper {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

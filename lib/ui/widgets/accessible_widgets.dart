@@ -18,21 +18,17 @@ class AccessiblePlayButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: isPlaying ? 'Pause' : 'Play',
-      hint: isPlaying
-          ? 'Tap to pause current song'
-          : 'Tap to play current song',
-      button: true,
-      enabled: true,
-      child: IconButton(
-        icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-        onPressed: onPressed,
-        tooltip: isPlaying ? 'Pause' : 'Play',
-      ),
-    );
-  }
+  Widget build(final BuildContext context) => Semantics(
+    label: isPlaying ? 'Pause' : 'Play',
+    hint: isPlaying ? 'Tap to pause current song' : 'Tap to play current song',
+    button: true,
+    enabled: true,
+    child: IconButton(
+      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+      onPressed: onPressed,
+      tooltip: isPlaying ? 'Pause' : 'Play',
+    ),
+  );
 }
 
 /// A song list tile with proper accessibility semantics.
@@ -71,40 +67,38 @@ class AccessibleSongTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label:
-          '$title by $artist, duration $duration${isPlaying ? ', currently playing' : ''}',
-      hint: 'Tap to play, double tap to toggle favorite',
-      button: true,
-      selected: isPlaying,
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text(artist),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(duration),
-            Semantics(
-              label: isFavorite ? 'Remove from favorites' : 'Add to favorites',
-              button: true,
-              child: IconButton(
-                icon: Icon(
-                  isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isFavorite ? Colors.red : null,
-                ),
-                onPressed: onFavoriteToggle,
-                tooltip: isFavorite
-                    ? 'Remove from favorites'
-                    : 'Add to favorites',
+  Widget build(final BuildContext context) => Semantics(
+    label:
+        '$title by $artist, duration $duration${isPlaying ? ', currently playing' : ''}',
+    hint: 'Tap to play, double tap to toggle favorite',
+    button: true,
+    selected: isPlaying,
+    child: ListTile(
+      title: Text(title),
+      subtitle: Text(artist),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(duration),
+          Semantics(
+            label: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+            button: true,
+            child: IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : null,
               ),
+              onPressed: onFavoriteToggle,
+              tooltip: isFavorite
+                  ? 'Remove from favorites'
+                  : 'Add to favorites',
             ),
-          ],
-        ),
-        onTap: onTap,
+          ),
+        ],
       ),
-    );
-  }
+      onTap: onTap,
+    ),
+  );
 }
 
 /// A volume slider with proper accessibility semantics.
@@ -131,7 +125,7 @@ class AccessibleVolumeSlider extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final percentage = (volume * 100).round();
 
     return Semantics(
@@ -160,8 +154,6 @@ class AccessibleVolumeSlider extends StatelessWidget {
             child: DebouncedSlider(
               value: volume,
               onChanged: onChanged,
-              min: 0,
-              max: 1,
               debounceMs: 80, // volume — short debounce for responsive feel
             ),
           ),

@@ -26,18 +26,17 @@ class LyricsSearchResult {
     this.syncedLyrics,
   });
 
-  factory LyricsSearchResult.fromJson(Map<String, dynamic> json) {
-    return LyricsSearchResult(
-      id: json['id'] as int,
-      trackName: json['trackName'] as String? ?? '',
-      artistName: json['artistName'] as String? ?? '',
-      albumName: json['albumName'] as String?,
-      duration: json['duration'] as int?,
-      instrumental: json['instrumental'] as bool? ?? false,
-      plainLyrics: json['plainLyrics'] as String?,
-      syncedLyrics: json['syncedLyrics'] as String?,
-    );
-  }
+  factory LyricsSearchResult.fromJson(final Map<String, dynamic> json) =>
+      LyricsSearchResult(
+        id: json['id'] as int,
+        trackName: json['trackName'] as String? ?? '',
+        artistName: json['artistName'] as String? ?? '',
+        albumName: json['albumName'] as String?,
+        duration: json['duration'] as int?,
+        instrumental: json['instrumental'] as bool? ?? false,
+        plainLyrics: json['plainLyrics'] as String?,
+        syncedLyrics: json['syncedLyrics'] as String?,
+      );
 
   /// Whether this result has synced lyrics (LRC format)
   bool get hasSyncedLyrics => syncedLyrics != null && syncedLyrics!.isNotEmpty;
@@ -62,9 +61,9 @@ class OnlineLyricsService {
 
   /// Search for lyrics by title and artist
   Future<List<LyricsSearchResult>> search({
-    required String title,
-    String? artist,
-    String? album,
+    required final String title,
+    final String? artist,
+    final String? album,
   }) async {
     try {
       final queryParams = <String, String>{'track_name': title};
@@ -85,10 +84,10 @@ class OnlineLyricsService {
         final List<dynamic> json = jsonDecode(response.body);
         return json
             .map(
-              (item) =>
+              (final item) =>
                   LyricsSearchResult.fromJson(item as Map<String, dynamic>),
             )
-            .where((r) => r.hasSyncedLyrics || r.hasPlainLyrics)
+            .where((final r) => r.hasSyncedLyrics || r.hasPlainLyrics)
             .toList();
       } else if (response.statusCode == 404) {
         // No results found
@@ -110,19 +109,19 @@ class OnlineLyricsService {
   ///
   /// Returns the first result with synced lyrics, or the first result with plain lyrics.
   Future<LyricsSearchResult?> getBestMatch({
-    required String title,
-    String? artist,
-    String? album,
+    required final String title,
+    final String? artist,
+    final String? album,
   }) async {
     final results = await search(title: title, artist: artist, album: album);
     if (results.isEmpty) return null;
 
     // Prefer synced lyrics
-    final synced = results.where((r) => r.hasSyncedLyrics).toList();
+    final synced = results.where((final r) => r.hasSyncedLyrics).toList();
     if (synced.isNotEmpty) return synced.first;
 
     // Fall back to plain lyrics
-    final plain = results.where((r) => r.hasPlainLyrics).toList();
+    final plain = results.where((final r) => r.hasPlainLyrics).toList();
     if (plain.isNotEmpty) return plain.first;
 
     return null;
@@ -130,9 +129,9 @@ class OnlineLyricsService {
 
   /// Get synced lyrics as parsed LyricLine list
   Future<List<LyricLine>> getSyncedLyrics({
-    required String title,
-    String? artist,
-    String? album,
+    required final String title,
+    final String? artist,
+    final String? album,
   }) async {
     final result = await getBestMatch(
       title: title,

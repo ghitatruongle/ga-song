@@ -23,20 +23,21 @@ class SmtcService {
   /// Windows SMTC doesn't need 250ms precision — 1s is sufficient.
   Duration _lastReportedPosition = Duration.zero;
 
-  /// Track last thumbnail path to cleanup when song changes
-  String? _lastThumbnailPath;
-
   /// ─── Persistent thumbnail cache ───────────────────────────────────────
-  
+
   /// In-memory cache: song fileName -> thumbnail path
   final Map<String, String> _thumbnailMemoryCache = {};
-  
+
   /// Disk cache directory for thumbnails
   Directory? _thumbnailCacheDir;
-  
+
   /// Maximum cache size (number of thumbnails)
   static const int _maxCacheSize = 50;
-  
+
+  /// v0.9.5: Increased memory cache TTL from 0 to 10 minutes to avoid
+  /// regenerating thumbnails on every song change when the file still exists.
+  static const Duration _memoryCacheTtl = Duration(minutes: 10);
+
   /// Cache access timestamps for LRU eviction
   final Map<String, DateTime> _cacheAccessTimes = {};
 
@@ -58,14 +59,14 @@ class SmtcService {
           nextEnabled: true,
           prevEnabled: true,
           stopEnabled: true,
-          fastForwardEnabled: true,  // Enable for timeline seek
-          rewindEnabled: true,       // Enable for timeline seek
+          fastForwardEnabled: true, // Enable for timeline seek
+          rewindEnabled: true, // Enable for timeline seek
         ),
       );
       _smtc = smtc;
 
       // Listen to SMTC buttons
-      _buttonSubscription = _smtc!.buttonPressStream.listen((event) {
+      _buttonSubscription = _smtc!.buttonPressStream.listen((final event) {
         switch (event) {
           case PressedButton.play:
             _playlistService.play();
@@ -106,10 +107,9 @@ class SmtcService {
       // Update timeline
       _engineService.positionNotifier.addListener(_onPositionChanged);
       _engineService.durationNotifier.addListener(_onDurationChanged);
-      
+
       // Pre-warm cache for current and next few songs
       _prewarmThumbnailCache();
-      
     } catch (e) {
       AppLogger.e('smtc.service', 'SMTC init failed', error: e);
     }
@@ -123,14 +123,17 @@ class SmtcService {
       if (!await _thumbnailCacheDir!.exists()) {
         await _thumbnailCacheDir!.create(recursive: true);
       }
-      
+
       // Load existing cache index
       await _loadCacheIndex();
-      
+
       // Cleanup old cache entries
       await _cleanupOldCache();
-      
-      AppLogger.d('smtc.service', 'Thumbnail cache initialized at ${_thumbnailCacheDir!.path}');
+
+      AppLogger.d(
+        'smtc.service',
+        'Thumbnail cache initialized at ${_thumbnailCacheDir!.path}',
+      );
     } catch (e) {
       AppLogger.w('smtc.service', 'Failed to init thumbnail cache', error: e);
     }
@@ -139,13 +142,13 @@ class SmtcService {
   /// Loads cache index from disk.
   Future<void> _loadCacheIndex() async {
     if (_thumbnailCacheDir == null) return;
-    
+
     final indexFile = File('${_thumbnailCacheDir!.path}/cache_index.json');
     if (await indexFile.exists()) {
       try {
         final content = await indexFile.readAsString();
         final Map<String, dynamic> index = jsonDecode(content);
-        
+
         for (final entry in index.entries) {
           final path = entry.value as String;
           final file = File(path);
@@ -154,7 +157,10 @@ class SmtcService {
             _cacheAccessTimes[entry.key] = DateTime.now();
           }
         }
-        AppLogger.d('smtc.service', 'Loaded ${_thumbnailMemoryCache.length} cached thumbnails');
+        AppLogger.d(
+          'smtc.service',
+          'Loaded ${_thumbnailMemoryCache.length} cached thumbnails',
+        );
       } catch (e) {
         AppLogger.w('smtc.service', 'Failed to load cache index', error: e);
       }
@@ -164,7 +170,7 @@ class SmtcService {
   /// Saves cache index to disk.
   Future<void> _saveCacheIndex() async {
     if (_thumbnailCacheDir == null) return;
-    
+
     try {
       final indexFile = File('${_thumbnailCacheDir!.path}/cache_index.json');
       final index = <String, String>{};
@@ -180,7 +186,7 @@ class SmtcService {
   /// Cleans up old cache entries (LRU eviction).
   Future<void> _cleanupOldCache() async {
     if (_thumbnailCacheDir == null) return;
-    
+
     // Remove files not in memory cache
     try {
       final files = await _thumbnailCacheDir!.list().toList();
@@ -192,16 +198,16 @@ class SmtcService {
     } catch (e) {
       AppLogger.w('smtc.service', 'Cache cleanup failed', error: e);
     }
-    
+
     // Enforce max size (LRU)
     while (_thumbnailMemoryCache.length > _maxCacheSize) {
       final oldest = _cacheAccessTimes.entries
-          .reduce((a, b) => a.value.isBefore(b.value) ? a : b)
+          .reduce((final a, final b) => a.value.isBefore(b.value) ? a : b)
           .key;
-      
+
       final path = _thumbnailMemoryCache.remove(oldest);
       _cacheAccessTimes.remove(oldest);
-      
+
       if (path != null) {
         try {
           await File(path).delete();
@@ -210,32 +216,38 @@ class SmtcService {
         }
       }
     }
-    
+
     await _saveCacheIndex();
   }
 
   /// Gets thumbnail path with persistent caching.
-  Future<String?> _getCachedThumbnail(Song song) async {
+  /// v0.9.5: Added TTL check and file-existence validation before re-caching.
+  Future<String?> _getCachedThumbnail(final Song song) async {
     final cacheKey = song.fileName.replaceAll(
       RegExp(r'\.(mp3|flac|wav|m4a)$'),
       '.png',
     );
-    
-    // Check memory cache first
+
+    // Check memory cache first with TTL
     if (_thumbnailMemoryCache.containsKey(cacheKey)) {
       final path = _thumbnailMemoryCache[cacheKey]!;
       final file = File(path);
-      if (await file.exists()) {
-        _cacheAccessTimes[cacheKey] = DateTime.now();
+      final lastAccess = _cacheAccessTimes[cacheKey];
+      final now = DateTime.now();
+      // Valid if file exists AND cache is less than _memoryCacheTtl old
+      if (await file.exists() &&
+          (lastAccess == null ||
+              now.difference(lastAccess) < _memoryCacheTtl)) {
+        _cacheAccessTimes[cacheKey] = now;
         return path;
       } else {
-        // File deleted externally, remove from cache
+        // Expired or missing — evict from memory
         _thumbnailMemoryCache.remove(cacheKey);
         _cacheAccessTimes.remove(cacheKey);
       }
     }
-    
-    // Check disk cache
+
+    // Check disk cache (persistent, no TTL)
     if (_thumbnailCacheDir != null) {
       final diskPath = '${_thumbnailCacheDir!.path}/$cacheKey';
       final diskFile = File(diskPath);
@@ -246,15 +258,18 @@ class SmtcService {
         return diskPath;
       }
     }
-    
+
     // Generate thumbnail
-    return await _generateAndCacheThumbnail(song, cacheKey);
+    return _generateAndCacheThumbnail(song, cacheKey);
   }
 
   /// Generates thumbnail and caches it.
-  Future<String?> _generateAndCacheThumbnail(Song song, String cacheKey) async {
+  Future<String?> _generateAndCacheThumbnail(
+    final Song song,
+    final String cacheKey,
+  ) async {
     if (_thumbnailCacheDir == null) return null;
-    
+
     String? resolvedPath;
     try {
       if (song.isBuiltIn) {
@@ -262,12 +277,12 @@ class SmtcService {
       } else {
         resolvedPath = await CoverArtRepository.findLocalCoverPath(song);
       }
-      
+
       if (resolvedPath == null) return null;
-      
+
       final diskPath = '${_thumbnailCacheDir!.path}/$cacheKey';
       final diskFile = File(diskPath);
-      
+
       if (song.isBuiltIn) {
         final data = await rootBundle.load(resolvedPath);
         await diskFile.writeAsBytes(
@@ -282,15 +297,15 @@ class SmtcService {
           return null;
         }
       }
-      
+
       // Update caches
       _thumbnailMemoryCache[cacheKey] = diskPath;
       _cacheAccessTimes[cacheKey] = DateTime.now();
-      
+
       // Enforce cache size limit
       await _cleanupOldCache();
       await _saveCacheIndex();
-      
+
       return diskPath;
     } catch (e) {
       AppLogger.w('smtc.service', 'thumbnail generation failed', error: e);
@@ -314,7 +329,7 @@ class SmtcService {
   }
 
   /// Seeks relative to current position.
-  void _seekRelative(Duration offset) {
+  void _seekRelative(final Duration offset) {
     final currentPos = _engineService.positionNotifier.value;
     final newPos = currentPos + offset;
     final clampedPos = newPos < Duration.zero ? Duration.zero : newPos;
@@ -358,11 +373,13 @@ class SmtcService {
       // Try to get cached thumbnail (persistent cache)
       try {
         thumbnailPath = await _getCachedThumbnail(song);
-        _lastThumbnailPath = thumbnailPath;
       } catch (e) {
         // Thumbnail is optional - continue without it
         AppLogger.d('smtc.service', 'thumbnail not available', error: e);
       }
+
+      // Re-check _smtc after await — dispose() may have set it to null
+      if (_smtc == null) return;
 
       try {
         _smtc!.updateMetadata(
@@ -378,6 +395,7 @@ class SmtcService {
         AppLogger.w('smtc.service', 'metadata update failed', error: e);
       }
     } else {
+      if (_smtc == null) return;
       try {
         _smtc!.clearMetadata();
       } catch (e) {
@@ -434,7 +452,7 @@ class SmtcService {
       } catch (e) {
         AppLogger.w('smtc.service', 'dispose failed', error: e);
       }
-      
+
       // Save cache index on dispose
       _saveCacheIndex();
     }

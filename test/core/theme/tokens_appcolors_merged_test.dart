@@ -4,14 +4,12 @@ import 'package:ga_song/core/theme/tokens.dart';
 
 /// Wraps [child] in a [MaterialApp] whose [ThemeData.brightness] is [brightness]
 /// so helpers like [AppColors.adaptive] can resolve a real [Theme.of].
-Widget _wrap(Widget child, Brightness brightness) {
-  return MaterialApp(
-    theme: ThemeData(brightness: brightness, useMaterial3: true),
-    home: Builder(
-      builder: (context) => Scaffold(body: Center(child: child)),
-    ),
-  );
-}
+Widget _wrap(final Widget child, final Brightness brightness) => MaterialApp(
+  theme: ThemeData(brightness: brightness, useMaterial3: true),
+  home: Builder(
+    builder: (final context) => Scaffold(body: Center(child: child)),
+  ),
+);
 
 void main() {
   group('AppColors merged from legacy app_colors.dart', () {
@@ -99,13 +97,13 @@ void main() {
 
   group('AppColors helpers', () {
     testWidgets('adaptive returns the dark color under a dark theme', (
-      tester,
+      final tester,
     ) async {
       Color? resolved;
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
+            builder: (final context) {
               resolved = AppColors.adaptive(
                 context,
                 dark: AppColors.darkSurface,
@@ -121,13 +119,13 @@ void main() {
     });
 
     testWidgets('adaptive returns the light color under a light theme', (
-      tester,
+      final tester,
     ) async {
       Color? resolved;
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
+            builder: (final context) {
               resolved = AppColors.adaptive(
                 context,
                 dark: AppColors.darkSurface,
@@ -143,7 +141,7 @@ void main() {
     });
 
     testWidgets('surfaceFor picks the right tier under a dark theme', (
-      tester,
+      final tester,
     ) async {
       Color? l1;
       Color? l2;
@@ -151,8 +149,8 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
-              l1 = AppColors.surfaceFor(context, level: 1);
+            builder: (final context) {
+              l1 = AppColors.surfaceFor(context);
               l2 = AppColors.surfaceFor(context, level: 2);
               l3 = AppColors.surfaceFor(context, level: 3);
               return const SizedBox.shrink();
@@ -167,7 +165,7 @@ void main() {
     });
 
     testWidgets('surfaceFor picks the right tier under a light theme', (
-      tester,
+      final tester,
     ) async {
       Color? l1;
       Color? l2;
@@ -175,8 +173,8 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
-              l1 = AppColors.surfaceFor(context, level: 1);
+            builder: (final context) {
+              l1 = AppColors.surfaceFor(context);
               l2 = AppColors.surfaceFor(context, level: 2);
               l3 = AppColors.surfaceFor(context, level: 3);
               return const SizedBox.shrink();
@@ -191,13 +189,13 @@ void main() {
     });
 
     testWidgets('surfaceFor falls back to level 1 for unknown levels', (
-      tester,
+      final tester,
     ) async {
       Color? result;
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
+            builder: (final context) {
               result = AppColors.surfaceFor(context, level: 99);
               return const SizedBox.shrink();
             },
@@ -209,13 +207,13 @@ void main() {
     });
 
     testWidgets('textWithOpacity applies opacity to the dark theme base', (
-      tester,
+      final tester,
     ) async {
       Color? result;
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
+            builder: (final context) {
               result = AppColors.textWithOpacity(context, 0.5);
               return const SizedBox.shrink();
             },
@@ -227,13 +225,13 @@ void main() {
     });
 
     testWidgets('textWithOpacity applies opacity to the light theme base', (
-      tester,
+      final tester,
     ) async {
       Color? result;
       await tester.pumpWidget(
         _wrap(
           Builder(
-            builder: (context) {
+            builder: (final context) {
               result = AppColors.textWithOpacity(context, 0.5);
               return const SizedBox.shrink();
             },

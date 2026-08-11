@@ -42,7 +42,7 @@ void main() {
     final s = computeStarField(
       const StarFieldComputeInput(
         starCount: 20,
-        timeSeconds: 1.0,
+        timeSeconds: 1,
         amplitude: 0.5,
         seed: 7,
         screenWidth: 800,
@@ -61,7 +61,7 @@ void main() {
     final s = computeStarField(
       const StarFieldComputeInput(
         starCount: 50,
-        timeSeconds: 2.0,
+        timeSeconds: 2,
         amplitude: 0.5,
         seed: 123,
         screenWidth: 800,

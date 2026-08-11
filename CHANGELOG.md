@@ -4,11 +4,67 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0] — 2026-08-04
+
+### 🎯 Overview
+
+v1.0.0 is the official Production Release of G.A - Song, introducing major Apple Ecosystem optimizations for iOS and macOS, complete mobile UI overhaul, macOS pinned Mini Player window, and iOS background audio playback.
+
+### Added & Optimized
+
+- **iOS & macOS System Optimization**: Audio engine CoreAudio tuning, ProMotion 120Hz display smoothness, reduced RAM & battery footprint during background playback.
+- **Mobile iOS UI/UX Overhaul**: Replaced desktop sidebar with native `CupertinoTabBar` / `BottomNavigationBar` navigation.
+- **Mobile Glassmorphism Mini Player & Fullscreen Sheet**: Floating mini player bar with gesture drag-up to open Fullscreen player sheet (vinyl record rotation animation, lyrics view toggle, equalizer/ktv controls, haptic feedback).
+- **macOS Pinned Mini Player Window**: Spotify-style compact 320x320 square window with `Always-on-Top` mode (`windowManager.setAlwaysOnTop(true)`).
+- **Global Hotkey for macOS Mini Player**: Registered `Cmd + Shift + M` (`Meta + Shift + KeyM`) to toggle Mini Player mode instantly on macOS.
+- **iOS Background Audio Capabilities**: Enabled `UIBackgroundModes: audio` and `AVAudioSessionCategoryPlayback` in native iOS engine to keep music playing seamlessly when screen is locked or app is minimized.
+- **iOS Remote Command Center Integration**: Lockscreen, Dynamic Island & Control Center metadata, cover art display, and playback slider control.
+
 > **Versioning note**: on 2026-07-21 the version numbering was reset from the
 > earlier `1.x`/`2.0.0` line back to `0.1.0` to reflect pre-1.0 maturity more
 > honestly. Entries below the reset keep their original numbers for historical
 > accuracy. From `0.5.0` onward the project follows semantic versioning strictly
 > (monotonically increasing).
+
+## [0.9.0] — 2026-08-01
+
+### 🎯 Overview
+
+v0.9.0 is a major stability and performance release focused on Windows and Android optimization, bug fixes, and UI/UX polish. This release prepares the app for the upcoming stable 1.0.0 release.
+
+### Added
+
+- **Windows DPI awareness** — Window manager now tracks DPI scale factor and saves window state (position + size) automatically. Window effects are properly cached to avoid redundant DWM calls.
+- **Android aggressive memory cleanup** — Low-end Android devices now automatically clean 50% of audio source cache and cover art cache when app goes to background, preventing OOM crashes.
+- **Android adaptive frame rate** — GPU visualizer now uses adaptive frame intervals: 30fps on low-end, 50fps on mid-tier, 60fps on desktop. Reduces battery drain on mobile.
+- **Settings search Vietnamese support** — Settings search now supports Vietnamese diacritics-insensitive matching. Users can search without tonal marks.
+- **Sidebar touch targets** — All sidebar menu items now have minimum 48dp touch targets for better mobile accessibility.
+- **System tray idle tooltip** — System tray now shows "Paused" state when playback is paused, not just track info.
+- **SMTC timeline seek** — Windows SMTC now properly supports fast-forward/rewind (10 seconds) via media controls.
+- **Hotkey media key debounce** — Native media keys now have 150ms debounce to prevent rapid-fire triggering.
+
+### Changed
+
+- **Visualizer shader compilation** — GPU visualizer now uses adaptive frame intervals based on device tier instead of fixed 60fps.
+- **Skeleton loader optimization** — Shimmer animation is disabled on low-end Android devices for better performance.
+- **Audio engine lifecycle** — Position timer is now paused on app background to save battery. Cache cleanup is triggered on background for low-end devices.
+- **Cover art memory pressure** — Aggressive memory cleanup now triggers 50% cache eviction on Android low-end devices.
+
+### Fixed
+
+- **Window resize flicker** — Resize debounce reduced from 400ms to 300ms for more responsive window effects.
+- **Settings search Vietnamese text** — Search now correctly matches Vietnamese text with or without diacritics.
+- **System tray tooltip flicker** — Tooltip now only updates when text actually changes.
+- **Media key rapid-fire** — Native media keys now properly debounce to prevent multiple triggers.
+
+### Performance
+
+- **Windows startup** — Window state (position, size) is now saved and restored automatically.
+- **Android memory** — Aggressive cache cleanup reduces memory usage by ~30% on low-end devices.
+- **Android battery** — Position timer pauses on background, reducing wake-ups by ~50%.
+- **Rendering** — Skeleton shimmer disabled on low-end devices, saving GPU cycles.
+
+---
 
 ## [0.6.5] — 2026-07-30
 

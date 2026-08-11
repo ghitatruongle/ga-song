@@ -7,68 +7,73 @@
 /// - Arrow keys for lists/grids
 /// - Custom shortcuts
 /// - Focus management
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/theme/tokens.dart';
 import '../../core/theme_utils.dart';
 
 /// Global keyboard navigation configuration
 class KeyboardNavigation {
-  static const Duration _focusAnimationDuration = Duration(milliseconds: 150);
-  
   /// Wraps a widget with keyboard navigation support
   static Widget navigable({
-    required Widget child,
-    FocusNode? focusNode,
-    bool autofocus = false,
-    bool canRequestFocus = true,
-    Iterable<LogicalKeyboardKey>? additionalExitKeys,
-    VoidCallback? onFocusLost,
-    Map<LogicalKeySet, Intent>? shortcuts,
-    Map<Type, Action<Intent>>? actions,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      autofocus: autofocus,
-      canRequestFocus: canRequestFocus,
-      onFocusChange: (hasFocus) {
-        if (!hasFocus) onFocusLost?.call();
+    required final Widget child,
+    final FocusNode? focusNode,
+    final bool autofocus = false,
+    final bool canRequestFocus = true,
+    final Iterable<LogicalKeyboardKey>? additionalExitKeys,
+    final VoidCallback? onFocusLost,
+    final Map<LogicalKeySet, Intent>? shortcuts,
+    final Map<Type, Action<Intent>>? actions,
+  }) => Focus(
+    focusNode: focusNode,
+    autofocus: autofocus,
+    canRequestFocus: canRequestFocus,
+    onFocusChange: (final hasFocus) {
+      if (!hasFocus) onFocusLost?.call();
+    },
+    child: Shortcuts(
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
+        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.space): const ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.tab): const NextFocusIntent(),
+        LogicalKeySet(LogicalKeyboardKey.shift, LogicalKeyboardKey.tab):
+            const PreviousFocusIntent(),
+        ...?shortcuts,
       },
-      child: Shortcuts(
-        shortcuts: {
-          LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
-          LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-          LogicalKeySet(LogicalKeyboardKey.space): const ActivateIntent(),
-          LogicalKeySet(LogicalKeyboardKey.tab): const NextFocusIntent(),
-          LogicalKeySet(LogicalKeyboardKey.shift, LogicalKeyboardKey.tab): const PreviousFocusIntent(),
-          ...?shortcuts,
-        },
-        child: Actions(
-          actions: {
-            DismissIntent: CallbackAction<DismissIntent>(onInvoke: (intent) {
+      child: Actions(
+        actions: {
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (final intent) {
               FocusManager.instance.primaryFocus?.unfocus();
               return null;
-            }),
-            ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (intent) {
+            },
+          ),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (final intent) {
               // Handled by individual widgets
               return null;
-            }),
-            NextFocusIntent: CallbackAction<NextFocusIntent>(onInvoke: (intent) {
+            },
+          ),
+          NextFocusIntent: CallbackAction<NextFocusIntent>(
+            onInvoke: (final intent) {
               FocusManager.instance.primaryFocus?.nextFocus();
               return null;
-            }),
-            PreviousFocusIntent: CallbackAction<PreviousFocusIntent>(onInvoke: (intent) {
+            },
+          ),
+          PreviousFocusIntent: CallbackAction<PreviousFocusIntent>(
+            onInvoke: (final intent) {
               FocusManager.instance.primaryFocus?.previousFocus();
               return null;
-            }),
-            ...?actions,
-          },
-          child: child,
-        ),
+            },
+          ),
+          ...?actions,
+        },
+        child: child,
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Intent to dismiss/close current focus
@@ -121,13 +126,14 @@ class KeyboardListTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = context.isDark;
+  Widget build(final BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveFocusColor = focusColor ?? theme.colorScheme.primary.withValues(alpha: 0.15);
-    final effectiveHoverColor = hoverColor ?? theme.colorScheme.primary.withValues(alpha: 0.05);
+    final effectiveFocusColor =
+        focusColor ?? theme.colorScheme.primary.withValues(alpha: 0.15);
+    final effectiveHoverColor =
+        hoverColor ?? theme.colorScheme.primary.withValues(alpha: 0.05);
     final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(8);
-    
+
     return Focus(
       focusNode: focusNode,
       autofocus: autofocus,
@@ -136,23 +142,24 @@ class KeyboardListTile extends StatelessWidget {
           LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
           LogicalKeySet(LogicalKeyboardKey.space): const ActivateIntent(),
           LogicalKeySet(LogicalKeyboardKey.arrowDown): const NextFocusIntent(),
-          LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousFocusIntent(),
+          LogicalKeySet(LogicalKeyboardKey.arrowUp):
+              const PreviousFocusIntent(),
         },
         actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (intent) {
-            if (enabled) {
-              onEnter?.call();
-              onTap?.call();
-            }
-            return null;
-          }),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (final intent) {
+              if (enabled) {
+                onEnter?.call();
+                onTap?.call();
+              }
+              return null;
+            },
+          ),
         },
         child: MouseRegion(
           cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: effectiveBorderRadius,
-            ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(borderRadius: effectiveBorderRadius),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -161,9 +168,13 @@ class KeyboardListTile extends StatelessWidget {
                 focusColor: effectiveFocusColor,
                 hoverColor: effectiveHoverColor,
                 splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+                highlightColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.05,
+                ),
                 child: Padding(
-                  padding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      padding ??
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: child,
                 ),
               ),
@@ -197,11 +208,12 @@ class KeyboardGridTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveFocusColor = focusColor ?? theme.colorScheme.primary.withValues(alpha: 0.15);
+    final effectiveFocusColor =
+        focusColor ?? theme.colorScheme.primary.withValues(alpha: 0.15);
     final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(12);
-    
+
     return Focus(
       focusNode: focusNode,
       autofocus: autofocus,
@@ -210,15 +222,19 @@ class KeyboardGridTile extends StatelessWidget {
           LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
           LogicalKeySet(LogicalKeyboardKey.space): const ActivateIntent(),
           LogicalKeySet(LogicalKeyboardKey.arrowRight): const NextFocusIntent(),
-          LogicalKeySet(LogicalKeyboardKey.arrowLeft): const PreviousFocusIntent(),
+          LogicalKeySet(LogicalKeyboardKey.arrowLeft):
+              const PreviousFocusIntent(),
           LogicalKeySet(LogicalKeyboardKey.arrowDown): const NextFocusIntent(),
-          LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousFocusIntent(),
+          LogicalKeySet(LogicalKeyboardKey.arrowUp):
+              const PreviousFocusIntent(),
         },
         actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (intent) {
-            if (enabled) onTap?.call();
-            return null;
-          }),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (final intent) {
+              if (enabled) onTap?.call();
+              return null;
+            },
+          ),
         },
         child: Material(
           color: Colors.transparent,
@@ -253,16 +269,14 @@ class FocusScopeWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return FocusScope(
-      node: focusNode ?? FocusScopeNode(),
-      autofocus: autofocus,
-      onFocusChange: (hasFocus) {
-        if (!hasFocus) onFocusLost?.call();
-      },
-      child: child,
-    );
-  }
+  Widget build(final BuildContext context) => FocusScope(
+    node: focusNode ?? FocusScopeNode(),
+    autofocus: autofocus,
+    onFocusChange: (final hasFocus) {
+      if (!hasFocus) onFocusLost?.call();
+    },
+    child: child,
+  );
 }
 
 /// Focus trap for modals - prevents focus from escaping
@@ -291,7 +305,7 @@ class _FocusTrapState extends State<FocusTrap> {
     super.initState();
     _focusNode = widget.focusNode ?? FocusScopeNode();
     _previousFocus = FocusManager.instance.primaryFocus;
-    
+
     // Request focus on first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && widget.enabled) {
@@ -313,12 +327,12 @@ class _FocusTrapState extends State<FocusTrap> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     if (!widget.enabled) return widget.child;
-    
+
     return FocusScope(
       node: _focusNode,
-      onFocusChange: (hasFocus) {
+      onFocusChange: (final hasFocus) {
         // Could add logic here if needed
       },
       child: FocusTraversalGroup(
@@ -333,7 +347,7 @@ class _FocusTrapState extends State<FocusTrap> {
 class SkipToMainContent extends StatelessWidget {
   final String mainContentId;
   final String label;
-  
+
   const SkipToMainContent({
     super.key,
     this.mainContentId = 'main-content',
@@ -341,28 +355,26 @@ class SkipToMainContent extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Focus(
-      child: Container(
-        color: Theme.of(context).colorScheme.primary,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+  Widget build(final BuildContext context) => Focus(
+    child: Container(
+      color: Theme.of(context).colorScheme.primary,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Keyboard shortcut help dialog
 class KeyboardShortcutsDialog extends StatelessWidget {
   final List<KeyboardShortcut> shortcuts;
   final String title;
-  
+
   const KeyboardShortcutsDialog({
     super.key,
     required this.shortcuts,
@@ -370,10 +382,9 @@ class KeyboardShortcutsDialog extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = context.isDark;
+  Widget build(final BuildContext context) {
     final adaptiveColor = context.adaptive;
-    
+
     return AlertDialog(
       title: Text(title),
       content: SizedBox(
@@ -381,8 +392,8 @@ class KeyboardShortcutsDialog extends StatelessWidget {
         child: ListView.separated(
           shrinkWrap: true,
           itemCount: shortcuts.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) {
+          separatorBuilder: (_, final _) => const Divider(height: 1),
+          itemBuilder: (final context, final index) {
             final shortcut = shortcuts[index];
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -397,7 +408,9 @@ class KeyboardShortcutsDialog extends StatelessWidget {
                     flex: 3,
                     child: Text(
                       shortcut.description,
-                      style: TextStyle(color: adaptiveColor.withValues(alpha: 0.8)),
+                      style: TextStyle(
+                        color: adaptiveColor.withValues(alpha: 0.8),
+                      ),
                     ),
                   ),
                 ],
@@ -419,46 +432,47 @@ class KeyboardShortcutsDialog extends StatelessWidget {
 class KeyboardShortcut {
   final List<LogicalKeyboardKey> keys;
   final String description;
-  
-  const KeyboardShortcut({
-    required this.keys,
-    required this.description,
-  });
+
+  const KeyboardShortcut({required this.keys, required this.description});
 }
 
 class _KeyCombination extends StatelessWidget {
   final List<LogicalKeyboardKey> keys;
-  
+
   const _KeyCombination({required this.keys});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     final isDark = context.isDark;
     final adaptiveColor = context.adaptive;
-    
+
     return Wrap(
       spacing: 4,
-      children: keys.map((key) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white12 : Colors.black12,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: adaptiveColor.withValues(alpha: 0.2)),
-        ),
-        child: Text(
-          _keyToString(key),
-          style: TextStyle(
-            fontSize: 12,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w500,
-            color: adaptiveColor,
-          ),
-        ),
-      )).toList(),
+      children: keys
+          .map(
+            (final key) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white12 : Colors.black12,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: adaptiveColor.withValues(alpha: 0.2)),
+              ),
+              child: Text(
+                _keyToString(key),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w500,
+                  color: adaptiveColor,
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 
-  String _keyToString(LogicalKeyboardKey key) {
+  String _keyToString(final LogicalKeyboardKey key) {
     if (key == LogicalKeyboardKey.control) return 'Ctrl';
     if (key == LogicalKeyboardKey.alt) return 'Alt';
     if (key == LogicalKeyboardKey.shift) return 'Shift';
@@ -492,7 +506,7 @@ class GlobalKeyboardShortcuts extends StatelessWidget {
   final Widget child;
   final Map<LogicalKeySet, VoidCallback> shortcuts;
   final bool enabled;
-  
+
   const GlobalKeyboardShortcuts({
     super.key,
     required this.child,
@@ -501,26 +515,21 @@ class GlobalKeyboardShortcuts extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     if (!enabled) return child;
-    
+
     return Shortcuts(
       shortcuts: shortcuts.map(
-        (keySet, callback) => MapEntry(
-          keySet,
-          _CallbackIntent(callback),
-        ),
+        (final keySet, final callback) =>
+            MapEntry(keySet, _CallbackIntent(callback)),
       ),
       child: Actions(
         actions: {
           _CallbackIntent: CallbackAction<_CallbackIntent>(
-            onInvoke: (intent) => intent.callback(),
+            onInvoke: (final intent) => intent.callback(),
           ),
         },
-        child: Focus(
-          autofocus: true,
-          child: child,
-        ),
+        child: Focus(autofocus: true, child: child),
       ),
     );
   }
@@ -528,6 +537,6 @@ class GlobalKeyboardShortcuts extends StatelessWidget {
 
 class _CallbackIntent extends Intent {
   final VoidCallback callback;
-  
+
   const _CallbackIntent(this.callback);
 }

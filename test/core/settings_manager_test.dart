@@ -226,17 +226,17 @@ void main() {
       });
 
       test('setBlurLevel clamps and persists', () async {
-        await manager.setBlurLevel(50.0);
+        await manager.setBlurLevel(50);
         expect(manager.blurLevelNotifier.value, 50.0);
       });
 
       test('setBlurLevel clamps to 0 minimum', () async {
-        await manager.setBlurLevel(-10.0);
+        await manager.setBlurLevel(-10);
         expect(manager.blurLevelNotifier.value, 0.0);
       });
 
       test('setBlurLevel clamps to 100 maximum', () async {
-        await manager.setBlurLevel(150.0);
+        await manager.setBlurLevel(150);
         expect(manager.blurLevelNotifier.value, 100.0);
       });
     });
@@ -253,7 +253,7 @@ void main() {
         await manager.setWindowOpacity(0.5);
         expect(manager.windowOpacityNotifier.value, 0.5);
 
-        await manager.setWindowOpacity(0.0);
+        await manager.setWindowOpacity(0);
         expect(manager.windowOpacityNotifier.value, 0.1);
 
         await manager.setWindowOpacity(1.5);
@@ -343,7 +343,7 @@ void main() {
       });
 
       test('clamps to 2.5 maximum', () async {
-        await manager.setSensitivity(3.0);
+        await manager.setSensitivity(3);
         expect(manager.sensitivityNotifier.value, 2.5);
       });
     });
@@ -410,9 +410,9 @@ void main() {
       });
 
       test('clamps to -1 to 1 range', () async {
-        await manager.setEqBand(0, -2.0);
+        await manager.setEqBand(0, -2);
         expect(manager.eqBandsNotifier.value[0], -1.0);
-        await manager.setEqBand(0, 2.0);
+        await manager.setEqBand(0, 2);
         expect(manager.eqBandsNotifier.value[0], 1.0);
       });
     });
@@ -437,20 +437,20 @@ void main() {
 
     group('audio effects setters', () {
       test('setCrossfadeDuration clamps and persists', () async {
-        await manager.setCrossfadeDuration(5.0);
+        await manager.setCrossfadeDuration(5);
         expect(manager.crossfadeDurationNotifier.value, 5.0);
-        await manager.setCrossfadeDuration(-1.0);
+        await manager.setCrossfadeDuration(-1);
         expect(manager.crossfadeDurationNotifier.value, 0.0);
-        await manager.setCrossfadeDuration(15.0);
+        await manager.setCrossfadeDuration(15);
         expect(manager.crossfadeDurationNotifier.value, 10.0);
       });
 
       test('setNormalizationLevel clamps', () async {
-        await manager.setNormalizationLevel(-18.0);
+        await manager.setNormalizationLevel(-18);
         expect(manager.normalizationLevelNotifier.value, -18.0);
-        await manager.setNormalizationLevel(-30.0);
+        await manager.setNormalizationLevel(-30);
         expect(manager.normalizationLevelNotifier.value, -24.0);
-        await manager.setNormalizationLevel(5.0);
+        await manager.setNormalizationLevel(5);
         expect(manager.normalizationLevelNotifier.value, 0.0);
       });
 
@@ -464,7 +464,7 @@ void main() {
         expect(manager.pitchShiftNotifier.value, 1.5);
         await manager.setPitchShift(0.1);
         expect(manager.pitchShiftNotifier.value, 0.5);
-        await manager.setPitchShift(3.0);
+        await manager.setPitchShift(3);
         expect(manager.pitchShiftNotifier.value, 2.0);
       });
 
@@ -478,11 +478,11 @@ void main() {
       });
 
       test('setCompressionRatio clamps', () async {
-        await manager.setCompressionRatio(4.0);
+        await manager.setCompressionRatio(4);
         expect(manager.compressionRatioNotifier.value, 4.0);
         await manager.setCompressionRatio(0.5);
         expect(manager.compressionRatioNotifier.value, 1.0);
-        await manager.setCompressionRatio(15.0);
+        await manager.setCompressionRatio(15);
         expect(manager.compressionRatioNotifier.value, 10.0);
       });
     });
@@ -491,29 +491,29 @@ void main() {
 
     group('compressor advanced setters', () {
       test('setCompThreshold clamps', () async {
-        await manager.setCompThreshold(-20.0);
+        await manager.setCompThreshold(-20);
         expect(manager.compThresholdNotifier.value, -20.0);
-        await manager.setCompThreshold(-100.0);
+        await manager.setCompThreshold(-100);
         expect(manager.compThresholdNotifier.value, -80.0);
       });
 
       test('setCompAttack clamps', () async {
-        await manager.setCompAttack(50.0);
+        await manager.setCompAttack(50);
         expect(manager.compAttackNotifier.value, 50.0);
       });
 
       test('setCompRelease clamps', () async {
-        await manager.setCompRelease(500.0);
+        await manager.setCompRelease(500);
         expect(manager.compReleaseNotifier.value, 500.0);
       });
 
       test('setCompKneeWidth clamps', () async {
-        await manager.setCompKneeWidth(10.0);
+        await manager.setCompKneeWidth(10);
         expect(manager.compKneeWidthNotifier.value, 10.0);
       });
 
       test('setCompMakeupGain clamps', () async {
-        await manager.setCompMakeupGain(6.0);
+        await manager.setCompMakeupGain(6);
         expect(manager.compMakeupGainNotifier.value, 6.0);
       });
     });
@@ -616,8 +616,8 @@ void main() {
       test('settings survive reinit', () async {
         await manager.setThemeMode(ThemeMode.dark);
         await manager.setEnableBlur(false);
-        await manager.setBlurLevel(50.0);
-        await manager.setCrossfadeDuration(5.0);
+        await manager.setBlurLevel(50);
+        await manager.setCrossfadeDuration(5);
         await manager.setSensitivity(1.8);
 
         // Flush debounced writes so values reach SharedPreferences before reinit.

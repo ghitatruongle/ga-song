@@ -20,7 +20,7 @@ void main() {
     });
 
     test('formats single digit minutes with padding', () {
-      expect(formatDuration(const Duration(minutes: 1, seconds: 0)), '01:00');
+      expect(formatDuration(const Duration(minutes: 1)), '01:00');
     });
 
     test('formats 59 minutes correctly', () {
@@ -29,10 +29,7 @@ void main() {
 
     test('caps minutes at 59 for durations >= 1 hour', () {
       // 1 hour = 60 minutes, but inMinutes.remainder(60) = 0
-      expect(
-        formatDuration(const Duration(hours: 1, minutes: 0, seconds: 0)),
-        '00:00',
-      );
+      expect(formatDuration(const Duration(hours: 1)), '00:00');
     });
 
     test('formats 1 hour 30 minutes correctly', () {

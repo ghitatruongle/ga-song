@@ -10,7 +10,8 @@ import '../../core/theme/theme_extensions.dart';
 /// which surfaces configuration bugs early.
 class ThemeSpacing {
   ThemeSpacing._(this.context);
-  factory ThemeSpacing.of(BuildContext context) => ThemeSpacing._(context);
+  factory ThemeSpacing.of(final BuildContext context) =>
+      ThemeSpacing._(context);
   final BuildContext context;
 
   AppSpacingExtension get _e =>
@@ -25,7 +26,7 @@ class ThemeSpacing {
   double get xxl => _e.xxl;
 
   /// Returns [EdgeInsets.all] with the supplied token (or `md` by default).
-  EdgeInsets all([double? value]) => EdgeInsets.all(value ?? md);
+  EdgeInsets all([final double? value]) => EdgeInsets.all(value ?? md);
 
   /// Returns symmetric padding using the spacing tokens.
   ///
@@ -33,11 +34,13 @@ class ThemeSpacing {
   /// out of the default — note that `0` is the only way to express
   /// "intentional zero" without going through the token (use `xxs`
   /// if you actually want the smallest spacing).
-  EdgeInsets symmetric({double horizontal = 0, double vertical = 0}) =>
-      EdgeInsets.symmetric(
-        horizontal: horizontal == 0 ? md : horizontal,
-        vertical: vertical == 0 ? md : vertical,
-      );
+  EdgeInsets symmetric({
+    final double horizontal = 0,
+    final double vertical = 0,
+  }) => EdgeInsets.symmetric(
+    horizontal: horizontal == 0 ? md : horizontal,
+    vertical: vertical == 0 ? md : vertical,
+  );
 
   /// Returns symmetric padding using `xs` (4) for vertical and `md` (16)
   /// for horizontal — the most common inset pattern in the app.
@@ -52,7 +55,7 @@ class ThemeSpacing {
 /// Sugar for `Theme.of(context).extension<AppRadiusExtension>()!.md` etc.
 class ThemeRadius {
   ThemeRadius._(this.context);
-  factory ThemeRadius.of(BuildContext context) => ThemeRadius._(context);
+  factory ThemeRadius.of(final BuildContext context) => ThemeRadius._(context);
   final BuildContext context;
 
   AppRadiusExtension get _e =>
@@ -64,5 +67,6 @@ class ThemeRadius {
   double get xl => _e.xl;
 
   /// Returns [BorderRadius.circular] with the supplied token (or `md`).
-  BorderRadius circular([double? value]) => BorderRadius.circular(value ?? md);
+  BorderRadius circular([final double? value]) =>
+      BorderRadius.circular(value ?? md);
 }

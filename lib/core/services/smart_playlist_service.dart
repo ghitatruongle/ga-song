@@ -21,23 +21,23 @@ class SmartPlaylistService {
   SmartPlaylistService(this._databaseService);
 
   /// Get songs for a specific smart playlist type
-  Future<List<Song>> getSmartPlaylist(SmartPlaylistType type) async {
+  Future<List<Song>> getSmartPlaylist(final SmartPlaylistType type) async {
     switch (type) {
       case SmartPlaylistType.mostPlayed:
-        return _databaseService.getMostPlayedSongs(limit: 50);
+        return _databaseService.getMostPlayedSongs();
       case SmartPlaylistType.recentlyPlayed:
-        return _databaseService.getRecentlyPlayedSongs(limit: 50);
+        return _databaseService.getRecentlyPlayedSongs();
       case SmartPlaylistType.favorites:
         return _databaseService.getFavoriteSongs();
       case SmartPlaylistType.recentlyAdded:
-        return _databaseService.getRecentlyAddedSongs(limit: 50);
+        return _databaseService.getRecentlyAddedSongs();
       case SmartPlaylistType.discovery:
-        return _databaseService.getDiscoverySongs(limit: 50);
+        return _databaseService.getDiscoverySongs();
     }
   }
 
   /// Get display name for a smart playlist type
-  static String getDisplayName(SmartPlaylistType type) {
+  static String getDisplayName(final SmartPlaylistType type) {
     switch (type) {
       case SmartPlaylistType.mostPlayed:
         return 'Nghe nhiều nhất';
@@ -53,7 +53,7 @@ class SmartPlaylistService {
   }
 
   /// Get icon for a smart playlist type
-  static String getIcon(SmartPlaylistType type) {
+  static String getIcon(final SmartPlaylistType type) {
     switch (type) {
       case SmartPlaylistType.mostPlayed:
         return '🔥';

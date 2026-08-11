@@ -116,12 +116,10 @@ class AppTypography {
   );
 
   // ─── Helper: Apply color to TextStyle ─────────────────────────────────────
-  static TextStyle withColor(TextStyle style, Color color) {
-    return style.copyWith(color: color);
-  }
+  static TextStyle withColor(final TextStyle style, final Color color) =>
+      style.copyWith(color: color);
 
   // ─── Helper: Apply opacity to TextStyle ───────────────────────────────────
-  static TextStyle withOpacity(TextStyle style, double opacity) {
-    return style.copyWith(color: style.color?.withValues(alpha: opacity));
-  }
+  static TextStyle withOpacity(final TextStyle style, final double opacity) =>
+      style.copyWith(color: style.color?.withValues(alpha: opacity));
 }

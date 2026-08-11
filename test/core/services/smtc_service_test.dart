@@ -27,12 +27,12 @@ class MockSmtcPlatform implements SmtcPlatform {
   bool metadataCleared = false;
 
   @override
-  Future<void> setPlaybackStatus(PlaybackStatus status) async {
+  Future<void> setPlaybackStatus(final PlaybackStatus status) async {
     lastSetStatus = status;
   }
 
   @override
-  Future<void> updateMetadata(MusicMetadata metadata) async {
+  Future<void> updateMetadata(final MusicMetadata metadata) async {
     lastMetadata = metadata;
   }
 
@@ -42,12 +42,12 @@ class MockSmtcPlatform implements SmtcPlatform {
   }
 
   @override
-  Future<void> setPosition(Duration position) async {
+  Future<void> setPosition(final Duration position) async {
     lastPosition = position;
   }
 
   @override
-  Future<void> setEndTime(Duration endTime) async {
+  Future<void> setEndTime(final Duration endTime) async {
     lastEndTime = endTime;
   }
 
@@ -56,7 +56,7 @@ class MockSmtcPlatform implements SmtcPlatform {
     disposed = true;
   }
 
-  void simulateButtonPress(PressedButton button) {
+  void simulateButtonPress(final PressedButton button) {
     _buttonController.add(button);
   }
 
@@ -88,7 +88,7 @@ class MockAudioEngineService
   ValueNotifier<Duration> durationNotifier = ValueNotifier(Duration.zero);
 
   @override
-  ValueNotifier<double> volumeNotifier = ValueNotifier(1.0);
+  ValueNotifier<double> volumeNotifier = ValueNotifier(1);
 
   final _songCompletedController = StreamController<void>.broadcast();
   @override
@@ -108,33 +108,36 @@ class MockAudioEngineService
   }
 
   @override
-  Future<void> playAsset(String assetPath, {double? normalizationGain}) async {}
+  Future<void> playAsset(
+    final String assetPath, {
+    final double? normalizationGain,
+  }) async {}
 
   @override
   Future<void> resume() async {}
 
   @override
-  Future<void> seek(Duration position) async {}
+  Future<void> seek(final Duration position) async {}
 
   @override
-  void setVolume(double volume) {}
+  void setVolume(final double volume) {}
 
   @override
-  void setNormalizationGain(double gain) {}
+  void setNormalizationGain(final double gain) {}
 
   @override
   Future<void> crossfadeTo(
-    String nextAssetPath,
-    double crossfadeDuration, {
-    double? nextNormalizationGain,
-    CrossfadeCurve curve = CrossfadeCurve.linear,
+    final String nextAssetPath,
+    final double crossfadeDuration, {
+    final double? nextNormalizationGain,
+    final CrossfadeCurve curve = CrossfadeCurve.linear,
   }) async {}
 
   @override
-  Future<void> preload(String assetPath) async {}
+  Future<void> preload(final String assetPath) async {}
 
   @override
-  Future<void> evictSources(Set<String> keepAssetPaths) async {}
+  Future<void> evictSources(final Set<String> keepAssetPaths) async {}
 
   @override
   Future<void> dispose() async {}
@@ -143,15 +146,16 @@ class MockAudioEngineService
   Map<String, dynamic> get cacheDiagnostics => {};
 
   @override
-  Future<AudioSource?> ensureSource(String assetPath) async => null;
+  Future<AudioSource?> ensureSource(final String assetPath) async => null;
 
   // P3.4: Lifecycle observer — mock is a no-op.
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {}
+  void didChangeAppLifecycleState(final AppLifecycleState state) {}
 
   // Forward any other WidgetsBindingObserver methods to noSuchMethod.
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }
 
 // ---------------------------------------------------------------------------
@@ -209,27 +213,30 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  Future<void> setPlaylist(List<Song> songs, {int startIndex = 0}) async {}
-
-  @override
-  void reorderPlaylist(List<Song> songs) {}
-
-  @override
-  Future<void> playSongAt(
-    int index, {
-    bool isHistoryNavigation = false,
+  Future<void> setPlaylist(
+    final List<Song> songs, {
+    final int startIndex = 0,
   }) async {}
 
   @override
-  Future<void> playSongByFileName(String fileName) async {}
+  void reorderPlaylist(final List<Song> songs) {}
 
   @override
-  Future<void> add(Song song) async {
+  Future<void> playSongAt(
+    final int index, {
+    final bool isHistoryNavigation = false,
+  }) async {}
+
+  @override
+  Future<void> playSongByFileName(final String fileName) async {}
+
+  @override
+  Future<void> add(final Song song) async {
     playlist.add(song);
   }
 
   @override
-  Future<void> remove(int index) async {
+  Future<void> remove(final int index) async {
     if (index >= 0 && index < playlist.length) {
       playlist.removeAt(index);
     }
@@ -241,7 +248,7 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+  Future<void> reorderQueue(final int oldIndex, int newIndex) async {
     if (oldIndex < 0 ||
         oldIndex >= playlist.length ||
         newIndex < 0 ||
@@ -257,13 +264,13 @@ class MockPlaylistService implements PlaylistService {
   }
 
   @override
-  void setPlayMode(PlayMode mode) {}
+  void setPlayMode(final PlayMode mode) {}
 
   @override
   Future<void> nextPlayMode() async {}
 
   @override
-  void startSleepTimer(Duration duration) {}
+  void startSleepTimer(final Duration duration) {}
 
   @override
   void startSleepTimerEndOfSong() {}
@@ -275,10 +282,10 @@ class MockPlaylistService implements PlaylistService {
   bool get isSleepTimerActive => false;
 
   @override
-  void setSortMode(SortMode mode) {}
+  void setSortMode(final SortMode mode) {}
 
   @override
-  List<Song> getSortedPlaylist(List<Song> songs) => songs;
+  List<Song> getSortedPlaylist(final List<Song> songs) => songs;
 
   @override
   void dispose() {}

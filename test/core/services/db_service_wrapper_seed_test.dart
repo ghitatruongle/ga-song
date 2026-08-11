@@ -20,21 +20,26 @@ void main() {
       await db.close();
     });
 
-    test('init seeds built-in songs from songs.json into an empty DB',
-        () async {
-      await wrapper.init();
+    test(
+      'init seeds built-in songs from songs.json into an empty DB',
+      () async {
+        await wrapper.init();
 
-      final songs = await wrapper.getAllSongs();
-      expect(songs, isNotEmpty,
-          reason: 'fresh install must not show an empty library');
-      expect(songs.every((s) => s.isBuiltIn), isTrue);
-      expect(
-        songs.every((s) => s.sourcePath.startsWith('assets/song/')),
-        isTrue,
-      );
-      // Metadata from songs.json is applied (not derived from file names).
-      expect(songs.any((s) => s.name == 'Chờ Anh Về'), isTrue);
-    });
+        final songs = await wrapper.getAllSongs();
+        expect(
+          songs,
+          isNotEmpty,
+          reason: 'fresh install must not show an empty library',
+        );
+        expect(songs.every((final s) => s.isBuiltIn), isTrue);
+        expect(
+          songs.every((final s) => s.sourcePath.startsWith('assets/song/')),
+          isTrue,
+        );
+        // Metadata from songs.json is applied (not derived from file names).
+        expect(songs.any((final s) => s.name == 'Chờ Anh Về'), isTrue);
+      },
+    );
 
     test('re-running init is idempotent (no duplicates)', () async {
       await wrapper.init();

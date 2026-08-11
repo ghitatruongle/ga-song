@@ -8,7 +8,7 @@ import 'package:ga_song/ui/widgets/player_bar/song_info.dart';
 
 void main() {
   group('SongInfo', () {
-    testWidgets('displays song name and artist', (tester) async {
+    testWidgets('displays song name and artist', (final tester) async {
       final song = Song(
         id: 1,
         name: 'Test Song',
@@ -32,7 +32,9 @@ void main() {
       expect(find.text('Test Artist'), findsOneWidget);
     });
 
-    testWidgets('shows Unknown Artist when artist is null', (tester) async {
+    testWidgets('shows Unknown Artist when artist is null', (
+      final tester,
+    ) async {
       final song = Song(
         id: 1,
         name: 'No Artist Song',

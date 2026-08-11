@@ -75,16 +75,20 @@ class LyricNotifier extends Notifier<List<LyricLine>> {
         final cached = await _databaseService?.getCachedLyrics(song.id!);
         if (!_isCurrent(generation)) return;
         if (cached != null) {
-          final syncedLyrics = cached['syncedLyrics'];
+          // Keys are 'synced'/'plain' (see DatabaseServiceWrapper.getCachedLyrics)
+          final syncedLyrics = cached['synced'];
           if (syncedLyrics != null && syncedLyrics.isNotEmpty) {
             state = LyricParser.parse(syncedLyrics);
             return;
           }
-          final plainLyrics = cached['plainLyrics'];
+          final plainLyrics = cached['plain'];
           if (plainLyrics != null && plainLyrics.isNotEmpty) {
             state = plainLyrics
                 .split('\n')
-                .map((line) => LyricLine(startTime: Duration.zero, text: line))
+                .map(
+                  (final line) =>
+                      LyricLine(startTime: Duration.zero, text: line),
+                )
                 .toList();
             return;
           }
@@ -118,7 +122,9 @@ class LyricNotifier extends Notifier<List<LyricLine>> {
         } else if (result.hasPlainLyrics) {
           state = result.plainLyrics!
               .split('\n')
-              .map((line) => LyricLine(startTime: Duration.zero, text: line))
+              .map(
+                (final line) => LyricLine(startTime: Duration.zero, text: line),
+              )
               .toList();
         } else {
           state = [];
@@ -134,10 +140,10 @@ class LyricNotifier extends Notifier<List<LyricLine>> {
   }
 
   /// True if [generation] is still the latest load request.
-  bool _isCurrent(int generation) => generation == _loadGeneration;
+  bool _isCurrent(final int generation) => generation == _loadGeneration;
 
   /// Manually fetch lyrics for the current song (e.g., from search results).
-  Future<void> fetchLyrics({String? title, String? artist}) async {
+  Future<void> fetchLyrics({final String? title, final String? artist}) async {
     final song = _playlistService?.currentSong;
     if (song == null) return;
 
@@ -166,7 +172,9 @@ class LyricNotifier extends Notifier<List<LyricLine>> {
         } else if (best.hasPlainLyrics) {
           state = best.plainLyrics!
               .split('\n')
-              .map((line) => LyricLine(startTime: Duration.zero, text: line))
+              .map(
+                (final line) => LyricLine(startTime: Duration.zero, text: line),
+              )
               .toList();
         }
       }
@@ -189,18 +197,21 @@ class CurrentLyricLineNotifier extends Notifier<String> {
   Timer? _pollTimer;
   List<LyricLine> _lines = [];
   bool _isPlaying = false;
+  // Local mirror — reading `state` inside build() throws
+  // "uninitialized provider" StateError in Riverpod 3.
+  String _currentLine = '';
 
   @override
   String build() {
     // Listen to lyric changes
-    ref.listen<List<LyricLine>>(lyricProvider, (_, next) {
+    ref.listen<List<LyricLine>>(lyricProvider, (_, final next) {
       _lines = next;
       _syncTimer();
       _updateCurrentLine();
     });
 
     // Listen to engine state to pause/resume timer
-    ref.listen<AudioEngineState>(engineStateProvider, (_, next) {
+    ref.listen<AudioEngineState>(engineStateProvider, (_, final next) {
       _isPlaying = next == AudioEngineState.playing;
       _syncTimer();
     });
@@ -211,7 +222,6 @@ class CurrentLyricLineNotifier extends Notifier<String> {
     _lines = ref.read(lyricProvider);
     _isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
     _syncTimer();
-    _updateCurrentLine();
 
     // Clean up timer when this provider is disposed
     ref.onDispose(() {
@@ -219,7 +229,7 @@ class CurrentLyricLineNotifier extends Notifier<String> {
       _pollTimer = null;
     });
 
-    return '';
+    return _currentLine;
   }
 
   void _onPositionChanged() {
@@ -243,7 +253,10 @@ class CurrentLyricLineNotifier extends Notifier<String> {
 
   void _updateCurrentLine() {
     if (_lines.isEmpty) {
-      if (state.isNotEmpty) state = '';
+      if (_currentLine.isNotEmpty) {
+        _currentLine = '';
+        state = '';
+      }
       return;
     }
 
@@ -268,7 +281,8 @@ class CurrentLyricLineNotifier extends Notifier<String> {
     final newLine = matchIndex == -1
         ? _lines.first.text
         : _lines[matchIndex].text;
-    if (newLine != state) {
+    if (newLine != _currentLine) {
+      _currentLine = newLine;
       state = newLine;
     }
   }
@@ -285,18 +299,20 @@ class CurrentSyllableIndexNotifier extends Notifier<int> {
   Timer? _pollTimer;
   List<LyricLine> _lines = [];
   bool _isPlaying = false;
+  // Local cached value — reading `state` inside build() throws in Riverpod 3.
+  int _currentSyllable = -1;
 
   @override
   int build() {
     // Listen to lyric changes
-    ref.listen<List<LyricLine>>(lyricProvider, (_, next) {
+    ref.listen<List<LyricLine>>(lyricProvider, (_, final next) {
       _lines = next;
       _syncTimer();
       _updateCurrentSyllable();
     });
 
     // Listen to engine state to pause/resume timer
-    ref.listen<AudioEngineState>(engineStateProvider, (_, next) {
+    ref.listen<AudioEngineState>(engineStateProvider, (_, final next) {
       _isPlaying = next == AudioEngineState.playing;
       _syncTimer();
     });
@@ -307,7 +323,6 @@ class CurrentSyllableIndexNotifier extends Notifier<int> {
     _lines = ref.read(lyricProvider);
     _isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
     _syncTimer();
-    _updateCurrentSyllable();
 
     // Clean up timer when this provider is disposed
     ref.onDispose(() {
@@ -315,7 +330,7 @@ class CurrentSyllableIndexNotifier extends Notifier<int> {
       _pollTimer = null;
     });
 
-    return -1;
+    return _currentSyllable;
   }
 
   void _onPositionChanged() {
@@ -339,7 +354,10 @@ class CurrentSyllableIndexNotifier extends Notifier<int> {
 
   void _updateCurrentSyllable() {
     if (_lines.isEmpty) {
-      if (state != -1) state = -1;
+      if (_currentSyllable != -1) {
+        _currentSyllable = -1;
+        state = -1;
+      }
       return;
     }
 
@@ -360,18 +378,25 @@ class CurrentSyllableIndexNotifier extends Notifier<int> {
     }
 
     if (matchIndex == -1) {
-      if (state != -1) state = -1;
+      if (_currentSyllable != -1) {
+        _currentSyllable = -1;
+        state = -1;
+      }
       return;
     }
 
     final line = _lines[matchIndex];
     if (!line.hasSyllables) {
-      if (state != -1) state = -1;
+      if (_currentSyllable != -1) {
+        _currentSyllable = -1;
+        state = -1;
+      }
       return;
     }
 
     final syllableIndex = line.getSyllableIndexAt(position);
-    if (syllableIndex != state) {
+    if (syllableIndex != _currentSyllable) {
+      _currentSyllable = syllableIndex;
       state = syllableIndex;
     }
   }

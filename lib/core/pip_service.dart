@@ -32,7 +32,7 @@ class PipService {
     if (!_isAndroid) return;
 
     // Set up PiP callback handler
-    _pipChannel.setMethodCallHandler((call) async {
+    _pipChannel.setMethodCallHandler((final call) async {
       if (call.method == 'onPiPChanged') {
         final args = call.arguments as Map;
         final isInPiP = args['isInPiP'] as bool;
@@ -41,7 +41,7 @@ class PipService {
     });
 
     // Set up deep link callback handler
-    _deepLinkChannel.setMethodCallHandler((call) async {
+    _deepLinkChannel.setMethodCallHandler((final call) async {
       if (call.method == 'playSong') {
         final songId = call.arguments as int;
         _deepLinkController.add(songId);

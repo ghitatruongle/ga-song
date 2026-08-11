@@ -8,8 +8,8 @@ void main() {
     late AppLocalizations en;
 
     setUp(() {
-      vi = lookupAppLocalizations(const Locale('vi'))!;
-      en = lookupAppLocalizations(const Locale('en'))!;
+      vi = lookupAppLocalizations(const Locale('vi'));
+      en = lookupAppLocalizations(const Locale('en'));
     });
 
     test('should throw for unsupported locale', () {
@@ -42,7 +42,10 @@ void main() {
     });
 
     test('importErrorWithMsg should handle parameters', () {
-      expect(en.importErrorWithMsg('File not found'), 'Import error: File not found');
+      expect(
+        en.importErrorWithMsg('File not found'),
+        'Import error: File not found',
+      );
     });
 
     test('all convenience getters return non-empty for Vietnamese', () {
@@ -62,7 +65,7 @@ void main() {
 }
 
 /// Helper to collect all AppLocalizations getter values.
-List<String> _allGetterValues(AppLocalizations l10n) => [
+List<String> _allGetterValues(final AppLocalizations l10n) => [
   l10n.appTitle,
   l10n.home,
   l10n.library,

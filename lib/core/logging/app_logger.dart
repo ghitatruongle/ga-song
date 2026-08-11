@@ -26,14 +26,14 @@ class AppLogger {
 
   /// Configures the global logger. Call once at app startup.
   static void init({
-    LogLevel minLevel = LogLevel.debug,
-    void Function(String line)? sink,
-    bool mirrorToCrashReporter = false,
+    final LogLevel minLevel = LogLevel.debug,
+    final void Function(String line)? sink,
+    final bool mirrorToCrashReporter = false,
   }) {
     _minLevel = minLevel;
     _sink = sink ?? (kDebugMode ? _debugPrintSink : _noopSink);
     if (mirrorToCrashReporter) {
-      _crashHook = (tag, msg, {error, stack}) {
+      _crashHook = (final tag, final msg, {final error, final stack}) {
         // Delegated to DebugCrashReporter by main.dart after init.
         _pendingCrashReports.add((
           tag: tag,
@@ -60,45 +60,45 @@ class AppLogger {
   }
 
   static void d(
-    String tag,
-    String message, {
-    Object? error,
-    StackTrace? stack,
+    final String tag,
+    final String message, {
+    final Object? error,
+    final StackTrace? stack,
   }) => _log(LogLevel.debug, tag, message, error: error, stack: stack);
 
-  static void i(String tag, String message) =>
+  static void i(final String tag, final String message) =>
       _log(LogLevel.info, tag, message);
 
   static void w(
-    String tag,
-    String message, {
-    Object? error,
-    StackTrace? stack,
+    final String tag,
+    final String message, {
+    final Object? error,
+    final StackTrace? stack,
   }) => _log(LogLevel.warn, tag, message, error: error, stack: stack);
 
   static void e(
-    String tag,
-    String message, {
-    Object? error,
-    StackTrace? stack,
+    final String tag,
+    final String message, {
+    final Object? error,
+    final StackTrace? stack,
   }) => _log(LogLevel.error, tag, message, error: error, stack: stack);
 
   static void f(
-    String tag,
-    String message, {
-    Object? error,
-    StackTrace? stack,
+    final String tag,
+    final String message, {
+    final Object? error,
+    final StackTrace? stack,
   }) {
     _log(LogLevel.fatal, tag, message, error: error, stack: stack);
     _crashHook?.call(tag, message, error: error, stack: stack);
   }
 
   static void _log(
-    LogLevel level,
-    String tag,
-    String message, {
-    Object? error,
-    StackTrace? stack,
+    final LogLevel level,
+    final String tag,
+    final String message, {
+    final Object? error,
+    final StackTrace? stack,
   }) {
     if (level.index < _minLevel.index) return;
     final levelStr = _levelTag(level);
@@ -108,7 +108,7 @@ class AppLogger {
     _sink?.call(buffer.toString());
   }
 
-  static String _levelTag(LogLevel level) => switch (level) {
+  static String _levelTag(final LogLevel level) => switch (level) {
     LogLevel.debug => '[D]',
     LogLevel.info => '[I]',
     LogLevel.warn => '[W]',
@@ -116,12 +116,12 @@ class AppLogger {
     LogLevel.fatal => '[F]',
   };
 
-  static void _debugPrintSink(String line) {
+  static void _debugPrintSink(final String line) {
     // ignore: avoid_print
     debugPrint(line);
   }
 
-  static void _noopSink(String line) {
+  static void _noopSink(final String line) {
     // intentional no-op for release
   }
 }

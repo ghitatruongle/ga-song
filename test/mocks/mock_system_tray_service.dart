@@ -1,16 +1,14 @@
 /// Mock implementation of [SystemTrayService] for testing.
 /// Provides controlled system tray behavior without platform dependencies.
+library;
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:ga_song/core/services/system_tray_service.dart';
 import 'package:ga_song/core/audio/audio_engine_service.dart';
 import 'package:ga_song/core/audio/playlist_service.dart';
 
 class MockSystemTrayService implements SystemTrayService {
-  @override
   final AudioEngineService? audioEngineService;
-  @override
   final PlaylistService? playlistService;
 
   bool initialized = false;
@@ -26,10 +24,7 @@ class MockSystemTrayService implements SystemTrayService {
   bool menuVisible = false;
   Map<String, dynamic>? lastMenuData;
 
-  MockSystemTrayService({
-    this.audioEngineService,
-    this.playlistService,
-  });
+  MockSystemTrayService({this.audioEngineService, this.playlistService});
 
   @override
   Future<void> init() async {
@@ -41,7 +36,8 @@ class MockSystemTrayService implements SystemTrayService {
     buildMenuCallCount++;
     menuVisible = true;
     lastMenuData = {
-      'isPlaying': audioEngineService?.engineState.value == AudioEngineState.playing,
+      'isPlaying':
+          audioEngineService?.engineState.value == AudioEngineState.playing,
       'position': audioEngineService?.positionNotifier.value,
       'duration': audioEngineService?.durationNotifier.value,
     };
@@ -51,7 +47,8 @@ class MockSystemTrayService implements SystemTrayService {
     updateMenuCallCount++;
     if (initialized) {
       lastMenuData = {
-        'isPlaying': audioEngineService?.engineState.value == AudioEngineState.playing,
+        'isPlaying':
+            audioEngineService?.engineState.value == AudioEngineState.playing,
         'position': audioEngineService?.positionNotifier.value,
         'duration': audioEngineService?.durationNotifier.value,
       };
@@ -67,5 +64,6 @@ class MockSystemTrayService implements SystemTrayService {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

@@ -10,7 +10,7 @@ class Songs extends Table {
   TextColumn get artist => text().nullable().withLength(max: 255)();
   TextColumn get album => text().nullable().withLength(max: 255)();
   IntColumn get durationMs => integer().nullable()();
-  RealColumn get peakDb => real().withDefault(const Constant(-12.0))();
+  RealColumn get peakDb => real().withDefault(const Constant(-12))();
   TextColumn get sourcePath => text()();
   BoolColumn get isBuiltIn => boolean().withDefault(const Constant(false))();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();

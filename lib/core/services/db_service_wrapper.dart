@@ -34,8 +34,8 @@ class DatabaseServiceWrapper {
 
   void _startWatchingSongs() {
     _songsSubscription?.cancel();
-    _songsSubscription = _db.watchAllSongs().listen((entries) {
-      _songsController.add(entries.map((e) => e.toSong()).toList());
+    _songsSubscription = _db.watchAllSongs().listen((final entries) {
+      _songsController.add(entries.map((final e) => e.toSong()).toList());
     });
   }
 
@@ -52,8 +52,9 @@ class DatabaseServiceWrapper {
   }
 
   /// Checks that all built-in songs from `assets/song/songs.json` exist in
-  /// the database. If any are missing (fresh install, partial seed, or a
-  /// corrupt DB), deletes ALL built-in rows and re-seeds from scratch.
+  /// the database with matching metadata. If any are missing or stale
+  /// (fresh install, partial seed, a corrupt DB, or songs.json updated with
+  /// new fields like `album`), deletes ALL built-in rows and re-seeds.
   Future<void> ensureBuiltInSeeded() async {
     try {
       final jsonString = await rootBundle.loadString('assets/song/songs.json');
@@ -62,40 +63,63 @@ class DatabaseServiceWrapper {
       final decoded = json.decode(jsonString);
       if (decoded is! List) return;
 
-      final expectedFileNames = <String>{};
+      // sourcePath -> (name, album) expected signature from songs.json
+      final expected = <String, ({String name, String? album})>{};
       for (final item in decoded) {
         if (item is Map<String, dynamic>) {
           final fileName = item['fileName'] as String? ?? '';
           if (fileName.isNotEmpty) {
-            expectedFileNames.add('assets/song/$fileName');
+            final sourcePath = 'assets/song/$fileName';
+            expected[sourcePath] = (
+              name: _normalizeText(item['name']) ?? 'Unknown',
+              album: _normalizeText(item['album']),
+            );
           }
         }
       }
-      if (expectedFileNames.isEmpty) return;
+      if (expected.isEmpty) return;
 
       // Query actual built-in sourcePaths from DB.
       final all = await getAllSongs();
       final actualPaths = all
-          .where((s) => s.isBuiltIn)
-          .map((s) => s.sourcePath)
+          .where((final s) => s.isBuiltIn)
+          .map((final s) => s.sourcePath)
           .toSet();
 
-      // Fast path: counts match → nothing to do.
-      if (actualPaths.length == expectedFileNames.length &&
-          actualPaths.containsAll(expectedFileNames)) {
+      // Fast path: counts + signatures match → nothing to do.
+      final actualSignatures = all
+          .where((final s) => s.isBuiltIn)
+          .map((final s) => (path: s.sourcePath, name: s.name, album: s.album))
+          .toList();
+
+      bool signatureMatches(
+        final List<({String path, String name, String? album})> actual,
+      ) {
+        if (actual.length != expected.length) return false;
+        for (final s in actual) {
+          final exp = expected[s.path];
+          if (exp == null) return false;
+          if (s.name != exp.name || s.album != exp.album) return false;
+        }
+        return true;
+      }
+
+      if (actualPaths.length == expected.length &&
+          actualPaths.containsAll(expected.keys) &&
+          signatureMatches(actualSignatures)) {
         return;
       }
 
       AppLogger.i(
         'database.wrapper',
-        'Built-in songs mismatch (expected=${expectedFileNames.length}, '
+        'Built-in songs mismatch (expected=${expected.length}, '
             'actual=${actualPaths.length}); re-seeding…',
       );
 
       // Delete stale built-in rows and re-seed from JSON.
       await (_db.delete(
         _db.songs,
-      )..where((t) => t.isBuiltIn.equals(true))).go();
+      )..where((final t) => t.isBuiltIn.equals(true))).go();
 
       final songsToInsert = <Song>[];
       for (final item in decoded) {
@@ -103,7 +127,7 @@ class DatabaseServiceWrapper {
           final fileName = item['fileName'] as String? ?? '';
           if (fileName.isEmpty) continue;
           final sourcePath = 'assets/song/$fileName';
-          if (!expectedFileNames.contains(sourcePath)) continue;
+          if (!expected.containsKey(sourcePath)) continue;
 
           songsToInsert.add(
             Song(
@@ -137,7 +161,7 @@ class DatabaseServiceWrapper {
     }
   }
 
-  static String? _normalizeText(dynamic value) {
+  static String? _normalizeText(final dynamic value) {
     if (value is! String) return null;
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
@@ -152,19 +176,19 @@ class DatabaseServiceWrapper {
 
   Future<List<Song>> getAllSongs() async {
     final entries = await _db.getAllSongs();
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
   /// Gets a single song by ID.
-  Future<Song?> getSong(int id) async {
+  Future<Song?> getSong(final int id) async {
     final entry = await _db.getSongById(id);
     return entry?.toSong();
   }
 
   /// Searches songs by name or artist.
-  Future<List<Song>> searchSongs(String query) async {
+  Future<List<Song>> searchSongs(final String query) async {
     final entries = await _db.searchSongs(query);
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
   Future<Result<List<Song>>> querySongs() async {
@@ -176,11 +200,9 @@ class DatabaseServiceWrapper {
     }
   }
 
-  Future<int> getSongCount() async {
-    return await _db.getSongCount();
-  }
+  Future<int> getSongCount() async => _db.getSongCount();
 
-  Future<void> putSong(Song song) async {
+  Future<void> putSong(final Song song) async {
     if (song.id != null) {
       await _db.updateSong(song.toCompanion());
     } else {
@@ -192,8 +214,8 @@ class DatabaseServiceWrapper {
     }
   }
 
-  Future<void> putAllSongs(List<Song> songs) async {
-    await _db.batch((batch) {
+  Future<void> putAllSongs(final List<Song> songs) async {
+    await _db.batch((final batch) {
       for (final song in songs) {
         batch.insert(
           _db.songs,
@@ -204,48 +226,46 @@ class DatabaseServiceWrapper {
     });
   }
 
-  Future<void> deleteSong(int id) async {
+  Future<void> deleteSong(final int id) async {
     await _db.deleteSong(id);
   }
 
-  Future<List<Song>> getMostPlayedSongs({int limit = 50}) async {
+  Future<List<Song>> getMostPlayedSongs({final int limit = 50}) async {
     final entries = await _db.getMostPlayed(limit: limit);
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
-  Future<List<Song>> getRecentlyPlayedSongs({int limit = 50}) async {
+  Future<List<Song>> getRecentlyPlayedSongs({final int limit = 50}) async {
     final entries = await _db.getRecentlyPlayed(limit: limit);
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
-  Future<void> toggleFavorite(int songId) async {
+  Future<void> toggleFavorite(final int songId) async {
     await _db.toggleFavorite(songId);
   }
 
   Future<List<Song>> getFavoriteSongs() async {
     final entries = await _db.getFavorites();
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
-  Future<List<Song>> getRecentlyAddedSongs({int limit = 50}) async {
+  Future<List<Song>> getRecentlyAddedSongs({final int limit = 50}) async {
     final entries = await _db.getRecentlyAdded(limit: limit);
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
-  Future<List<Song>> getDiscoverySongs({int limit = 50}) async {
+  Future<List<Song>> getDiscoverySongs({final int limit = 50}) async {
     final entries = await _db.getDiscovery(limit: limit);
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
-  Future<void> incrementPlayCount(int songId) async {
+  Future<void> incrementPlayCount(final int songId) async {
     await _db.incrementPlayCount(songId);
   }
 
-  Future<Map<String, dynamic>> getLibraryStats() async {
-    return await _db.getLibraryStats();
-  }
+  Future<Map<String, dynamic>> getLibraryStats() async => _db.getLibraryStats();
 
-  Future<Map<String, String>?> getCachedLyrics(int songId) async {
+  Future<Map<String, String>?> getCachedLyrics(final int songId) async {
     final entry = await _db.getLyrics(songId);
     if (entry == null) return null;
     return {
@@ -256,10 +276,10 @@ class DatabaseServiceWrapper {
   }
 
   Future<void> cacheLyrics({
-    required int songId,
-    String? plainLyrics,
-    String? syncedLyrics,
-    required String source,
+    required final int songId,
+    final String? plainLyrics,
+    final String? syncedLyrics,
+    required final String source,
   }) async {
     await _db.saveLyrics(
       songId,
@@ -269,21 +289,21 @@ class DatabaseServiceWrapper {
     );
   }
 
-  Future<void> deleteCachedLyrics(int songId) async {
+  Future<void> deleteCachedLyrics(final int songId) async {
     await _db.deleteLyrics(songId);
   }
 
   Future<List<Playlist>> getAllPlaylists() async {
     final entries = await _db.getAllPlaylists();
-    return entries.map((e) => e.toPlaylist()).toList();
+    return entries.map((final e) => e.toPlaylist()).toList();
   }
 
-  Future<List<Song>> getPlaylistSongsDirect(int playlistId) async {
+  Future<List<Song>> getPlaylistSongsDirect(final int playlistId) async {
     final entries = await _db.getPlaylistSongs(playlistId);
-    return entries.map((e) => e.toSong()).toList();
+    return entries.map((final e) => e.toSong()).toList();
   }
 
-  Future<void> putPlaylist(Playlist playlist) async {
+  Future<void> putPlaylist(final Playlist playlist) async {
     if (playlist.id != null) {
       await _db.updatePlaylist(playlist.id!, playlist.name);
     } else {
@@ -291,49 +311,56 @@ class DatabaseServiceWrapper {
     }
   }
 
-  Future<void> deletePlaylist(int id) async {
+  Future<void> deletePlaylist(final int id) async {
     await _db.deletePlaylist(id);
   }
 
-  Future<void> addSongToPlaylist(int playlistId, int songId) async {
+  Future<void> addSongToPlaylist(final int playlistId, final int songId) async {
     await _db.addSongToPlaylist(playlistId, songId);
   }
 
-  Future<void> removeSongFromPlaylist(int playlistId, int songId) async {
+  Future<void> removeSongFromPlaylist(
+    final int playlistId,
+    final int songId,
+  ) async {
     await _db.removeSongFromPlaylist(playlistId, songId);
   }
 
-  Future<bool> isSongInPlaylist(int playlistId, int songId) async {
-    return await _db.isSongInPlaylist(playlistId, songId);
-  }
+  Future<bool> isSongInPlaylist(final int playlistId, final int songId) async =>
+      _db.isSongInPlaylist(playlistId, songId);
 
   /// Reorder songs in a user-created playlist.
-  Future<void> reorderPlaylistSongs(int playlistId, List<int> songIds) async {
+  Future<void> reorderPlaylistSongs(
+    final int playlistId,
+    final List<int> songIds,
+  ) async {
     await _db.reorderPlaylistSongs(playlistId, songIds);
   }
 
-  Future<CoverArtCache?> getCoverArtCacheByFileName(String fileName) async {
+  Future<CoverArtCache?> getCoverArtCacheByFileName(
+    final String fileName,
+  ) async {
     final bytes = await _db.getCoverArt(fileName);
     if (bytes == null) return null;
     return CoverArtCache(fileName: fileName, bytes: bytes.toList());
   }
 
-  Future<void> putCoverArtCache(CoverArtCache cache) async {
+  Future<void> putCoverArtCache(final CoverArtCache cache) async {
     await _db.saveCoverArt(cache.fileName, cache.bytesAsUint8List);
   }
 
-  Future<void> deleteCoverArtCache(String fileName) async {
+  Future<void> deleteCoverArtCache(final String fileName) async {
     // Current Drift DB might not have delete by fileName explicitly
-    await _db.coverArtCache.deleteWhere((tbl) => tbl.fileName.equals(fileName));
+    await _db.coverArtCache.deleteWhere(
+      (final tbl) => tbl.fileName.equals(fileName),
+    );
   }
 
-  Future<int> getCoverArtCacheCount() async {
-    return await _db.getCoverArtCacheCount();
-  }
+  Future<int> getCoverArtCacheCount() async => _db.getCoverArtCacheCount();
 
   /// Evicts the oldest [count] cover art cache entries (by last_accessed).
   /// Uses a single SQL query — no loading of all entries into memory.
-  Future<void> evictOldestCoverArtCaches(int count) async {
+  Future<void> evictOldestCoverArtCaches(final int count) async {
     if (count <= 0) return;
     await _db.customStatement(
       'DELETE FROM cover_art_cache WHERE id IN ('

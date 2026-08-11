@@ -330,8 +330,8 @@ class _PersonalVisualizerWidgetState
     switch (shape) {
       case 1:
         final barsWidth = availableWidth;
-        final barsHeight = min(availableHeight, 400.0);
-        final paintHeight = min(barsHeight * 0.5, 200.0);
+        final barsHeight = min(availableHeight, 400.0).toDouble();
+        final paintHeight = min(barsHeight * 0.5, 200.0).toDouble();
         return SizedBox(
           width: barsWidth,
           height: barsHeight,
@@ -347,8 +347,8 @@ class _PersonalVisualizerWidgetState
         );
       case 2:
         final waveWidth = availableWidth;
-        final waveHeight = min(availableHeight, 400.0);
-        final paintHeight = min(waveHeight * 0.75, 300.0);
+        final waveHeight = min(availableHeight, 400.0).toDouble();
+        final paintHeight = min(waveHeight * 0.75, 300.0).toDouble();
         return SizedBox(
           width: waveWidth,
           height: waveHeight,
@@ -363,7 +363,8 @@ class _PersonalVisualizerWidgetState
           ),
         );
       case 3:
-        final tunnelDim = min(availableWidth, availableHeight) * 0.85;
+        final tunnelDim =
+            min(availableWidth, availableHeight).toDouble() * 0.85;
         return SizedBox(
           width: tunnelDim,
           height: tunnelDim,
@@ -409,8 +410,9 @@ class _PersonalVisualizerWidgetState
         );
       case 7:
         // GPU Fragment Shader Visualizer
+        // v0.9.5: Pass the controller so the GPU shader gets real FFT data
         return RepaintBoundary(
-          child: GpuVisualizerWidget(),
+          child: GpuVisualizerWidget(controller: _visualizerController),
         );
       default:
         final circleDim = min(min(availableWidth, availableHeight), 450.0);

@@ -2,7 +2,6 @@ import 'logging/app_logger.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,10 +21,10 @@ const Duration _coverArtTtl = Duration(hours: 1);
 enum CoverArtCacheTier {
   /// In-memory cache (fastest, ~1-5ms)
   memory,
-  
+
   /// Disk cache (SQLite, ~10-50ms)
   disk,
-  
+
   /// Network cache (fetched from online sources, ~100-500ms)
   network,
 }
@@ -37,7 +36,7 @@ class CoverArtEntry {
     required this.exists,
     required this.isAsset,
     required this.tier,
-    DateTime? capturedAt,
+    final DateTime? capturedAt,
   }) : capturedAt = capturedAt ?? DateTime.now();
 
   final String fileName;
@@ -51,9 +50,8 @@ class CoverArtEntry {
   final DateTime capturedAt;
 
   /// True when [capturedAt] is within [ttl] from `DateTime.now()`.
-  bool isFresh({required Duration ttl}) {
-    return DateTime.now().difference(capturedAt) < ttl;
-  }
+  bool isFresh({required final Duration ttl}) =>
+      DateTime.now().difference(capturedAt) < ttl;
 
   bool get hasCover => exists;
 }
@@ -69,9 +67,6 @@ int get _maxDominantColorCacheSize =>
 /// Memory: Hot cache - most recently accessed
 /// Disk: Persistent cache - survives app restarts
 /// Network: Online fetch - fallback when local not available
-const int _maxMemoryCacheEntries = 100;
-const int _maxDiskCacheEntries = 500;
-const int _maxNetworkCacheEntries = 50;
 
 /// Centralizes cover art existence checks, resized providers, palette cache,
 /// and SQLite-backed disk cache for persistence across sessions.
@@ -79,8 +74,8 @@ const int _maxNetworkCacheEntries = 50;
 /// Dependencies are injected via constructor for testability.
 class CoverArtRepository with WidgetsBindingObserver {
   CoverArtRepository({
-    DatabaseServiceWrapper? databaseService,
-    SettingsManager? settingsManager,
+    final DatabaseServiceWrapper? databaseService,
+    final SettingsManager? settingsManager,
   }) : _databaseService = databaseService,
        _settingsManager = settingsManager {
     WidgetsBinding.instance.addObserver(this);
@@ -90,20 +85,20 @@ class CoverArtRepository with WidgetsBindingObserver {
   final SettingsManager? _settingsManager;
 
   // ─── 3-Tier Cache Storage ────────────────────────────────────────────────
-  
+
   /// Tier 1: In-memory cache (fastest access)
   final Map<String, CoverArtEntry> _memoryCache = <String, CoverArtEntry>{};
-  
+
   /// Tier 2: Disk cache index (tracks what's in SQLite)
   final Set<String> _diskCacheIndex = <String>{};
-  
+
   /// Tier 3: Network cache index (tracks what's been fetched online)
   final Set<String> _networkCacheIndex = <String>{};
-  
+
   /// Entry futures for deduplication
   final Map<String, Future<CoverArtEntry>> _entryFutures =
       <String, Future<CoverArtEntry>>{};
-  
+
   /// Legacy in-memory entries (for backward compatibility)
   final Map<String, CoverArtEntry> _entries = <String, CoverArtEntry>{};
 
@@ -126,6 +121,34 @@ class CoverArtRepository with WidgetsBindingObserver {
     _dominantColorFutures.clear();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
+
+    // Android: aggressive cleanup on memory pressure
+    if (PlatformCapabilities.instance.aggressiveMemoryCleanup) {
+      _aggressiveMemoryCleanup();
+    }
+  }
+
+  /// Aggressive memory cleanup for low-end Android devices.
+  void _aggressiveMemoryCleanup() {
+    // Clear 50% of provider cache
+    final providersToRemove = (_providerCache.length * 0.5).ceil();
+    final keys = _providerCache.keys.toList();
+    for (int i = 0; i < providersToRemove && i < keys.length; i++) {
+      _providerCache.remove(keys[i]);
+    }
+
+    // Clear 50% of memory cache
+    final memoryToRemove = (_memoryCache.length * 0.5).ceil();
+    final memoryKeys = _memoryCache.keys.toList();
+    for (int i = 0; i < memoryToRemove && i < memoryKeys.length; i++) {
+      _memoryCache.remove(memoryKeys[i]);
+    }
+
+    AppLogger.d(
+      'cover_art.repository',
+      'Aggressive memory cleanup: cleared $providersToRemove providers, '
+          '$memoryToRemove memory entries',
+    );
   }
 
   void dispose() {
@@ -144,15 +167,16 @@ class CoverArtRepository with WidgetsBindingObserver {
     PerformanceProbe.instance.recordCacheSize(_providerCache.length);
   }
 
-  Future<void> primeForSongs(Iterable<Song> songs) async {
+  Future<void> primeForSongs(final Iterable<Song> songs) async {
     await Future.wait(songs.map(resolveEntry));
   }
 
   Future<void> preloadNextSongs(
-    List<Song> songs,
-    int currentIndex,
-    int count,
+    final List<Song> songs,
+    final int currentIndex,
+    final int count,
   ) async {
+    if (songs.isEmpty) return;
     final concurrency = PlatformCapabilities.instance.preloadConcurrency;
     final toPreload = <int>[];
     for (int i = 1; i <= count; i++) {
@@ -165,7 +189,7 @@ class CoverArtRepository with WidgetsBindingObserver {
     if (concurrency >= toPreload.length) {
       // Desktop: parallel preload
       await Future.wait(
-        toPreload.map((idx) async {
+        toPreload.map((final idx) async {
           try {
             final song = songs[idx];
             await resolveEntry(song);
@@ -202,13 +226,13 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   /// Gets entry from 3-tier cache (memory → disk → network)
-  CoverArtEntry? getCachedEntry(String fileName) {
+  CoverArtEntry? getCachedEntry(final String fileName) {
     // Tier 1: Memory cache (fastest)
     final memoryEntry = _memoryCache[fileName];
     if (memoryEntry != null && memoryEntry.isFresh(ttl: _coverArtTtl)) {
       return memoryEntry;
     }
-    
+
     // Tier 2: Legacy entries cache
     final legacyEntry = _entries[fileName];
     if (legacyEntry != null && legacyEntry.isFresh(ttl: _coverArtTtl)) {
@@ -216,35 +240,35 @@ class CoverArtRepository with WidgetsBindingObserver {
       _memoryCache[fileName] = legacyEntry;
       return legacyEntry;
     }
-    
+
     // Clean up stale entries
     if (memoryEntry != null) _evictMemoryEntry(fileName);
     if (legacyEntry != null) _evictStaleEntry(fileName);
-    
+
     return null;
   }
 
   /// Removes a stale entry from memory cache.
-  void _evictMemoryEntry(String fileName) {
+  void _evictMemoryEntry(final String fileName) {
     _memoryCache.remove(fileName);
     _entryFutures.remove(fileName);
-    _providerCache.removeWhere((key, _) => key.fileName == fileName);
+    _providerCache.removeWhere((final key, _) => key.fileName == fileName);
     _dominantColorFutures.remove(fileName);
   }
 
   /// Removes a stale entry from all in-memory caches for [fileName].
-  void _evictStaleEntry(String fileName) {
+  void _evictStaleEntry(final String fileName) {
     _entries.remove(fileName);
     _entryFutures.remove(fileName);
-    _providerCache.removeWhere((key, _) => key.fileName == fileName);
+    _providerCache.removeWhere((final key, _) => key.fileName == fileName);
     _dominantColorFutures.remove(fileName);
     _memoryCache.remove(fileName);
   }
 
   ImageProvider<Object>? getCachedProvider(
-    String fileName, {
-    int? cacheWidth,
-    int? cacheHeight,
+    final String fileName, {
+    final int? cacheWidth,
+    final int? cacheHeight,
   }) {
     final entry = getCachedEntry(fileName);
     if (entry == null || !entry.hasCover) {
@@ -314,7 +338,7 @@ class CoverArtRepository with WidgetsBindingObserver {
     return provider;
   }
 
-  Future<CoverArtEntry> resolveEntry(Song song) {
+  Future<CoverArtEntry> resolveEntry(final Song song) {
     final existing = _entryFutures[song.fileName];
     if (existing != null) return existing;
 
@@ -332,8 +356,8 @@ class CoverArtRepository with WidgetsBindingObserver {
   /// 1. Stale async results clobbering a newer entry after invalidate/TTL.
   /// 2. A failed future being cached forever (poisoned future).
   Future<CoverArtEntry> _resolveEntry(
-    Song song,
-    bool Function() isCurrent,
+    final Song song,
+    final bool Function() isCurrent,
   ) async {
     try {
       String imagePath;
@@ -347,7 +371,8 @@ class CoverArtRepository with WidgetsBindingObserver {
         if (resolved != null) {
           imagePath = resolved;
           exists = true;
-          tier = CoverArtCacheTier.memory; // Built-in assets are always in memory
+          tier =
+              CoverArtCacheTier.memory; // Built-in assets are always in memory
         } else {
           imagePath = _builtInCoverPath(song);
           exists = false;
@@ -379,7 +404,7 @@ class CoverArtRepository with WidgetsBindingObserver {
         // Add to appropriate cache tier
         _memoryCache[song.fileName] = entry;
         _entries[song.fileName] = entry; // Legacy compatibility
-        
+
         // Track cache tier
         if (tier == CoverArtCacheTier.disk) {
           _diskCacheIndex.add(song.fileName);
@@ -406,8 +431,8 @@ class CoverArtRepository with WidgetsBindingObserver {
   /// Fire-and-forget: loads cover bytes (from Isar disk cache or source file)
   /// and pre-populates the in-memory [ImageProvider] cache.
   Future<void> _prepopulateProviderFromDiskOrSource(
-    CoverArtEntry entry,
-    String fileName,
+    final CoverArtEntry entry,
+    final String fileName,
   ) async {
     try {
       Uint8List? bytes;
@@ -457,7 +482,7 @@ class CoverArtRepository with WidgetsBindingObserver {
         // Encode to WebP for efficient memory storage
         final webpBytes = await _encodeToWebP(bytes);
         final provider = MemoryImage(webpBytes ?? bytes);
-        
+
         final key = _CoverArtVariantKey(
           fileName: fileName,
           cacheWidth: null,
@@ -483,7 +508,7 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// Encodes image bytes to a compact format for efficient storage.
   /// Returns null if encoding fails (falls back to original format).
-  Future<Uint8List?> _encodeToWebP(Uint8List bytes) async {
+  Future<Uint8List?> _encodeToWebP(final Uint8List bytes) async {
     try {
       final image = img.decodeImage(bytes);
       if (image == null) return null;
@@ -499,23 +524,8 @@ class CoverArtRepository with WidgetsBindingObserver {
     }
   }
 
-  /// Decodes stored bytes back to standard format for display.
-  /// Returns null if decoding fails.
-  Future<Uint8List?> _decodeFromWebP(Uint8List storedBytes) async {
-    try {
-      final image = img.decodeImage(storedBytes);
-      if (image == null) return null;
-
-      final pngBytes = img.encodePng(image);
-      return Uint8List.fromList(pngBytes);
-    } catch (e) {
-      AppLogger.w('cover_art.repository', 'WebP decoding failed', error: e);
-      return null;
-    }
-  }
-
   /// Loads raw image bytes from the asset bundle or local file.
-  Future<Uint8List?> _loadCoverBytes(CoverArtEntry entry) async {
+  Future<Uint8List?> _loadCoverBytes(final CoverArtEntry entry) async {
     try {
       if (entry.isAsset) {
         final data = await rootBundle.load(entry.imagePath);
@@ -539,7 +549,10 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   /// Saves cover bytes to the SQLite disk cache, evicting oldest entries first if needed.
-  Future<void> _saveToDiskCache(String fileName, Uint8List bytes) async {
+  Future<void> _saveToDiskCache(
+    final String fileName,
+    final Uint8List bytes,
+  ) async {
     final db = _databaseService;
     if (db == null) return;
     try {
@@ -636,18 +649,21 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   /// Invalidate cache for a single song (e.g. after cover art is written to disk)
-  void invalidateEntry(Song song) {
+  void invalidateEntry(final Song song) {
     _entryFutures.remove(song.fileName);
     _entries.remove(song.fileName);
+    // Also drop the memory cache — without this, getCachedEntry() keeps
+    // returning the STALE cover for up to the TTL (1 hour) after a rewrite.
+    _memoryCache.remove(song.fileName);
     // Also remove all provider variants for this song
-    _providerCache.removeWhere((key, _) => key.fileName == song.fileName);
+    _providerCache.removeWhere((final key, _) => key.fileName == song.fileName);
     _dominantColorFutures.remove(song.fileName);
     // Also remove from disk cache
     _removeFromDiskCache(song.fileName);
   }
 
   /// Removes a single entry from the disk cache.
-  Future<void> _removeFromDiskCache(String fileName) async {
+  Future<void> _removeFromDiskCache(final String fileName) async {
     final db = _databaseService;
     if (db == null) return;
     try {
@@ -666,9 +682,9 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   Future<Color?> resolveDominantColor(
-    Song song, {
-    int paletteWidth = 192,
-    int paletteHeight = 192,
+    final Song song, {
+    final int paletteWidth = 192,
+    final int paletteHeight = 192,
   }) {
     if (_dominantColorFutures.containsKey(song.fileName)) {
       // Move to end
@@ -687,13 +703,23 @@ class CoverArtRepository with WidgetsBindingObserver {
       paletteHeight,
     );
     _dominantColorFutures[song.fileName] = future;
+    // Don't cache FAILED futures forever — otherwise a transient decode
+    // error poisons the color for the rest of the session (hot songs never
+    // get recomputed). Remove on error so the next call retries.
+    future.whenComplete(() {
+      if (_dominantColorFutures[song.fileName] == future) {
+        future.then<void>((_) {}).catchError((_) {
+          _dominantColorFutures.remove(song.fileName);
+        });
+      }
+    });
     return future;
   }
 
   Future<Color?> _resolveDominantColorAsync(
-    Song song,
-    int paletteWidth,
-    int paletteHeight,
+    final Song song,
+    final int paletteWidth,
+    final int paletteHeight,
   ) async {
     // 1. Check persistent cache first — instant return (~0ms)
     final cachedColor = _settingsManager?.getSongColor(song.fileName);
@@ -738,7 +764,7 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// Maps built-in song source path to cover art asset path.
   /// e.g. assets/song/mat_nham_mat_mo/song.mp3 → assets/pic/mat_nham_mat_mo/song.png
-  static String _builtInCoverPath(Song song) {
+  static String _builtInCoverPath(final Song song) {
     final path = song.sourcePath;
     // Replace the audio folder prefix and extension
     final picPath = path
@@ -749,10 +775,10 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// Attempts to find a cover art asset path for a built-in song by checking various locations.
   /// Returns the first path that successfully loads, or null if none are found.
-  static Future<String?> findCoverAssetPath(Song song) async {
+  static Future<String?> findCoverAssetPath(final Song song) async {
     if (!song.isBuiltIn) return null;
 
-    final path = song.sourcePath.replaceAll('\\', '/');
+    final path = song.sourcePath.replaceAll(r'\', '/');
     final lastSlash = path.lastIndexOf('/');
     final parentDir = lastSlash != -1 ? path.substring(0, lastSlash) : '';
     final lastDot = path.lastIndexOf('.');
@@ -809,12 +835,12 @@ class CoverArtRepository with WidgetsBindingObserver {
 
   /// various locations. Returns the first path that exists, or null if none
   /// are found.
-  static Future<String?> findLocalCoverPath(Song song) async {
+  static Future<String?> findLocalCoverPath(final Song song) async {
     if (song.isBuiltIn) return null;
 
     final path = song.sourcePath;
     final file = File(path);
-    final parentDir = file.parent.path.replaceAll('\\', '/');
+    final parentDir = file.parent.path.replaceAll(r'\', '/');
     final fileName = file.path.split(RegExp(r'[/\\]')).last;
     final lastDot = fileName.lastIndexOf('.');
     final fileNameWithoutExt = lastDot != -1
@@ -851,25 +877,28 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   // ─── Background Indexing via Isolate ──────────────────────────────────────
-  
+
   /// Starts background indexing of cover art for all songs in the library.
   /// Uses an Isolate to avoid blocking the main thread.
-  /// 
+  ///
   /// [onProgress] callback receives (processed, total) for progress updates.
   Future<void> startBackgroundIndexing({
-    void Function(int processed, int total)? onProgress,
-    List<Song>? songs,
+    final void Function(int processed, int total)? onProgress,
+    final List<Song>? songs,
   }) async {
     if (_indexingInProgress) return;
     _indexingInProgress = true;
-    
+
     try {
       // If songs not provided, fetch from database
       final songsToIndex = songs ?? await _databaseService?.getAllSongs() ?? [];
       final total = songsToIndex.length;
-      
-      AppLogger.i('cover_art.repository', 'Starting background indexing for $total songs');
-      
+
+      AppLogger.i(
+        'cover_art.repository',
+        'Starting background indexing for $total songs',
+      );
+
       // Spawn isolate for heavy lifting
       final receivePort = ReceivePort();
       await Isolate.spawn(
@@ -879,34 +908,46 @@ class CoverArtRepository with WidgetsBindingObserver {
           sendPort: receivePort.sendPort,
         ),
       );
-      
+
       // Listen for progress updates
       await for (final message in receivePort) {
         if (message is _IndexProgress) {
           onProgress?.call(message.processed, message.total);
         } else if (message is _IndexComplete) {
-          AppLogger.i('cover_art.repository', 'Background indexing complete: ${message.results.length} covers indexed');
+          AppLogger.i(
+            'cover_art.repository',
+            'Background indexing complete: ${message.results.length} covers indexed',
+          );
           _indexingInProgress = false;
           receivePort.close();
           break;
         } else if (message is _IndexError) {
-          AppLogger.e('cover_art.repository', 'Background indexing error', error: message.error);
+          AppLogger.e(
+            'cover_art.repository',
+            'Background indexing error',
+            error: message.error,
+          );
           _indexingInProgress = false;
           receivePort.close();
           break;
         }
       }
     } catch (e, stack) {
-      AppLogger.e('cover_art.repository', 'Background indexing failed to start', error: e, stack: stack);
+      AppLogger.e(
+        'cover_art.repository',
+        'Background indexing failed to start',
+        error: e,
+        stack: stack,
+      );
       _indexingInProgress = false;
     }
   }
-  
+
   bool _indexingInProgress = false;
-  
+
   /// Checks if background indexing is currently in progress.
   bool get isIndexingInProgress => _indexingInProgress;
-  
+
   /// Cancels any ongoing background indexing.
   void cancelBackgroundIndexing() {
     // The isolate will clean up when it receives the cancel message
@@ -919,7 +960,7 @@ class CoverArtRepository with WidgetsBindingObserver {
 class _BackgroundIndexMessage {
   final List<Song> songs;
   final SendPort sendPort;
-  
+
   _BackgroundIndexMessage({required this.songs, required this.sendPort});
 }
 
@@ -927,21 +968,21 @@ class _BackgroundIndexMessage {
 class _IndexProgress {
   final int processed;
   final int total;
-  
+
   _IndexProgress({required this.processed, required this.total});
 }
 
 /// Completion message from background isolate.
 class _IndexComplete {
   final List<_IndexResult> results;
-  
+
   _IndexComplete({required this.results});
 }
 
 /// Error message from background isolate.
 class _IndexError {
   final String error;
-  
+
   _IndexError({required this.error});
 }
 
@@ -950,7 +991,7 @@ class _IndexResult {
   final String fileName;
   final bool success;
   final CoverArtCacheTier tier;
-  
+
   _IndexResult({
     required this.fileName,
     required this.success,
@@ -960,54 +1001,62 @@ class _IndexResult {
 
 /// Background isolate worker function.
 /// This runs in a separate isolate to avoid blocking the main thread.
-void _backgroundIndexWorker(_BackgroundIndexMessage message) async {
+Future<void> _backgroundIndexWorker(
+  final _BackgroundIndexMessage message,
+) async {
   final sendPort = message.sendPort;
   final songs = message.songs;
   final total = songs.length;
   final results = <_IndexResult>[];
-  
+
   try {
     for (int i = 0; i < total; i++) {
       final song = songs[i];
-      
+
       // Check if cover already exists in cache
       // This is a simplified check - in reality you'd check disk/memory cache
       try {
         // Simulate cover art resolution
         String? coverPath;
         CoverArtCacheTier tier = CoverArtCacheTier.memory;
-        
+
         if (song.isBuiltIn) {
           coverPath = await _findCoverAssetPathInIsolate(song);
           tier = CoverArtCacheTier.memory;
         } else {
           coverPath = await _findLocalCoverPathInIsolate(song);
-          tier = coverPath != null ? CoverArtCacheTier.disk : CoverArtCacheTier.network;
+          tier = coverPath != null
+              ? CoverArtCacheTier.disk
+              : CoverArtCacheTier.network;
         }
-        
+
         final success = coverPath != null;
-        results.add(_IndexResult(
-          fileName: song.fileName,
-          success: success,
-          tier: success ? tier : CoverArtCacheTier.network,
-        ));
+        results.add(
+          _IndexResult(
+            fileName: song.fileName,
+            success: success,
+            tier: success ? tier : CoverArtCacheTier.network,
+          ),
+        );
       } catch (e) {
-        results.add(_IndexResult(
-          fileName: song.fileName,
-          success: false,
-          tier: CoverArtCacheTier.network,
-        ));
+        results.add(
+          _IndexResult(
+            fileName: song.fileName,
+            success: false,
+            tier: CoverArtCacheTier.network,
+          ),
+        );
       }
-      
+
       // Send progress update every 10 songs
       if (i % 10 == 0 || i == total - 1) {
         sendPort.send(_IndexProgress(processed: i + 1, total: total));
       }
-      
+
       // Yield to allow other isolates to run
       await Future.delayed(Duration.zero);
     }
-    
+
     sendPort.send(_IndexComplete(results: results));
   } catch (e) {
     sendPort.send(_IndexError(error: e.toString()));
@@ -1016,19 +1065,19 @@ void _backgroundIndexWorker(_BackgroundIndexMessage message) async {
 
 /// Finds cover asset path in isolate (simplified - no rootBundle access).
 /// In a real implementation, you'd pass asset paths or use a different approach.
-Future<String?> _findCoverAssetPathInIsolate(Song song) async {
+Future<String?> _findCoverAssetPathInIsolate(final Song song) async {
   // This is a placeholder - in isolate you can't access rootBundle directly
   // You'd need to pre-compute paths or pass them in the message
   return null;
 }
 
 /// Finds local cover path in isolate.
-Future<String?> _findLocalCoverPathInIsolate(Song song) async {
+Future<String?> _findLocalCoverPathInIsolate(final Song song) async {
   if (song.isBuiltIn) return null;
 
   final path = song.sourcePath;
   final file = File(path);
-  final parentDir = file.parent.path.replaceAll('\\', '/');
+  final parentDir = file.parent.path.replaceAll(r'\', '/');
   final fileName = file.path.split(RegExp(r'[/\\]')).last;
   final lastDot = fileName.lastIndexOf('.');
   final fileNameWithoutExt = lastDot != -1
@@ -1072,12 +1121,11 @@ class _CoverArtVariantKey {
   final int? cacheHeight;
 
   @override
-  bool operator ==(Object other) {
-    return other is _CoverArtVariantKey &&
-        other.fileName == fileName &&
-        other.cacheWidth == cacheWidth &&
-        other.cacheHeight == cacheHeight;
-  }
+  bool operator ==(final Object other) =>
+      other is _CoverArtVariantKey &&
+      other.fileName == fileName &&
+      other.cacheWidth == cacheWidth &&
+      other.cacheHeight == cacheHeight;
 
   @override
   int get hashCode => Object.hash(fileName, cacheWidth, cacheHeight);

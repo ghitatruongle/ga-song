@@ -3,8 +3,10 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
   audiotags
   flutter_acrylic
+  flutter_inappwebview_windows
   hotkey_manager_windows
   screen_retriever_windows
   sqlite3_flutter_libs

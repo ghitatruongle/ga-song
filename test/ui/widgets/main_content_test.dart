@@ -45,11 +45,11 @@ void main() {
   });
 
   Future<void> pumpMainContent(
-    WidgetTester tester, {
-    bool isLoading = false,
-    String? loadingError,
-    List<Song> songs = const [],
-    VoidCallback? onRefresh,
+    final WidgetTester tester, {
+    final bool isLoading = false,
+    final String? loadingError,
+    final List<Song> songs = const [],
+    final VoidCallback? onRefresh,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -88,13 +88,15 @@ void main() {
   }
 
   group('MainContentWidget', () {
-    testWidgets('shows a progress indicator while loading', (tester) async {
+    testWidgets('shows a progress indicator while loading', (
+      final tester,
+    ) async {
       await pumpMainContent(tester, isLoading: true);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('shows error state with retry that calls onRefresh', (
-      tester,
+      final tester,
     ) async {
       var refreshCount = 0;
       await pumpMainContent(
@@ -115,12 +117,16 @@ void main() {
       expect(refreshCount, 1);
     });
 
-    testWidgets('shows empty state when there are no songs', (tester) async {
+    testWidgets('shows empty state when there are no songs', (
+      final tester,
+    ) async {
       await pumpMainContent(tester);
       expect(find.byType(EmptyLibraryState), findsOneWidget);
     });
 
-    testWidgets('renders song list when songs are provided', (tester) async {
+    testWidgets('renders song list when songs are provided', (
+      final tester,
+    ) async {
       await pumpMainContent(tester, songs: createTestSongList(2));
       await tester.pump();
 

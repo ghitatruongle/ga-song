@@ -4,17 +4,12 @@
 /// - Recent playlists
 /// - Pinned songs/playlists
 /// - Common tasks (Play, Pause, Next, Previous, Open Settings)
+library;
 
 import 'dart:async';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 
 import '../logging/app_logger.dart';
 import '../platform_capabilities.dart';
-import '../settings_manager.dart';
-import '../services/db_service_wrapper.dart';
 import '../../models/playlist.dart';
 import '../../models/song.dart';
 
@@ -36,65 +31,46 @@ class JumpListItem {
     this.arguments = const {},
   });
 
-  factory JumpListItem.playlist(Playlist playlist, {bool pinned = false}) {
-    return JumpListItem(
-      id: 'playlist_${playlist.id}',
-      title: playlist.name,
-      subtitle: 'Playlist (${playlist.songIds.length} songs)',
-      type: pinned ? JumpListItemType.pinned : JumpListItemType.recent,
-      arguments: {
-        'action': 'open_playlist',
-        'playlist_id': playlist.id,
-      },
-    );
-  }
+  factory JumpListItem.playlist(
+    final Playlist playlist, {
+    final bool pinned = false,
+  }) => JumpListItem(
+    id: 'playlist_${playlist.id}',
+    title: playlist.name,
+    subtitle: 'Playlist (${playlist.songIds.length} songs)',
+    type: pinned ? JumpListItemType.pinned : JumpListItemType.recent,
+    arguments: {'action': 'open_playlist', 'playlist_id': playlist.id},
+  );
 
-  factory JumpListItem.song(Song song, {bool pinned = false}) {
-    return JumpListItem(
-      id: 'song_${song.id}',
-      title: song.name,
-      subtitle: song.artist ?? 'Unknown Artist',
-      type: pinned ? JumpListItemType.pinned : JumpListItemType.recent,
-      arguments: {
-        'action': 'play_song',
-        'song_id': song.id,
-      },
-    );
-  }
+  factory JumpListItem.song(final Song song, {final bool pinned = false}) =>
+      JumpListItem(
+        id: 'song_${song.id}',
+        title: song.name,
+        subtitle: song.artist ?? 'Unknown Artist',
+        type: pinned ? JumpListItemType.pinned : JumpListItemType.recent,
+        arguments: {'action': 'play_song', 'song_id': song.id},
+      );
 
   factory JumpListItem.task({
-    required String id,
-    required String title,
-    required String action,
-    String? iconPath,
-    Map<String, dynamic>? arguments,
-  }) {
-    return JumpListItem(
-      id: 'task_$id',
-      title: title,
-      type: JumpListItemType.task,
-      iconPath: iconPath,
-      arguments: {'action': action, ...?arguments},
-    );
-  }
+    required final String id,
+    required final String title,
+    required final String action,
+    final String? iconPath,
+    final Map<String, dynamic>? arguments,
+  }) => JumpListItem(
+    id: 'task_$id',
+    title: title,
+    type: JumpListItemType.task,
+    iconPath: iconPath,
+    arguments: {'action': action, ...?arguments},
+  );
 }
 
-enum JumpListItemType {
-  recent,
-  pinned,
-  task,
-}
+enum JumpListItemType { recent, pinned, task }
 
 /// Windows Jump List Service
 class JumpListService {
-  JumpListService({
-    SettingsManager? settingsManager,
-    DatabaseServiceWrapper? databaseService,
-  }) : _settingsManager = settingsManager,
-       _databaseService = databaseService;
-
-  final SettingsManager? _settingsManager;
-  final DatabaseServiceWrapper? _databaseService;
+  JumpListService();
 
   static const int _maxRecentItems = 10;
   static const int _maxPinnedItems = 5;
@@ -109,14 +85,21 @@ class JumpListService {
   /// Initialize the Jump List service
   Future<void> init() async {
     if (_initialized || !PlatformCapabilities.instance.isWindows) return;
-    _initialized = true;
 
     try {
       await _loadFromPrefs();
       await _rebuildJumpList();
+      // Mark initialized only AFTER success — a failed init can be retried
+      // on the next call (previously it was permanently stuck).
+      _initialized = true;
       AppLogger.i('jump_list.service', 'Jump List initialized');
     } catch (e, stack) {
-      AppLogger.e('jump_list.service', 'Failed to initialize Jump List', error: e, stack: stack);
+      AppLogger.e(
+        'jump_list.service',
+        'Failed to initialize Jump List',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -127,15 +110,13 @@ class JumpListService {
   }
 
   /// Save items to SharedPreferences
-  Future<void> _saveToPrefs() async {
-    // This would be implemented with SharedPreferences
-  }
-
   /// Add a playlist to recent items
-  Future<void> addRecentPlaylist(Playlist playlist) async {
+  Future<void> addRecentPlaylist(final Playlist playlist) async {
     if (!PlatformCapabilities.instance.isWindows) return;
 
-    _recentItems.removeWhere((item) => item.id == 'playlist_${playlist.id}');
+    _recentItems.removeWhere(
+      (final item) => item.id == 'playlist_${playlist.id}',
+    );
     _recentItems.insert(0, JumpListItem.playlist(playlist));
 
     if (_recentItems.length > _maxRecentItems) {
@@ -146,10 +127,10 @@ class JumpListService {
   }
 
   /// Add a song to recent items
-  Future<void> addRecentSong(Song song) async {
+  Future<void> addRecentSong(final Song song) async {
     if (!PlatformCapabilities.instance.isWindows) return;
 
-    _recentItems.removeWhere((item) => item.id == 'song_${song.id}');
+    _recentItems.removeWhere((final item) => item.id == 'song_${song.id}');
     _recentItems.insert(0, JumpListItem.song(song));
 
     if (_recentItems.length > _maxRecentItems) {
@@ -160,10 +141,12 @@ class JumpListService {
   }
 
   /// Pin a playlist
-  Future<void> pinPlaylist(Playlist playlist) async {
+  Future<void> pinPlaylist(final Playlist playlist) async {
     if (!PlatformCapabilities.instance.isWindows) return;
 
-    _pinnedItems.removeWhere((item) => item.id == 'playlist_${playlist.id}');
+    _pinnedItems.removeWhere(
+      (final item) => item.id == 'playlist_${playlist.id}',
+    );
     _pinnedItems.add(JumpListItem.playlist(playlist, pinned: true));
 
     if (_pinnedItems.length > _maxPinnedItems) {
@@ -174,10 +157,10 @@ class JumpListService {
   }
 
   /// Pin a song
-  Future<void> pinSong(Song song) async {
+  Future<void> pinSong(final Song song) async {
     if (!PlatformCapabilities.instance.isWindows) return;
 
-    _pinnedItems.removeWhere((item) => item.id == 'song_${song.id}');
+    _pinnedItems.removeWhere((final item) => item.id == 'song_${song.id}');
     _pinnedItems.add(JumpListItem.song(song, pinned: true));
 
     if (_pinnedItems.length > _maxPinnedItems) {
@@ -188,10 +171,10 @@ class JumpListService {
   }
 
   /// Unpin an item
-  Future<void> unpinItem(String itemId) async {
+  Future<void> unpinItem(final String itemId) async {
     if (!PlatformCapabilities.instance.isWindows) return;
 
-    _pinnedItems.removeWhere((item) => item.id == itemId);
+    _pinnedItems.removeWhere((final item) => item.id == itemId);
     await _rebuildJumpList();
   }
 
@@ -226,7 +209,12 @@ class JumpListService {
       // Using Dart FFI or a platform channel
       await _updateWindowsJumpList();
     } catch (e, stack) {
-      AppLogger.w('jump_list.service', 'Failed to rebuild Jump List', error: e, stack: stack);
+      AppLogger.w(
+        'jump_list.service',
+        'Failed to rebuild Jump List',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -234,9 +222,9 @@ class JumpListService {
   Future<void> _updateWindowsJumpList() async {
     // This would use a platform channel or Dart FFI to call Windows APIs
     // For now, we'll use a platform channel approach
-    
+
     final items = <Map<String, dynamic>>[];
-    
+
     // Add pinned items first
     for (final item in _pinnedItems) {
       items.add({
@@ -248,7 +236,7 @@ class JumpListService {
         'arguments': item.arguments,
       });
     }
-    
+
     // Add recent items
     for (final item in _recentItems) {
       if (item.type != JumpListItemType.pinned) {
@@ -298,11 +286,16 @@ class JumpListService {
     ]);
 
     // Send to platform channel (would be implemented in platform-specific code)
-    AppLogger.d('jump_list.service', 'Jump List items prepared: ${items.length} items');
+    AppLogger.d(
+      'jump_list.service',
+      'Jump List items prepared: ${items.length} items',
+    );
   }
 
   /// Handle a Jump List action
-  Future<void> handleJumpListAction(Map<String, dynamic> arguments) async {
+  Future<void> handleJumpListAction(
+    final Map<String, dynamic> arguments,
+  ) async {
     final action = arguments['action'] as String?;
     if (action == null) return;
 

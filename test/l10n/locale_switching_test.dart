@@ -24,31 +24,35 @@ void main() {
   });
 
   group('MaterialApp locale wiring', () {
-    Widget buildApp(Locale locale, void Function(BuildContext) onBuild) {
-      return MaterialApp(
-        locale: locale,
-        supportedLocales: const [Locale('vi'), Locale('en')],
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: Builder(
-          builder: (context) {
-            onBuild(context);
-            return const SizedBox();
-          },
-        ),
-      );
-    }
+    Widget buildApp(
+      final Locale locale,
+      final void Function(BuildContext) onBuild,
+    ) => MaterialApp(
+      locale: locale,
+      supportedLocales: const [Locale('vi'), Locale('en')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: Builder(
+        builder: (final context) {
+          onBuild(context);
+          return const SizedBox();
+        },
+      ),
+    );
 
     testWidgets('AppLocalizations.of resolves English under en locale', (
-      tester,
+      final tester,
     ) async {
       late AppLocalizations l10n;
       await tester.pumpWidget(
-        buildApp(const Locale('en'), (c) => l10n = AppLocalizations.of(c)!),
+        buildApp(
+          const Locale('en'),
+          (final c) => l10n = AppLocalizations.of(c)!,
+        ),
       );
       await tester.pumpAndSettle();
       expect(l10n.localeName, 'en');
@@ -56,11 +60,14 @@ void main() {
     });
 
     testWidgets('AppLocalizations.of resolves Vietnamese under vi locale', (
-      tester,
+      final tester,
     ) async {
       late AppLocalizations l10n;
       await tester.pumpWidget(
-        buildApp(const Locale('vi'), (c) => l10n = AppLocalizations.of(c)!),
+        buildApp(
+          const Locale('vi'),
+          (final c) => l10n = AppLocalizations.of(c)!,
+        ),
       );
       await tester.pumpAndSettle();
       expect(l10n.localeName, 'vi');

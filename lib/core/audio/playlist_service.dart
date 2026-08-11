@@ -65,7 +65,7 @@ class PlaylistService {
     this._engineService,
     this._effectService,
     this._databaseService, [
-    SettingsManager? settingsManager,
+    final SettingsManager? settingsManager,
   ]) : _settingsManager = settingsManager ?? SettingsManager() {
     _songCompletedSub = _engineService.onSongCompleted.listen((_) {
       _onSongCompleted();
@@ -84,7 +84,10 @@ class PlaylistService {
 
   // ─── Setup ─────────────────────────────────────────────────────────────────
 
-  Future<void> setPlaylist(List<Song> songs, {int startIndex = 0}) async {
+  Future<void> setPlaylist(
+    final List<Song> songs, {
+    final int startIndex = 0,
+  }) async {
     await _engineService.stop();
 
     _playlist = songs;
@@ -107,7 +110,7 @@ class PlaylistService {
 
   /// Updates the playlist order without stopping the current playback.
   /// Used when the user changes sort mode while music is playing.
-  void reorderPlaylist(List<Song> songs) {
+  void reorderPlaylist(final List<Song> songs) {
     final currentFileName = currentSong?.fileName;
     _playlist = songs;
 
@@ -118,7 +121,9 @@ class PlaylistService {
 
     // Relocate current song in the new order
     if (currentFileName != null) {
-      final newIndex = songs.indexWhere((s) => s.fileName == currentFileName);
+      final newIndex = songs.indexWhere(
+        (final s) => s.fileName == currentFileName,
+      );
       if (newIndex >= 0) {
         _currentIndex = newIndex;
         currentIndexNotifier.value = _currentIndex;
@@ -129,16 +134,14 @@ class PlaylistService {
   }
 
   /// Reorders queue by moving song from oldIndex to newIndex.
-  /// Used for drag-drop reordering in the queue management UI.
-  Future<void> reorderQueue(int oldIndex, int newIndex) async {
+  /// Callers must pass FINAL indices (post-removal semantics, the way
+  /// ReorderableListView.onReorder already compensates). We do NOT adjust
+  /// newIndex here — doing so caused a double-offset when callers also
+  /// applied the legacy `newIndex--` compensation.
+  Future<void> reorderQueue(final int oldIndex, final int newIndex) async {
     if (oldIndex < 0 || oldIndex >= _playlist.length) return;
     if (newIndex < 0 || newIndex >= _playlist.length) return;
     if (oldIndex == newIndex) return;
-
-    // Adjust for removal shifting
-    if (oldIndex < newIndex) {
-      newIndex--;
-    }
 
     final song = _playlist.removeAt(oldIndex);
     _playlist.insert(newIndex, song);
@@ -155,7 +158,7 @@ class PlaylistService {
 
     // Update shuffle history indices
     for (int i = 0; i < _shuffleHistory.length; i++) {
-      int histIndex = _shuffleHistory[i];
+      final int histIndex = _shuffleHistory[i];
       if (histIndex == oldIndex) {
         _shuffleHistory[i] = newIndex;
       } else if (oldIndex < newIndex) {
@@ -174,11 +177,13 @@ class PlaylistService {
       if (_plannedShuffleIndex == oldIndex) {
         _plannedShuffleIndex = newIndex;
       } else if (oldIndex < newIndex) {
-        if (_plannedShuffleIndex! > oldIndex && _plannedShuffleIndex! <= newIndex) {
+        if (_plannedShuffleIndex! > oldIndex &&
+            _plannedShuffleIndex! <= newIndex) {
           _plannedShuffleIndex = _plannedShuffleIndex! - 1;
         }
       } else if (oldIndex > newIndex) {
-        if (_plannedShuffleIndex! >= newIndex && _plannedShuffleIndex! < oldIndex) {
+        if (_plannedShuffleIndex! >= newIndex &&
+            _plannedShuffleIndex! < oldIndex) {
           _plannedShuffleIndex = _plannedShuffleIndex! + 1;
         }
       }
@@ -224,14 +229,14 @@ class PlaylistService {
 
   /// Listens for the engine's duration and writes it to the database the
   /// first time a non-zero value is reported.  Self-cancels after one write.
-  void _persistDurationWhenReady(Song song) {
+  void _persistDurationWhenReady(final Song song) {
     void listener() {
       final dur = _engineService.durationNotifier.value;
       if (dur.inMilliseconds > 0) {
         _engineService.durationNotifier.removeListener(listener);
         // Fire-and-forget: don't block playback for a DB write.
         final updated = song.copyWith(durationMs: dur.inMilliseconds);
-        _databaseService.putSong(updated).catchError((Object e) {
+        _databaseService.putSong(updated).catchError((final Object e) {
           AppLogger.w(
             'audio.playlist_service',
             'Failed to persist duration for ${song.name}',
@@ -244,7 +249,10 @@ class PlaylistService {
     _engineService.durationNotifier.addListener(listener);
   }
 
-  Future<void> playSongAt(int index, {bool isHistoryNavigation = false}) async {
+  Future<void> playSongAt(
+    final int index, {
+    final bool isHistoryNavigation = false,
+  }) async {
     if (index < 0 || index >= _playlist.length) return;
     _currentIndex = index;
     currentIndexNotifier.value = _currentIndex;
@@ -255,14 +263,14 @@ class PlaylistService {
   }
 
   /// Adds a song to the end of the queue.
-  Future<void> add(Song song) async {
+  Future<void> add(final Song song) async {
     _playlist.add(song);
     currentIndexNotifier.value = _currentIndex;
     unawaited(_prepareCacheWindow());
   }
 
   /// Removes a song at [index] from the queue.
-  Future<void> remove(int index) async {
+  Future<void> remove(final int index) async {
     if (index < 0 || index >= _playlist.length) return;
 
     final wasCurrent = index == _currentIndex;
@@ -296,8 +304,8 @@ class PlaylistService {
     _historyOffset = 0;
   }
 
-  Future<void> playSongByFileName(String fileName) async {
-    final index = _playlist.indexWhere((s) => s.fileName == fileName);
+  Future<void> playSongByFileName(final String fileName) async {
+    final index = _playlist.indexWhere((final s) => s.fileName == fileName);
     if (index != -1) {
       await playSongAt(index);
     }
@@ -392,7 +400,7 @@ class PlaylistService {
     }
   }
 
-  Future<void> _performCrossfade(int nextIndex) async {
+  Future<void> _performCrossfade(final int nextIndex) async {
     if (nextIndex < 0 || nextIndex >= _playlist.length) return;
 
     final nextSong = _playlist[nextIndex];
@@ -418,7 +426,7 @@ class PlaylistService {
 
   // ─── Play Mode & Shuffle ───────────────────────────────────────────────────
 
-  void setPlayMode(PlayMode mode) {
+  void setPlayMode(final PlayMode mode) {
     _playMode = mode;
     if (mode == PlayMode.shuffle) {
       _shuffleHistory.clear();
@@ -481,7 +489,7 @@ class PlaylistService {
     }
   }
 
-  void _markShufflePlayback(int index) {
+  void _markShufflePlayback(final int index) {
     if (_playMode != PlayMode.shuffle || index < 0) return;
     // C2 fix: Bounds-check before adding to history
     if (index >= _playlist.length) return;
@@ -497,7 +505,7 @@ class PlaylistService {
 
   /// C2 fix: Remove stale indices that are out of bounds after playlist change.
   void _sanitizeShuffleHistory() {
-    _shuffleHistory.removeWhere((i) => i < 0 || i >= _playlist.length);
+    _shuffleHistory.removeWhere((final i) => i < 0 || i >= _playlist.length);
     if (_plannedShuffleIndex != null &&
         (_plannedShuffleIndex! < 0 ||
             _plannedShuffleIndex! >= _playlist.length)) {
@@ -520,14 +528,19 @@ class PlaylistService {
     final genreCounts = <String, int>{};
     for (final song in _playlist) {
       if (song.genre != null && song.playCount > 0) {
-        genreCounts[song.genre!] = (genreCounts[song.genre!] ?? 0) + song.playCount;
+        genreCounts[song.genre!] =
+            (genreCounts[song.genre!] ?? 0) + song.playCount;
       }
     }
-    
+
     if (genreCounts.isEmpty) return {};
-    
-    final maxCount = genreCounts.values.reduce((a, b) => a > b ? a : b);
-    return genreCounts.map((genre, count) => MapEntry(genre, count / maxCount));
+
+    final maxCount = genreCounts.values.reduce(
+      (final a, final b) => a > b ? a : b,
+    );
+    return genreCounts.map(
+      (final genre, final count) => MapEntry(genre, count / maxCount),
+    );
   }
 
   // ─── Caching ───────────────────────────────────────────────────────────────
@@ -551,7 +564,7 @@ class PlaylistService {
           plannedNextIndex: plannedIndex,
         );
         final keepPaths = keepIndices
-            .map((i) => _playlist[i].assetPath)
+            .map((final i) => _playlist[i].assetPath)
             .toSet();
         await _engineService.evictSources(keepPaths);
         return;
@@ -561,7 +574,9 @@ class PlaylistService {
         currentIndex: _currentIndex,
         playlistLength: _playlist.length,
       );
-      final keepPaths = keepIndices.map((i) => _playlist[i].assetPath).toSet();
+      final keepPaths = keepIndices
+          .map((final i) => _playlist[i].assetPath)
+          .toSet();
 
       // Concurrency-limited preload: sequential on Android (1), parallel on desktop (3)
       final concurrency = PlatformCapabilities.instance.preloadConcurrency;
@@ -570,7 +585,7 @@ class PlaylistService {
         // Fast path: parallel preload (desktop)
         await Future.wait(
           indicesToPreload.map(
-            (i) => _engineService.preload(_playlist[i].assetPath),
+            (final i) => _engineService.preload(_playlist[i].assetPath),
           ),
         );
       } else {
@@ -587,25 +602,28 @@ class PlaylistService {
 
   // ─── Sleep Timer ───────────────────────────────────────────────────────────
 
-  void startSleepTimer(Duration duration) {
+  void startSleepTimer(final Duration duration) {
     cancelSleepTimer();
-    
-    final fadeOutEnabled = _settingsManager.sleepTimerFadeOutEnabledNotifier.value;
-    final fadeOutDuration = Duration(seconds: _settingsManager.sleepTimerFadeOutDurationNotifier.value);
-    
+
+    final fadeOutEnabled =
+        _settingsManager.sleepTimerFadeOutEnabledNotifier.value;
+    final fadeOutDuration = Duration(
+      seconds: _settingsManager.sleepTimerFadeOutDurationNotifier.value,
+    );
+
     sleepTimerRemainingNotifier.value = duration;
-    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (final timer) {
       final remaining = sleepTimerRemainingNotifier.value;
       if (remaining == null || remaining.inSeconds <= 1) {
         cancelSleepTimer();
-        
+
         // Handle fade out before pause
         if (fadeOutEnabled && !_isFadingOut) {
           _startFadeOut(fadeOutDuration);
         } else {
           _engineService.pause();
         }
-        
+
         sleepTimerRemainingNotifier.value = null;
       } else {
         sleepTimerRemainingNotifier.value =
@@ -615,23 +633,26 @@ class PlaylistService {
   }
 
   /// Starts fade out over the specified duration, then pauses.
-  void _startFadeOut(Duration fadeOutDuration) {
+  void _startFadeOut(final Duration fadeOutDuration) {
     if (_isFadingOut) return;
     _isFadingOut = true;
-    
+
     final currentVolume = _engineService.volumeNotifier.value;
     final steps = fadeOutDuration.inMilliseconds ~/ 50; // 50ms steps
-    double volumeStep = currentVolume / steps;
-    
-    _fadeOutTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+    final double volumeStep = currentVolume / steps;
+
+    _fadeOutTimer = Timer.periodic(const Duration(milliseconds: 50), (
+      final timer,
+    ) {
       if (!_isFadingOut) {
         timer.cancel();
         return;
       }
-      
-      final newVolume = (_engineService.volumeNotifier.value - volumeStep).clamp(0.0, 1.0);
+
+      final newVolume = (_engineService.volumeNotifier.value - volumeStep)
+          .clamp(0.0, 1.0);
       _engineService.setVolume(newVolume);
-      
+
       if (newVolume <= 0.01) {
         timer.cancel();
         _isFadingOut = false;
@@ -656,14 +677,15 @@ class PlaylistService {
     _sleepAtEndOfSong = false;
   }
 
-  bool get isSleepTimerActive => _sleepTimer != null || _sleepAtEndOfSong || _isFadingOut;
+  bool get isSleepTimerActive =>
+      _sleepTimer != null || _sleepAtEndOfSong || _isFadingOut;
 
   // ─── Sort Mode ─────────────────────────────────────────────────────────────
 
   SortMode get sortMode => _sortMode;
   bool get sortAscending => _sortAscending;
 
-  void setSortMode(SortMode mode) {
+  void setSortMode(final SortMode mode) {
     if (_sortMode == mode) {
       _sortAscending = !_sortAscending;
     } else {
@@ -672,9 +694,8 @@ class PlaylistService {
     }
   }
 
-  List<Song> getSortedPlaylist(List<Song> songs) {
-    return SongSortUtils.sorted(songs, _sortMode, ascending: _sortAscending);
-  }
+  List<Song> getSortedPlaylist(final List<Song> songs) =>
+      SongSortUtils.sorted(songs, _sortMode, ascending: _sortAscending);
 
   void dispose() {
     _songCompletedSub?.cancel();

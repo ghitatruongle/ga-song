@@ -85,7 +85,7 @@ void main() {
       expect(song.sourcePath, 'assets/song/my_song.mp3');
       expect(song.isBuiltIn, isTrue);
       expect(song.isFavorite, isTrue);
-      expect(song.dateAdded, DateTime(2026, 6, 1, 12, 0, 0));
+      expect(song.dateAdded, DateTime(2026, 6, 1, 12));
     });
 
     test('fromJson handles missing fields gracefully', () {
@@ -144,11 +144,10 @@ void main() {
         artist: 'Artist',
         album: 'Album',
         durationMs: 180000,
-        peakDb: -10.0,
+        peakDb: -10,
         sourcePath: 'test.mp3',
         isBuiltIn: true,
-        isFavorite: false,
-        dateAdded: DateTime(2026, 6, 1),
+        dateAdded: DateTime(2026, 6),
       );
       final json = song.toJson();
       expect(json['id'], 1);
@@ -170,7 +169,7 @@ void main() {
         artist: 'Artist',
         album: 'Album',
         durationMs: 120000,
-        peakDb: -6.0,
+        peakDb: -6,
         sourcePath: 'assets/song/roundtrip.mp3',
         isBuiltIn: true,
         isFavorite: true,

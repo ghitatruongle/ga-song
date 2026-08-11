@@ -18,6 +18,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
 
+  // v0.9.5: Enable Impeller GPU renderer on Windows for better visualizer
+  // performance and reduced CPU usage during shader rendering.
+  command_line_arguments.push_back("--enable-impeller");
+
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);

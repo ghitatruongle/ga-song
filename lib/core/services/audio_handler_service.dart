@@ -62,7 +62,7 @@ class GaSongAudioHandler extends BaseAudioHandler
           playing: state == AudioEngineState.playing,
           updatePosition: position,
           bufferedPosition: position,
-          speed: 1.0,
+          speed: 1,
         ),
       );
     } catch (e) {
@@ -70,7 +70,7 @@ class GaSongAudioHandler extends BaseAudioHandler
     }
   }
 
-  AudioProcessingState _getProcessingState(AudioEngineState state) {
+  AudioProcessingState _getProcessingState(final AudioEngineState state) {
     switch (state) {
       case AudioEngineState.idle:
       case AudioEngineState.stopped:
@@ -118,6 +118,10 @@ class GaSongAudioHandler extends BaseAudioHandler
       }
       return;
     }
+    // Generation guard: if the user switches songs while the cover-art IO
+    // below is in flight, the STALE song must not overwrite the current one.
+    final String songAtStart = song.fileName;
+    bool isCurrent() => _playlistService.currentSong?.fileName == songAtStart;
 
     Uri? artUri;
     try {
@@ -161,6 +165,10 @@ class GaSongAudioHandler extends BaseAudioHandler
       );
     }
 
+    // A different song may have started while we read the cover — don't let
+    // this stale update clobber the current Now Playing entry.
+    if (!isCurrent()) return;
+
     try {
       mediaItem.add(
         MediaItem(
@@ -198,7 +206,8 @@ class GaSongAudioHandler extends BaseAudioHandler
   Future<void> stop() async => _engineService.stop();
 
   @override
-  Future<void> seek(Duration position) async => _engineService.seek(position);
+  Future<void> seek(final Duration position) async =>
+      _engineService.seek(position);
 
   @override
   Future<void> skipToNext() async => _playlistService.next();

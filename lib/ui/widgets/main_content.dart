@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audio/audio_engine_service.dart';
@@ -40,21 +40,15 @@ class MainContentWidget extends ConsumerStatefulWidget {
 }
 
 class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
-  // #6: TextEditingController so the "X" clear button actually clears the UI.
   late final TextEditingController _searchController;
   Timer? _debounceTimer;
-  
-  // Viewport-aware precache
-  final ScrollController _scrollController = ScrollController();
-  Timer? _precacheTimer;
-  final Set<int> _precachedIndices = {};
 
-  // P-8 fix + Phase 2.3: Cached playback state, kept in sync via ref.listen
-  // on [currentPlayingIndexProvider] and [engineStateProvider].
+  final ScrollController _scrollController = ScrollController();
+
   int _currentPlayingIndex = -1;
   AudioEngineState _engineState = AudioEngineState.stopped;
 
-  void _onPlaybackChanged(int newIndex, AudioEngineState newState) {
+  void _onPlaybackChanged(final int newIndex, final AudioEngineState newState) {
     if (newIndex == _currentPlayingIndex && newState == _engineState) return;
     setState(() {
       _currentPlayingIndex = newIndex;
@@ -66,63 +60,19 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.searchQuery);
-    _scrollController.addListener(_onScrollForPrecache);
-    // P-8 fix: Riverpod subscriptions replace direct addListener calls so
-    // disposal is automatic on widget unmount.
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _precacheTimer?.cancel();
-    _scrollController.removeListener(_onScrollForPrecache);
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onScrollForPrecache() {
-    // Debounce precache to avoid excessive calls during fast scroll
-    _precacheTimer?.cancel();
-    _precacheTimer = Timer(const Duration(milliseconds: 200), _precacheVisibleItems);
-  }
-
-  void _precacheVisibleItems() {
-    if (!mounted) return;
-    
-    final coverArtRepo = ref.read(coverArtRepositoryProvider);
-    final songs = widget.filteredSongs;
-    
-    // Calculate visible range based on scroll position
-    final itemExtent = 86.0;
-    final viewportHeight = _scrollController.position.viewportDimension;
-    final scrollOffset = _scrollController.offset;
-    
-    final firstVisible = (scrollOffset / itemExtent).floor().clamp(0, songs.length - 1);
-    final lastVisible = ((scrollOffset + viewportHeight) / itemExtent).ceil().clamp(0, songs.length - 1);
-    
-    // Precache slightly beyond visible range for smooth scrolling
-    final precacheStart = (firstVisible - 3).clamp(0, songs.length - 1);
-    final precacheEnd = (lastVisible + 3).clamp(0, songs.length - 1);
-    
-    for (int i = precacheStart; i <= precacheEnd; i++) {
-      if (!_precachedIndices.contains(i)) {
-        _precachedIndices.add(i);
-        final song = songs[i];
-        // Precache cover art at typical display sizes
-        coverArtRepo.getCachedProvider(song.fileName, cacheWidth: 72, cacheHeight: 72);
-        // Also preload next few songs
-        if (i < songs.length - 1) {
-          coverArtRepo.getCachedProvider(songs[i + 1].fileName, cacheWidth: 72, cacheHeight: 72);
-        }
-      }
-    }
-  }
-
   @override
-  void didUpdateWidget(covariant MainContentWidget oldWidget) {
+  void didUpdateWidget(covariant final MainContentWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Keep controller in sync when parent changes searchQuery externally
     if (oldWidget.searchQuery != widget.searchQuery &&
         _searchController.text != widget.searchQuery) {
       _searchController.text = widget.searchQuery;
@@ -130,20 +80,17 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // P-8 fix + Phase 2.3: Use ref.listen to subscribe to playback state
-    // changes via Riverpod state providers; cleaner than direct addListener.
-    ref.listen<int>(currentPlayingIndexProvider, (prev, next) {
+  Widget build(final BuildContext context) {
+    ref.listen<int>(currentPlayingIndexProvider, (final prev, final next) {
       _onPlaybackChanged(next, ref.read(engineStateProvider));
     });
-    ref.listen<AudioEngineState>(engineStateProvider, (prev, next) {
+    ref.listen<AudioEngineState>(engineStateProvider, (final prev, final next) {
       _onPlaybackChanged(ref.read(currentPlayingIndexProvider), next);
     });
     return ColoredBox(
       color: Colors.transparent,
       child: Column(
         children: <Widget>[
-          // Q-3 fix: Use shared DesktopTitleBar widget
           if (widget.showTitleBar) const DesktopTitleBar(),
           _buildHeader(context),
           Expanded(
@@ -165,113 +112,147 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 10, 40, 30),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final showSearchBox = constraints.maxWidth > 600;
-          return Row(
-            children: <Widget>[
-              Flexible(
-                child: Text(
-                  'Trang chủ',
+  Widget _buildHeader(final BuildContext context) => LayoutBuilder(
+    builder: (final context, final constraints) {
+      final isMobile = constraints.maxWidth <= 600;
+      final paddingHorizontal = isMobile ? 16.0 : 40.0;
+
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          paddingHorizontal,
+          10,
+          paddingHorizontal,
+          16,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: <Widget>[
+                Text(
+                  'Thư viện',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: isMobile ? 24 : 32,
                     fontWeight: FontWeight.w800,
                     color: context.adaptive,
                     letterSpacing: -0.5,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (showSearchBox) ...[
-                const SizedBox(width: 16),
-                Flexible(
-                  child: SizedBox(
-                    width: 320,
-                    height: 44,
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        _debounceTimer?.cancel();
-                        _debounceTimer = Timer(
-                          const Duration(milliseconds: 300),
-                          () {
-                            widget.onSearchChanged(value);
-                          },
+                const SizedBox(width: 8),
+                // Nút Import Nhạc +
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1DB954),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add, color: Colors.black, size: 20),
+                  ),
+                  tooltip: 'Thêm nhạc vào thư viện (Import)',
+                  onPressed: () async {
+                    HapticFeedback.lightImpact();
+                    final manager = ref.read(musicManagerProvider);
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await manager.importLocalSongs();
+                      widget.onRefresh();
+                      if (context.mounted) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Đã thêm bài hát vào thư viện thành công',
+                            ),
+                            duration: Duration(seconds: 2),
+                          ),
                         );
-                      },
-                      style: TextStyle(color: context.adaptive, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Tìm kiếm bài hát...',
-                        hintStyle: TextStyle(
-                          color: context.adaptive.withValues(alpha: 0.5),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: context.adaptive.withValues(alpha: 0.5),
-                          size: 20,
-                        ),
-                        suffixIcon: widget.searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(
-                                  Icons.clear,
-                                  color: context.adaptiveSubtle,
-                                  size: 18,
-                                ),
-                                onPressed: () {
-                                  _debounceTimer?.cancel();
-                                  _searchController.clear();
-                                  widget.onSearchChanged('');
-                                },
-                                splashRadius: 20,
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: context.adaptive.withValues(alpha: 0.1),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide(
-                            color: context.adaptive.withValues(alpha: 0.15),
-                            width: 1,
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Lỗi thêm nhạc: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+                const Spacer(),
+                // Search box shrinks on narrower windows instead of
+                // overflowing (fixed 260px broke windows < ~800px).
+                if (!isMobile) ...[
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 260),
+                      child: SizedBox(
+                        height: 38,
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (final value) {
+                            _debounceTimer?.cancel();
+                            _debounceTimer = Timer(
+                              const Duration(milliseconds: 300),
+                              () {
+                                widget.onSearchChanged(value);
+                              },
+                            );
+                          },
+                          style: TextStyle(
+                            color: context.adaptive,
+                            fontSize: 13,
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide(
-                            color: context.adaptive.withValues(alpha: 0.15),
-                            width: 1,
+                          decoration: InputDecoration(
+                            hintText: 'Tìm kiếm bài hát...',
+                            hintStyle: TextStyle(
+                              color: context.adaptive.withValues(alpha: 0.5),
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: context.adaptive.withValues(alpha: 0.5),
+                              size: 18,
+                            ),
+                            suffixIcon: widget.searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      color: context.adaptiveSubtle,
+                                      size: 16,
+                                    ),
+                                    onPressed: () {
+                                      _debounceTimer?.cancel();
+                                      _searchController.clear();
+                                      widget.onSearchChanged('');
+                                    },
+                                    splashRadius: 18,
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: context.adaptive.withValues(alpha: 0.1),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide(
-                            color: context.adaptive.withValues(alpha: 0.4),
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 0,
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-              const SizedBox(width: 16),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.adaptive.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: ref
-                      .read(settingsManagerProvider)
-                      .isGridViewNotifier,
-                  builder: (context, isGrid, _) {
-                    return IconButton(
+                  const SizedBox(width: 8),
+                ],
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: context.adaptive.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: ref
+                        .read(settingsManagerProvider)
+                        .isGridViewNotifier,
+                    builder: (final context, final isGrid, _) => IconButton(
                       icon: Icon(
                         isGrid ? Icons.list_rounded : Icons.grid_view_rounded,
                         color: context.adaptive,
@@ -282,89 +263,134 @@ class _MainContentWidgetState extends ConsumerState<MainContentWidget> {
                           .setIsGridView(!isGrid),
                       tooltip: isGrid ? 'Chế độ danh sách' : 'Chế độ lưới',
                       splashRadius: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: context.adaptive.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.refresh_rounded,
+                      color: context.adaptive,
+                      size: 20,
+                    ),
+                    onPressed: widget.onRefresh,
+                    tooltip: 'Làm mới danh sách',
+                    splashRadius: 24,
+                  ),
+                ),
+              ],
+            ),
+            if (isMobile) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 38,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (final value) {
+                    _debounceTimer?.cancel();
+                    _debounceTimer = Timer(
+                      const Duration(milliseconds: 300),
+                      () {
+                        widget.onSearchChanged(value);
+                      },
                     );
                   },
-                ),
-              ),
-              const SizedBox(width: 8),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.adaptive.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    color: context.adaptive,
-                    size: 20,
+                  style: TextStyle(color: context.adaptive, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm kiếm bài hát...',
+                    hintStyle: TextStyle(
+                      color: context.adaptive.withValues(alpha: 0.5),
+                      fontSize: 13,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: context.adaptive.withValues(alpha: 0.5),
+                      size: 18,
+                    ),
+                    suffixIcon: widget.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: context.adaptiveSubtle,
+                              size: 16,
+                            ),
+                            onPressed: () {
+                              _debounceTimer?.cancel();
+                              _searchController.clear();
+                              widget.onSearchChanged('');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: context.adaptive.withValues(alpha: 0.1),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  onPressed: widget.onRefresh,
-                  tooltip: 'Làm mới danh sách',
-                  splashRadius: 24,
                 ),
               ),
             ],
-          );
-        },
-      ),
-    );
-  }
+          ],
+        ),
+      );
+    },
+  );
 
-  Widget _buildSongList(BuildContext context) {
-    // P-8 fix: Wrap with SongPlaybackInheritedWidget so tiles can read
-    // playback state via context instead of registering individual listeners.
-    return SongPlaybackInheritedWidget(
-      currentIndex: _currentPlayingIndex,
-      isPlaying: _engineState == AudioEngineState.playing,
-      child: ValueListenableBuilder<bool>(
-        valueListenable: ref.read(settingsManagerProvider).isGridViewNotifier,
-        builder: (context, isGrid, _) {
-          final itemCount = widget.filteredSongs.length;
-          if (isGrid) {
-            return RepaintBoundary(
-              child: GridView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
-                scrollCacheExtent: const ScrollCacheExtent.pixels(500),
-                addAutomaticKeepAlives: false,
-                addRepaintBoundaries:
-                    false, // items have manual RepaintBoundary
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 200,
-                  childAspectRatio: 0.8,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+  Widget _buildSongList(final BuildContext context) =>
+      SongPlaybackInheritedWidget(
+        currentIndex: _currentPlayingIndex,
+        isPlaying: _engineState == AudioEngineState.playing,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: ref.read(settingsManagerProvider).isGridViewNotifier,
+          builder: (final context, final isGrid, _) {
+            final itemCount = widget.filteredSongs.length;
+            if (isGrid) {
+              return RepaintBoundary(
+                child: GridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 220,
+                    childAspectRatio: 0.82,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                  ),
+                  itemCount: itemCount,
+                  itemBuilder: (final context, final index) {
+                    final song = widget.filteredSongs[index];
+                    final globalIndex =
+                        widget.songIndexByFileName[song.fileName] ?? index;
+                    return SongGridTile(song: song, songIndex: globalIndex);
+                  },
                 ),
+              );
+            }
+
+            return RepaintBoundary(
+              child: ListView.builder(
+                controller: _scrollController,
                 itemCount: itemCount,
-                itemBuilder: (context, index) {
+                itemExtent: 64,
+                padding: const EdgeInsets.only(bottom: 20),
+                itemBuilder: (final context, final index) {
                   final song = widget.filteredSongs[index];
-                  final songIndex =
+                  final globalIndex =
                       widget.songIndexByFileName[song.fileName] ?? index;
-                  return SongGridTile(song: song, songIndex: songIndex);
+                  return SongListTile(song: song, songIndex: globalIndex);
                 },
               ),
             );
-          }
-
-          return RepaintBoundary(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(40, 0, 40, 140),
-              itemExtent: 86.0,
-              scrollCacheExtent: const ScrollCacheExtent.pixels(500),
-              addAutomaticKeepAlives: false,
-              addRepaintBoundaries: false, // items have manual RepaintBoundary
-              itemCount: itemCount,
-              itemBuilder: (context, index) {
-                final song = widget.filteredSongs[index];
-                final songIndex =
-                    widget.songIndexByFileName[song.fileName] ?? index;
-                return SongListTile(song: song, songIndex: songIndex);
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
+          },
+        ),
+      );
 }

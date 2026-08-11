@@ -1,5 +1,6 @@
 /// Mock implementation of [GaSongAudioHandler] for testing.
 /// Provides controlled audio handler behavior without platform dependencies.
+library;
 
 import 'dart:async';
 import 'package:ga_song/core/services/audio_handler_service.dart';
@@ -43,12 +44,12 @@ class MockAudioHandlerService extends BaseAudioHandler
     updatePlaybackStateCallCount++;
   }
 
-  @override
   void dispose() {
     disposeCallCount++;
     initialized = false;
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(final Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

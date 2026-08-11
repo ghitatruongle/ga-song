@@ -8,11 +8,11 @@ class KTVScreen extends ConsumerWidget {
   const KTVScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final playlistService = ref.read(playlistServiceProvider);
     return ValueListenableBuilder<int>(
       valueListenable: playlistService.currentIndexNotifier,
-      builder: (context, index, _) {
+      builder: (final context, final index, _) {
         final song = playlistService.currentSong;
         if (song == null) {
           return const Center(

@@ -19,7 +19,7 @@ class MacOSIntegration {
     await _configureWindow();
   }
 
-  static Future<dynamic> _handleMethodCall(MethodCall call) async {
+  static Future<dynamic> _handleMethodCall(final MethodCall call) async {
     switch (call.method) {
       case 'onWindowFocusChanged':
         // Handle window focus changes
@@ -47,12 +47,12 @@ class MacOSIntegration {
 
   /// Updates the macOS Now Playing info.
   static Future<void> setNowPlaying({
-    required String title,
-    required String artist,
-    required String? album,
-    required Duration position,
-    required Duration duration,
-    required bool isPlaying,
+    required final String title,
+    required final String artist,
+    required final String? album,
+    required final Duration position,
+    required final Duration duration,
+    required final bool isPlaying,
   }) async {
     if (!isMacOS) return;
 
@@ -82,7 +82,7 @@ class MacOSIntegration {
   }
 
   /// Sets the dock badge count.
-  static Future<void> setDockBadge(int? count) async {
+  static Future<void> setDockBadge(final int? count) async {
     if (!isMacOS) return;
 
     try {
@@ -94,9 +94,9 @@ class MacOSIntegration {
 
   /// Shows a macOS notification.
   static Future<void> showNotification({
-    required String title,
-    required String body,
-    String? subtitle,
+    required final String title,
+    required final String body,
+    final String? subtitle,
   }) async {
     if (!isMacOS) return;
 

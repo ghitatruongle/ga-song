@@ -71,7 +71,9 @@ void main() {
   });
 
   group('AppMotion.fadeThrough', () {
-    testWidgets('builds without error given an Animation', (tester) async {
+    testWidgets('builds without error given an Animation', (
+      final tester,
+    ) async {
       final controller = AnimationController(
         vsync: const TestVSync(),
         duration: AppDurations.short,

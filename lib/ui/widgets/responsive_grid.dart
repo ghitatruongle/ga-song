@@ -31,23 +31,21 @@ class ResponsiveGrid extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = Breakpoints.gridColumns(constraints.maxWidth);
+  Widget build(final BuildContext context) => LayoutBuilder(
+    builder: (final context, final constraints) {
+      final crossAxisCount = Breakpoints.gridColumns(constraints.maxWidth);
 
-        return GridView.builder(
-          padding: padding,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: crossAxisSpacing,
-            mainAxisSpacing: mainAxisSpacing,
-            childAspectRatio: childAspectRatio,
-          ),
-          itemCount: children.length,
-          itemBuilder: (context, index) => children[index],
-        );
-      },
-    );
-  }
+      return GridView.builder(
+        padding: padding,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: crossAxisSpacing,
+          mainAxisSpacing: mainAxisSpacing,
+          childAspectRatio: childAspectRatio,
+        ),
+        itemCount: children.length,
+        itemBuilder: (final context, final index) => children[index],
+      );
+    },
+  );
 }

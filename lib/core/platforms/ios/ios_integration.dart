@@ -18,7 +18,7 @@ class IOSIntegration {
     _channel.setMethodCallHandler(_handleMethodCall);
   }
 
-  static Future<dynamic> _handleMethodCall(MethodCall call) async {
+  static Future<dynamic> _handleMethodCall(final MethodCall call) async {
     switch (call.method) {
       case 'onWidgetTapped':
         // Handle widget tap
@@ -31,10 +31,10 @@ class IOSIntegration {
 
   /// Updates the iOS home screen widget data.
   static Future<void> updateWidget({
-    required String songName,
-    required String artist,
-    required bool isPlaying,
-    String? coverArtBase64,
+    required final String songName,
+    required final String artist,
+    required final bool isPlaying,
+    final String? coverArtBase64,
   }) async {
     if (!isIOS) return;
 
@@ -52,10 +52,10 @@ class IOSIntegration {
 
   /// Registers a Siri shortcut for quick actions.
   static Future<void> registerSiriShortcut({
-    required String identifier,
-    required String phrase,
-    required String title,
-    String? subtitle,
+    required final String identifier,
+    required final String phrase,
+    required final String title,
+    final String? subtitle,
   }) async {
     if (!isIOS) return;
 
@@ -73,8 +73,8 @@ class IOSIntegration {
 
   /// Donates a Siri shortcut invocation.
   static Future<void> donateSiriShortcut({
-    required String identifier,
-    Map<String, dynamic>? parameters,
+    required final String identifier,
+    final Map<String, dynamic>? parameters,
   }) async {
     if (!isIOS) return;
 

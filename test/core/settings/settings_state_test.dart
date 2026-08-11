@@ -29,7 +29,7 @@ void main() {
       final modified = state.copyWith(
         themeMode: ThemeMode.dark,
         enableBlur: false,
-        blurLevel: 50.0,
+        blurLevel: 50,
         isMiniPlayer: true,
       );
 
@@ -59,8 +59,8 @@ void main() {
     });
 
     test('value equality works with colors', () {
-      const state1 = SettingsState(customPrimaryColor: Color(0xFF1DB954));
-      const state2 = SettingsState(customPrimaryColor: Color(0xFF1DB954));
+      const state1 = SettingsState();
+      const state2 = SettingsState();
 
       expect(state1, equals(state2));
     });
@@ -86,7 +86,7 @@ void main() {
       final modified = state.copyWith(
         themeMode: ThemeMode.dark,
         enableBlur: false,
-        blurLevel: 50.0,
+        blurLevel: 50,
         useNativeWindowEffect: true,
         windowOpacity: 0.5,
         isGridView: true,

@@ -143,8 +143,8 @@ void main() {
 
     group('LyricLine', () {
       test('stores startTime and text', () {
-        final line = LyricLine(
-          startTime: const Duration(seconds: 30),
+        const line = LyricLine(
+          startTime: Duration(seconds: 30),
           text: 'Hello world',
         );
         expect(line.startTime, const Duration(seconds: 30));
@@ -152,12 +152,12 @@ void main() {
       });
 
       test('handles empty text', () {
-        final line = LyricLine(startTime: Duration.zero, text: '');
+        const line = LyricLine(startTime: Duration.zero, text: '');
         expect(line.text, isEmpty);
       });
 
       test('handles unicode text', () {
-        final line = LyricLine(
+        const line = LyricLine(
           startTime: Duration.zero,
           text: 'Xin chào thế giới 🎵',
         );

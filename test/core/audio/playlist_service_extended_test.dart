@@ -181,21 +181,20 @@ void main() {
             artist: 'Zebra',
             sourcePath: 'a.mp3',
             durationMs: 300000,
-            dateAdded: DateTime(2026, 1, 1),
+            dateAdded: DateTime(2026),
           ),
           createTestSong(
             name: 'Apple',
             artist: 'Apple',
             sourcePath: 'b.mp3',
             durationMs: 120000,
-            dateAdded: DateTime(2026, 3, 1),
+            dateAdded: DateTime(2026, 3),
           ),
           createTestSong(
             name: 'Cherry',
             artist: 'Monkey',
             sourcePath: 'c.mp3',
-            durationMs: 180000,
-            dateAdded: DateTime(2026, 2, 1),
+            dateAdded: DateTime(2026, 2),
           ),
         ];
       });
@@ -203,35 +202,35 @@ void main() {
       test('sorts by name ascending (default)', () {
         // Default is SortMode.name, ascending=true
         final sorted = service.getSortedPlaylist(songs);
-        expect(sorted.map((s) => s.name), ['Apple', 'Banana', 'Cherry']);
+        expect(sorted.map((final s) => s.name), ['Apple', 'Banana', 'Cherry']);
       });
 
       test('sorts by name descending', () {
         // Toggle to descending
         service.setSortMode(SortMode.name);
         final sorted = service.getSortedPlaylist(songs);
-        expect(sorted.map((s) => s.name), ['Cherry', 'Banana', 'Apple']);
+        expect(sorted.map((final s) => s.name), ['Cherry', 'Banana', 'Apple']);
       });
 
       test('sorts by artist ascending', () {
         service.setSortMode(SortMode.artist);
         final sorted = service.getSortedPlaylist(songs);
-        expect(sorted.map((s) => s.artist), ['Apple', 'Monkey', 'Zebra']);
+        expect(sorted.map((final s) => s.artist), ['Apple', 'Monkey', 'Zebra']);
       });
 
       test('sorts by duration ascending', () {
         service.setSortMode(SortMode.duration);
         final sorted = service.getSortedPlaylist(songs);
-        expect(sorted.map((s) => s.durationMs), [120000, 180000, 300000]);
+        expect(sorted.map((final s) => s.durationMs), [120000, 180000, 300000]);
       });
 
       test('sorts by dateAdded ascending', () {
         service.setSortMode(SortMode.dateAdded);
         final sorted = service.getSortedPlaylist(songs);
-        expect(sorted.map((s) => s.dateAdded), [
-          DateTime(2026, 1, 1),
-          DateTime(2026, 2, 1),
-          DateTime(2026, 3, 1),
+        expect(sorted.map((final s) => s.dateAdded), [
+          DateTime(2026),
+          DateTime(2026, 2),
+          DateTime(2026, 3),
         ]);
       });
 
@@ -266,7 +265,7 @@ void main() {
 
       test('handles song not found in new order', () async {
         final songs = createTestSongList(3);
-        await service.setPlaylist(songs, startIndex: 0);
+        await service.setPlaylist(songs);
 
         // Replace all songs with new ones
         final newSongs = createTestSongList(3, prefix: 'New');
@@ -306,7 +305,7 @@ void main() {
 
       test('sequential: goes to next song', () async {
         final songs = createTestSongList(3);
-        await service.setPlaylist(songs, startIndex: 0);
+        await service.setPlaylist(songs);
         await service.next();
         expect(service.currentIndex, 1);
       });
@@ -362,7 +361,7 @@ void main() {
 
       test('sequential: seeks to start at first song', () async {
         final songs = createTestSongList(3);
-        await service.setPlaylist(songs, startIndex: 0);
+        await service.setPlaylist(songs);
         mockEngine.positionNotifier.value = const Duration(seconds: 1);
         await service.previous();
         expect(mockEngine.lastSeekPosition, Duration.zero);

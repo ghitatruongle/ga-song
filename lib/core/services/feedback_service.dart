@@ -21,12 +21,17 @@ class FeedbackService {
 
   Future<void> playClick() async {
     if (_settings.soundFeedbackEnabledNotifier.value) {
-      SystemSound.play(SystemSoundType.click);
+      // SystemSound.play returns a Future that can throw (MissingPlugin
+      // on some desktop configs) — await + swallow so it never becomes an
+      // unhandled async exception.
+      try {
+        await SystemSound.play(SystemSoundType.click);
+      } catch (_) {}
     }
 
     if (_settings.hapticFeedbackEnabledNotifier.value && _canVibrate) {
       try {
-        HapticFeedback.lightImpact();
+        await HapticFeedback.lightImpact();
       } catch (e, st) {
         AppLogger.w(
           'Feedback',
@@ -41,7 +46,7 @@ class FeedbackService {
   Future<void> playMedium() async {
     if (_settings.hapticFeedbackEnabledNotifier.value && _canVibrate) {
       try {
-        HapticFeedback.mediumImpact();
+        await HapticFeedback.mediumImpact();
       } catch (e, st) {
         AppLogger.w(
           'Feedback',
@@ -56,7 +61,7 @@ class FeedbackService {
   Future<void> playHeavy() async {
     if (_settings.hapticFeedbackEnabledNotifier.value && _canVibrate) {
       try {
-        HapticFeedback.heavyImpact();
+        await HapticFeedback.heavyImpact();
       } catch (e, st) {
         AppLogger.w(
           'Feedback',
