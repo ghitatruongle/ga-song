@@ -73,7 +73,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, SongEntry> {
     false,
     type: DriftSqlType.double,
     requiredDuringInsert: false,
-    defaultValue: const Constant(-12.0),
+    defaultValue: const Constant(-12),
   );
   static const VerificationMeta _sourcePathMeta = const VerificationMeta(
     'sourcePath',

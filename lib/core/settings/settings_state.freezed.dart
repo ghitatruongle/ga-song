@@ -67,7 +67,7 @@ mixin _$SettingsState {
       throw _privateConstructorUsedError; // ─── Hotkeys & Media ────────────────────────────────────────────
   Map<String, String> get customHotkeys => throw _privateConstructorUsedError;
   bool get mediaKeyEnabled =>
-      throw _privateConstructorUsedError; // ─── Feedback (Phase 4) ──────────────────────────────────────────
+      throw _privateConstructorUsedError; // ─── Feedback ────────────────────────────────────────────────────
   bool get soundFeedbackEnabled =>
       throw _privateConstructorUsedError; // ─── Other ──────────────────────────────────────────────────────
   bool get minimizeToTray => throw _privateConstructorUsedError;
@@ -873,7 +873,7 @@ class _$SettingsStateImpl implements _SettingsState {
   @override
   @JsonKey()
   final bool mediaKeyEnabled;
-  // ─── Feedback (Phase 4) ──────────────────────────────────────────
+  // ─── Feedback ────────────────────────────────────────────────────
   @override
   @JsonKey()
   final bool soundFeedbackEnabled;
@@ -1177,7 +1177,7 @@ abstract class _SettingsState implements SettingsState {
   @override
   Map<String, String> get customHotkeys;
   @override
-  bool get mediaKeyEnabled; // ─── Feedback (Phase 4) ──────────────────────────────────────────
+  bool get mediaKeyEnabled; // ─── Feedback ────────────────────────────────────────────────────
   @override
   bool get soundFeedbackEnabled; // ─── Other ──────────────────────────────────────────────────────
   @override

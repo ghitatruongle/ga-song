@@ -24,7 +24,7 @@ void main() {
       expect(AppColors.danger, isA<Color>());
     });
 
-    test('Phase 1 AppColors.accent still exists (not overwritten)', () {
+    test('AppColors.accent still exists (not overwritten)', () {
       expect(AppColors.accent, isA<Color>());
     });
 

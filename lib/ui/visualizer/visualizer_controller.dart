@@ -34,12 +34,9 @@ class VisualizerFrameSnapshot {
   final Size size;
   final bool isBeat;
 
-  /// P3.2.5: Star field produced off the main thread via `compute()`.
-  ///
+  /// Star field produced off the main thread via `compute()`
   /// When non-null, [StarfieldPainter] prefers this typed-array snapshot
-  /// over the legacy [stars] list. The legacy [stars] list is retained
-  /// during the transition window so the painter can fall back if the
-  /// isolate hasn't completed yet.
+  /// over the legacy [stars] list
   final StarFieldSnapshot? starFieldSnapshot;
 }
 
@@ -230,12 +227,24 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
     _audioService.engineState.addListener(_handleActivityChanged);
     _settings.visualizerEnabledNotifier.addListener(_handleActivityChanged);
     WidgetsBinding.instance.addObserver(this);
+    _instances.add(this);
     _publishSnapshot();
     _handleActivityChanged();
   }
 
-  // P4.3: Lifecycle state flag to stop ticker when app is in background
+  // Lifecycle state flag to stop ticker when app is in background
   bool _isAppInBackground = false;
+
+  // Desktop window visibility flag to stop ticker while minimized/hidden.
+  static bool _windowHidden = false;
+  static final List<VisualizerController> _instances = <VisualizerController>[];
+
+  static void setWindowHidden(final bool hidden) {
+    _windowHidden = hidden;
+    for (final controller in List<VisualizerController>.of(_instances)) {
+      controller._handleActivityChanged();
+    }
+  }
 
   // P3.2: Disposal flag — guards against the async `_handleTick` running
   // after dispose(). Set in `dispose()`.
@@ -359,7 +368,11 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _handleActivityChanged() {
-    if (_isAppInBackground) return;
+    // Treat a hidden/minimized desktop window like app background.
+    if (_isAppInBackground || _windowHidden) {
+      _stopTicker();
+      return;
+    }
 
     if (isAudioReactive || _activeParticleCount > 0) {
       _startTicker();
@@ -704,6 +717,7 @@ class VisualizerController extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     _isDisposed = true;
+    _instances.remove(this);
     WidgetsBinding.instance.removeObserver(this);
     _audioService.engineState.removeListener(_handleActivityChanged);
     _settings.visualizerEnabledNotifier.removeListener(_handleActivityChanged);

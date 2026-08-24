@@ -18,9 +18,11 @@ import 'core/performance_probe.dart';
 import 'core/platform_capabilities.dart';
 import 'core/settings_manager.dart';
 import 'core/services/window_manager_service.dart';
+import 'core/services/power_state_service.dart';
 import 'core/services/system_tray_service.dart';
 import 'core/services/hotkey_service.dart';
 import 'core/cover_art_repository.dart';
+import 'ui/visualizer/visualizer_controller.dart';
 import 'core/pip_service.dart';
 import 'core/services/smtc_service.dart';
 import 'core/services/audio_handler_service.dart';
@@ -37,7 +39,9 @@ import 'l10n/app_localizations.dart';
 import 'providers/service_providers.dart';
 import 'providers/theme_provider.dart';
 import 'core/platforms/platform_service.dart';
+import 'core/platforms/macos/macos_integration.dart';
 import 'core/platforms/macos/macos_menu_bar.dart';
+import 'core/platforms/ios/ios_integration.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/widgets/frame_budget_overlay.dart';
 import 'ui/widgets/settings_search_dialog.dart';
@@ -57,20 +61,10 @@ Future<void> main() async {
   AppLogger.init();
   final startupStopwatch = Stopwatch()..start();
 
-  // Configure image cache limits based on device capabilities
+  // Platform capabilities. Image-cache sizing is applied AFTER
+  // SettingsManager.init() so the persisted Reduce Lag flag is honored from
+  // the very first frame (see applyImageCacheConfig below).
   final caps = PlatformCapabilities.instance;
-  final imageCache = PaintingBinding.instance.imageCache;
-  if (caps.isAndroid && caps.deviceTier == DeviceTier.low) {
-    imageCache.maximumSizeBytes =
-        16 * 1024 * 1024; // 16MB for low-spec Android (SM J610F)
-    imageCache.maximumSize = 25;
-  } else if (caps.isAndroid) {
-    imageCache.maximumSizeBytes = 32 * 1024 * 1024; // 32MB for mid-tier Android
-    imageCache.maximumSize = 50;
-  } else {
-    imageCache.maximumSizeBytes = 120 * 1024 * 1024; // 120MB for Desktop
-    imageCache.maximumSize = 150;
-  }
 
   // Initialize sqflite for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -89,7 +83,7 @@ Future<void> main() async {
     );
   }
 
-  // Bắt lỗi UI (Render exceptions)
+  // Render exceptions
   FlutterError.onError = (final FlutterErrorDetails details) {
     FlutterError.presentError(details);
     crashReporter.reportError(
@@ -134,22 +128,117 @@ Future<void> main() async {
   );
 
   // Create services directly (no get_it)
-  // Phase 3: Deferred initialization for faster startup
   final settings = SettingsManager();
   await settings.init(); // Critical: must complete before UI
   PerformanceProbe.instance.install();
 
+  // ─── Image cache + Reduce Lag (Android-only) ─────────────────────────────
+  final imageCache = PaintingBinding.instance.imageCache;
+
+  void applyImageCacheConfig() {
+    if (caps.reduceLagOverride) {
+      imageCache.maximumSizeBytes = 8 * 1024 * 1024; // 8MB — lowest tier
+      imageCache.maximumSize = 15;
+    } else if (caps.isAndroid && caps.effectiveTier == DeviceTier.low) {
+      imageCache.maximumSizeBytes =
+          16 * 1024 * 1024; // 16MB for low-spec Android
+      imageCache.maximumSize = 25;
+    } else if (caps.isAndroid) {
+      imageCache.maximumSizeBytes = 32 * 1024 * 1024; // 32MB mid-tier Android
+      imageCache.maximumSize = 50;
+    } else {
+      imageCache.maximumSizeBytes = 120 * 1024 * 1024; // 120MB for Desktop
+      imageCache.maximumSize = 150;
+    }
+  }
+
+  // Reduce Lag runtime override: force visualizer + blur off WITHOUT touching
+  // user preferences, pin every PlatformCapabilities knob to low tier, and
+  // shrink the image cache. Restores everything when toggled off. Reactive —
+  // the VisualizerController already listens to visualizerEnabledNotifier and
+  // stops its ticker, so no further wiring is needed.
+  bool? userVisualizerEnabled;
+  bool? userEnableBlur;
+  void applyReduceLag(final bool reduceLag) {
+    if (reduceLag) {
+      userVisualizerEnabled ??= settings.visualizerEnabledNotifier.value;
+      userEnableBlur ??= settings.enableBlurNotifier.value;
+      settings.visualizerEnabledNotifier.value = false;
+      settings.enableBlurNotifier.value = false;
+      caps.reduceLagOverride = true;
+      try {
+        if (SoLoud.instance.isInitialized) {
+          SoLoud.instance.setVisualizationEnabled(false);
+        }
+      } catch (e) {
+        AppLogger.w('main', 'reduce-lag visualization off failed', error: e);
+      }
+    } else {
+      if (userVisualizerEnabled != null) {
+        settings.visualizerEnabledNotifier.value = userVisualizerEnabled!;
+      }
+      if (userEnableBlur != null) {
+        settings.enableBlurNotifier.value = userEnableBlur!;
+      }
+      userVisualizerEnabled = null;
+      userEnableBlur = null;
+      caps.reduceLagOverride = false;
+      try {
+        if (SoLoud.instance.isInitialized) {
+          SoLoud.instance.setVisualizationEnabled(
+            settings.visualizerEnabledNotifier.value,
+          );
+        }
+      } catch (e) {
+        AppLogger.w(
+          'main',
+          'reduce-lag visualization restore failed',
+          error: e,
+        );
+      }
+    }
+    applyImageCacheConfig();
+    if (reduceLag) {
+      imageCache.clear();
+    }
+  }
+
+  settings.reduceLagNotifier.addListener(
+    () => applyReduceLag(settings.reduceLagNotifier.value),
+  );
+  applyReduceLag(settings.reduceLagNotifier.value);
+
   // Run migration first (critical for data integrity)
   final appDb = AppDatabase();
   final migrationService = MigrationService(appDb);
-  await migrationService.migrateFromSqflite();
-  // We don't close appDb here because it's meant to stay open for the whole app lifespan
 
   // Use the wrapper to interact with Drift
   final dbService = DatabaseServiceWrapper(appDb);
-  await dbService.init(); // Critical: must complete before UI
 
-  // Phase 3: Create services with lazy initialization
+  // DB init is deferred past the first frame for faster startup.
+  // The library UI renders immediately and populates reactively via songsStream
+  // once migration/seeding completes.
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final dbSw = Stopwatch()..start();
+    try {
+      await migrationService.migrateFromSqflite();
+      await dbService.init();
+      AppLogger.i(
+        'main',
+        'deferred DB init + migration took '
+            '${dbSw.elapsedMilliseconds}ms',
+      );
+    } catch (e, stack) {
+      AppLogger.e(
+        'main',
+        'deferred database init failed',
+        error: e,
+        stack: stack,
+      );
+    }
+  });
+
+  // Create services with lazy initialization
   final engineService = AudioEngineService();
   final effectService = AudioEffectService();
   final playlistService = PlaylistService(
@@ -266,23 +355,27 @@ Future<void> main() async {
   if (caps.isAndroid) {
     pipService.init();
   }
+  // Track Power Saver to defer background work and adapt visualizer frame rate.
+  if (caps.isAndroid || caps.isWindows) {
+    PowerStateService.instance.start();
+  }
 
   if (caps.isDesktop) {
     await windowManager.init();
-    // Hidden to tray / minimized → free decoded audio + image caches so
-    // background playback does not keep growing RAM (see user reports).
+    // Free decoded audio and image caches when hidden to tray.
     windowManager.onHiddenToTray = () {
       engineService.releaseMemoryWhenHidden();
       PaintingBinding.instance.imageCache.clear();
+    };
+    // Pause visualizer ticker while desktop window is minimized/hidden.
+    windowManager.onWindowHiddenChanged = (hidden) {
+      VisualizerController.setWindowHidden(hidden);
     };
     desktopLyricsService.init();
     if (Platform.isWindows) {
       final smtcService = SmtcService(engineService, playlistService);
       await smtcService.init();
     }
-    // Note: hotkeyService + systemTrayService init moved out of here and
-    // registered via `addPostFrameCallback` (see P3.5 block just before
-    // `runApp(...)`) so they do not block first paint.
   }
 
   if (!kIsWeb &&
@@ -290,10 +383,6 @@ Future<void> main() async {
           Platform.isLinux ||
           Platform.isIOS ||
           Platform.isMacOS)) {
-    // audio_service's MediaBrowserServiceCompat connection can hang forever
-    // on some Samsung devices (notably after a force-stop); bound the wait so
-    // startup can never be blocked. Runs post-frame on purpose — playback
-    // itself does NOT depend on it (soloud plays directly).
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         await Future.any([
@@ -304,6 +393,8 @@ Future<void> main() async {
                   'com.ghitatruongle.gasong.channel.audio',
               androidNotificationChannelName: 'GA Song Playback',
               androidNotificationOngoing: true,
+              fastForwardInterval: Duration(seconds: 10),
+              rewindInterval: Duration(seconds: 10),
             ),
           ),
           Future<void>.delayed(const Duration(seconds: 12)),
@@ -334,6 +425,57 @@ Future<void> main() async {
       );
     }
   });
+
+  // macOS memory pressure → free image and decoded audio caches.
+  if (Platform.isMacOS) {
+    MacOSIntegration.onMemoryPressureHandler = (level) {
+      PaintingBinding.instance.imageCache.clear();
+      engineService.releaseMemoryWhenHidden();
+      AppLogger.d('main', 'macOS memory pressure ($level): caches released');
+    };
+    // Dock badge: show track number while playing, clear when paused/stopped.
+    engineService.engineState.addListener(() {
+      final isPlaying =
+          engineService.engineState.value == AudioEngineState.playing;
+      final index = playlistService.currentIndex;
+      MacOSIntegration.setDockBadge(isPlaying && index >= 0 ? index + 1 : null);
+    });
+    // Sleep timer expired → show macOS notification.
+    playlistService.sleepTimerRemainingNotifier.addListener(() {
+      final remaining = playlistService.sleepTimerRemainingNotifier.value;
+      if (remaining == null) {
+        PlatformService.instance.showNotification(
+          title: 'Sleep Timer',
+          body: 'Nhạc đã dừng theo hẹn giờ',
+        );
+      }
+    });
+  }
+
+  // iOS Low Power Mode and memory warnings handling.
+  if (Platform.isIOS) {
+    IOSIntegration.onLowPowerModeChanged = (enabled) {
+      AppLogger.d('main', 'iOS Low Power Mode: $enabled');
+    };
+    IOSIntegration.onMemoryWarning = () {
+      PaintingBinding.instance.imageCache.clear();
+      engineService.releaseMemoryWhenHidden();
+      AppLogger.d('main', 'iOS memory warning: caches released');
+    };
+    // SceneDelegate lifecycle: resume/pause resources based on foreground state.
+    const lifecycleChannel = MethodChannel('gasong/lifecycle');
+    lifecycleChannel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'onAppResumed':
+          AppLogger.d('main', 'iOS scene resumed');
+        case 'onAppPaused':
+          // Release non-essential caches when entering background.
+          PaintingBinding.instance.imageCache.clear();
+          engineService.releaseMemoryWhenHidden();
+          AppLogger.d('main', 'iOS scene paused: caches released');
+      }
+    });
+  }
 
   // P3.5: defer non-critical init until after first paint.
   // Future first-frame targets: lyrics DB warmup, smart playlist computation,
@@ -539,11 +681,11 @@ class _GASongAppState extends ConsumerState<GASongApp> {
               ? DynamicSchemeVariant.fidelity
               : DynamicSchemeVariant.tonalSpot;
 
-          // Phase 4: Material 3 — derive ColorScheme.fromSeed for a richer,
-          // consistent palette instead of the legacy copyWith approach.
           _cachedLightTheme = ThemeData(
             useMaterial3: true,
             brightness: Brightness.light,
+            // Vietnamese glyph fallback (see pubspec fonts: NotoSans).
+            fontFamilyFallback: const ['NotoSans'],
             colorScheme: ColorScheme.fromSeed(
               seedColor: primaryColor,
               dynamicSchemeVariant: variant,
@@ -555,6 +697,7 @@ class _GASongAppState extends ConsumerState<GASongApp> {
           _cachedDarkTheme = ThemeData(
             useMaterial3: true,
             brightness: Brightness.dark,
+            fontFamilyFallback: const ['NotoSans'],
             colorScheme: ColorScheme.fromSeed(
               seedColor: primaryColor,
               brightness: Brightness.dark,

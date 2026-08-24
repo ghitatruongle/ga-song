@@ -2,9 +2,11 @@ import Cocoa
 import FlutterMacOS
 import UserNotifications
 import MediaPlayer
+import Dispatch
 
 class MainFlutterWindow: NSWindow {
   private var channel: FlutterMethodChannel?
+  private var memoryPressureSource: DispatchSourceMemoryPressure?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -21,6 +23,7 @@ class MainFlutterWindow: NSWindow {
 
   private func setupMethodChannel(binaryMessenger: FlutterBinaryMessenger) {
     channel = FlutterMethodChannel(name: "gasong/macos", binaryMessenger: binaryMessenger)
+    startMemoryPressureObserver()
     channel?.setMethodCallHandler { [weak self] (call, result) in
       guard let self = self else {
         result(FlutterMethodNotImplemented)
@@ -92,9 +95,47 @@ class MainFlutterWindow: NSWindow {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         result(nil)
 
+      case "quitApplication":
+        // Menu-bar "Quit" — real termination on macOS.
+        NSApp.terminate(nil)
+        result(nil)
+
       default:
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  /// Watches OS memory pressure and notifies Dart to drop image and audio caches.
+  ///
+  /// The event handler dispatches to the main queue only for the channel
+  /// call — the heavy Dart-side cache release happens asynchronously there.
+  /// Using a background queue for the source itself avoids blocking the main
+  /// run loop during memory-pressure events.
+  private func startMemoryPressureObserver() {
+    let bgQueue = DispatchQueue(label: "com.gasong.memory-pressure")
+    let source = DispatchSource.makeMemoryPressureSource(
+      eventMask: [.warning, .critical],
+      queue: bgQueue
+    )
+    source.setEventHandler { [weak self] in
+      let level: String
+      switch source.data {
+      case .critical:
+        level = "critical"
+      case .warning:
+        level = "warning"
+      default:
+        level = "normal"
+      }
+      DispatchQueue.main.async {
+        self?.channel?.invokeMethod(
+          "onMemoryPressure",
+          arguments: ["level": level]
+        )
+      }
+    }
+    source.resume()
+    memoryPressureSource = source
   }
 }

@@ -8,16 +8,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Default Constants ───────────────────────────────────────────────────────
 
-/// Default blur level (0–100 scale).
+/// Default blur level (0–100 scale)
 const double _kDefaultBlurLevel = 30;
 
-/// Default window opacity (0.1–1.0).
+/// Default window opacity (0.1–1.0)
 const double _kDefaultWindowOpacity = 0.7;
 
-/// Default crossfade duration in seconds (0–10).
+/// Default crossfade duration in seconds (0–10)
 const double _kDefaultCrossfadeDuration = 3;
 
-/// Target normalization level in dB (−24 ... 0).
+/// Target normalization level in dB (−24 ... 0)
 const double _kDefaultNormalizationLevel = -12;
 
 /// Equalizer band count.
@@ -76,6 +76,9 @@ class SettingsManager {
   final ValueNotifier<bool> minimizeToTrayNotifier = ValueNotifier(true);
   final ValueNotifier<bool> autoHidePlayerBarNotifier = ValueNotifier(false);
   final ValueNotifier<bool> visualizerEnabledNotifier = ValueNotifier(true);
+
+  /// Android-only "Reduce Lag" mode: forces performance knobs to the lowest tier.
+  final ValueNotifier<bool> reduceLagNotifier = ValueNotifier(false);
   final ValueNotifier<bool> useDynamicColorNotifier = ValueNotifier(true);
   final ValueNotifier<bool> sidebarCollapsedNotifier = ValueNotifier(false);
 
@@ -147,7 +150,7 @@ class SettingsManager {
   // Media Key Support
   final ValueNotifier<bool> mediaKeyEnabledNotifier = ValueNotifier(true);
 
-  // ─── Feedback (Phase 4) ──────────────────────────────────────────────────
+  // ─── Feedback ────────────────────────────────────────────────────────────
   /// Whether [SystemSound.click] plays on next/prev. Off by default;
   /// users opt-in via the Settings UI.
   final ValueNotifier<bool> soundFeedbackEnabledNotifier = ValueNotifier(false);
@@ -255,6 +258,7 @@ class SettingsManager {
         _prefs.getBool('autoHidePlayerBar') ?? false;
     visualizerEnabledNotifier.value =
         _prefs.getBool('visualizerEnabled') ?? true;
+    reduceLagNotifier.value = _prefs.getBool('reduceLag') ?? false;
     useDynamicColorNotifier.value = _prefs.getBool('useDynamicColor') ?? true;
     sidebarCollapsedNotifier.value =
         _prefs.getBool('sidebarCollapsed') ?? false;
@@ -533,6 +537,13 @@ class SettingsManager {
         stack: stack,
       );
     }
+  }
+
+  /// Toggles Android "Reduce Lag" mode. Persisted; runtime overrides are
+  /// applied reactively by listeners in [SettingsManager] consumers (main.dart).
+  Future<void> setReduceLag(final bool enable) async {
+    reduceLagNotifier.value = enable;
+    await _prefs.setBool('reduceLag', enable);
   }
 
   Future<void> setSensitivity(final double value) async {
@@ -843,6 +854,7 @@ class SettingsManager {
     minimizeToTrayNotifier,
     autoHidePlayerBarNotifier,
     visualizerEnabledNotifier,
+    reduceLagNotifier,
     useDynamicColorNotifier,
     sidebarCollapsedNotifier,
     desktopLyricsEnabledNotifier,
@@ -899,6 +911,7 @@ class SettingsManager {
     visualizerShapeNotifier.dispose();
     minimizeToTrayNotifier.dispose();
     visualizerEnabledNotifier.dispose();
+    reduceLagNotifier.dispose();
     useDynamicColorNotifier.dispose();
     sensitivityNotifier.dispose();
     customPrimaryColorNotifier.dispose();

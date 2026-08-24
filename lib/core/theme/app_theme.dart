@@ -4,8 +4,7 @@ import 'tokens.dart';
 import 'app_typography.dart';
 import 'theme_extensions.dart';
 
-/// Centralized theme configuration for G.A - Song.
-///
+/// Centralized theme configuration for G.A - Song
 /// Provides both light and dark themes with consistent styling
 /// across all components. Supports dynamic accent color from cover art.
 class AppTheme {
@@ -40,6 +39,8 @@ class AppTheme {
   static ThemeData darkTheme() => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
+    // Vietnamese glyph fallback (bundled NotoSans).
+    fontFamilyFallback: const ['NotoSans'],
     // Register ThemeExtensions — context.spacing()/radius()/elevation()
     // use `extension<...>()!` and crash if these are missing.
     extensions: [
@@ -166,6 +167,7 @@ class AppTheme {
   static ThemeData lightTheme() => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
+    fontFamilyFallback: const ['NotoSans'],
     // Register ThemeExtensions (see darkTheme()); required for
     // context.spacing()/radius()/elevation() null-bang helpers.
     extensions: [

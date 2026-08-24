@@ -10,7 +10,6 @@ class ProgressBar extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    // Phase 2.2: read position/duration from state providers (was PlayerViewModel).
     final position = ref.watch(positionProvider);
     final duration = ref.watch(trackDurationProvider);
     final engine = ref.read(audioEngineServiceProvider);

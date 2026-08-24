@@ -161,8 +161,11 @@ class _IOSFullscreenPlayerScreenState
                           ),
                         ),
                       )
-                    : BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                    // Use ImageFiltered instead of BackdropFilter for performance:
+                    // BackdropFilter re-blurs every pixel every frame (GPU killer on ProMotion).
+                    // ImageFiltered blurs only its child; result is cached by compositor.
+                    : ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                         child: Container(
                           color: Colors.black.withValues(alpha: 0.65),
                         ),

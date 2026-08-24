@@ -15,7 +15,6 @@ class CenterControls extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    // Phase 2.2: use state providers directly (was PlayerViewModel).
     final engineState = ref.watch(engineStateProvider);
     final playlist = ref.read(playlistServiceProvider);
     // `soundOn` is only consulted inside onPressed callbacks; use

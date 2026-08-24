@@ -279,7 +279,7 @@ class _EqualizerDialogState extends ConsumerState<_EqualizerDialog> {
   );
 }
 
-/// Phase 4 Task 8: per-band slider that glows while dragging.
+/// Per-band slider that glows while dragging.
 class _BandSliderWidget extends StatefulWidget {
   const _BandSliderWidget({
     super.key,

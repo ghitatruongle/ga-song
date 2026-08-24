@@ -284,7 +284,13 @@ class WindowManagerService with WindowListener {
       } else {
         await Window.setEffect(effect: WindowEffect.disabled);
       }
-    } catch (_) {
+    } catch (e) {
+      // Log the primary effect failure before trying transparent fallback.
+      AppLogger.w(
+        'window.manager_service',
+        'primary effect failed ($effectType), trying transparent fallback',
+        error: e,
+      );
       // Fallback to transparent if effect unsupported
       try {
         await Window.setEffect(
@@ -295,7 +301,7 @@ class WindowManagerService with WindowListener {
       } catch (e) {
         AppLogger.w(
           'window.manager_service',
-          'transparent fallback effect failed',
+          'transparent fallback effect also failed',
           error: e,
         );
       }
@@ -396,6 +402,7 @@ class WindowManagerService with WindowListener {
 
       if (_settings?.minimizeToTrayNotifier.value ?? false) {
         _isWindowVisible = false;
+        onWindowHiddenChanged?.call(true);
         await windowManager.hide();
       } else {
         await windowManager.destroy();
@@ -403,7 +410,7 @@ class WindowManagerService with WindowListener {
     }
   }
 
-  // ─── Window move — debounce state save (v0.9.5) ─────────────────────────
+  // ─── Window move — debounce state save ───────────────────────────────────
 
   @override
   void onWindowMove() {
@@ -421,10 +428,26 @@ class WindowManagerService with WindowListener {
   /// release decoded audio caches while running in the background.
   VoidCallback? onHiddenToTray;
 
-  void onWindowHide() => onHiddenToTray?.call();
+  /// Fired with the window's visibility state so the visualizer can stop
+  /// its ticker while the desktop window is minimized or hidden.
+  void Function(bool hidden)? onWindowHiddenChanged;
+
+  // Note: window_manager 0.5.1 emits onWindowMinimize / onWindowRestore but
+  // NOT onWindowShow / onWindowHide, so tray show/hide is wired through the
+  // system_tray_service menu directly (VisualizerController.setWindowHidden).
 
   @override
-  void onWindowMinimize() => onHiddenToTray?.call();
+  void onWindowMinimize() {
+    onHiddenToTray?.call();
+    onWindowHiddenChanged?.call(true);
+  }
+
+  @override
+  void onWindowRestore() {
+    _isWindowVisible = true;
+    onWindowHiddenChanged?.call(false);
+    _scheduleApplyEffect();
+  }
 
   // ─── macOS Mini Player Pinned Mode ──────────────────────────────────────
 

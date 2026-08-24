@@ -104,6 +104,13 @@ class PlatformService {
           subtitle: subtitle,
         );
         break;
+      case PlatformType.ios:
+        await IOSIntegration.showNotification(
+          title: title,
+          body: body,
+          subtitle: subtitle,
+        );
+        break;
       case PlatformType.web:
         await WebIntegration.showNotification(title: title, body: body);
         break;

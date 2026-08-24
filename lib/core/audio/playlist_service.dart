@@ -17,7 +17,6 @@ enum PlayMode { sequential, repeatOne, playOneStop, shuffle }
 enum SortMode { name, artist, dateAdded, duration, playCount, lastPlayed }
 
 /// Manages playlist, playback order, shuffle logic, and cache eviction.
-///
 /// This service handles:
 /// - Playlist setup and song ordering
 /// - Play modes: sequential, repeat-one, play-one-stop, shuffle
@@ -44,6 +43,10 @@ class PlaylistService {
   final List<int> _shuffleHistory = [];
   int _historyOffset = 0;
   bool _isPreparingCache = false;
+
+  /// Set when [_prepareCacheWindow] runs while another run is in flight — a
+  /// fresh run must follow, else a skip leaves the new window with no preloads.
+  bool _preparePending = false;
 
   final ValueNotifier<int> currentIndexNotifier = ValueNotifier(-1);
   final ValueNotifier<PlayMode> playModeNotifier = ValueNotifier(
@@ -547,14 +550,20 @@ class PlaylistService {
 
   Future<void> _prepareCacheWindow() async {
     if (_currentIndex < 0 || _currentIndex >= _playlist.length) return;
-    if (_isPreparingCache) return;
+    // Invalidate in-flight preloads of the previous window via cache epoch.
+    _engineService.bumpCacheEpoch();
+    if (_isPreparingCache) {
+      _preparePending = true;
+      return;
+    }
     _isPreparingCache = true;
+    final epoch = _engineService.cacheEpoch;
 
     try {
       if (_playMode == PlayMode.shuffle) {
         _plannedShuffleIndex ??= _selectNextShuffleIndex();
         final plannedIndex = _plannedShuffleIndex;
-        if (plannedIndex != null) {
+        if (plannedIndex != null && _engineService.cacheEpoch == epoch) {
           await _engineService.preload(_playlist[plannedIndex].assetPath);
         }
 
@@ -584,19 +593,27 @@ class PlaylistService {
       if (concurrency >= indicesToPreload.length) {
         // Fast path: parallel preload (desktop)
         await Future.wait(
-          indicesToPreload.map(
-            (final i) => _engineService.preload(_playlist[i].assetPath),
-          ),
+          indicesToPreload.map((final i) async {
+            if (_engineService.cacheEpoch != epoch) return;
+            await _engineService.preload(_playlist[i].assetPath);
+          }),
         );
       } else {
         // Throttled path: sequential preload (Android)
         for (final i in indicesToPreload) {
+          if (_engineService.cacheEpoch != epoch) return;
           await _engineService.preload(_playlist[i].assetPath);
         }
       }
       await _engineService.evictSources(keepPaths);
     } finally {
       _isPreparingCache = false;
+      if (_preparePending) {
+        _preparePending = false;
+        // Re-enter after releasing the lock so the newest window (the one
+        // that bumped the epoch) is prepared with the current index.
+        unawaited(_prepareCacheWindow());
+      }
     }
   }
 

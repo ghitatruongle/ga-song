@@ -315,17 +315,31 @@ class SmtcService {
 
   /// Pre-warms cache for current and upcoming songs.
   void _prewarmThumbnailCache() {
-    // Schedule in background to avoid blocking init
-    Future.microtask(() async {
-      final songs = _playlistService.playlist;
-      final currentIndex = _playlistService.currentIndex;
-      if (currentIndex < 0 || songs.isEmpty) return;
+    // Schedule in background to avoid blocking init.
+    // Guard: if _smtc is disposed before the microtask runs, bail out.
+    unawaited(
+      Future.microtask(() async {
+        try {
+          if (_smtc == null) return;
+          final songs = _playlistService.playlist;
+          final currentIndex = _playlistService.currentIndex;
+          if (currentIndex < 0 || songs.isEmpty) return;
 
-      // Cache current + next 3 songs
-      for (int i = 0; i < 4 && currentIndex + i < songs.length; i++) {
-        await _getCachedThumbnail(songs[currentIndex + i]);
-      }
-    });
+          // Cache current + next 3 songs
+          for (int i = 0; i < 4 && currentIndex + i < songs.length; i++) {
+            if (_smtc == null) return; // disposed mid-loop
+            await _getCachedThumbnail(songs[currentIndex + i]);
+          }
+        } catch (e, stack) {
+          AppLogger.w(
+            'smtc.service',
+            'thumbnail prewarm failed',
+            error: e,
+            stack: stack,
+          );
+        }
+      }),
+    );
   }
 
   /// Seeks relative to current position.

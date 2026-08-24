@@ -17,11 +17,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <!-- Exact alarm for sleep timer (Android 12+) -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-
     <application
-        android:label="ga_song"
+        android:label="GA Song"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="false"
@@ -63,13 +60,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-            <!-- Deep link support cho ga-song://play?id=xxx -->
+            </intent-filter>                <!-- Deep link support cho gasong://play?id=xxx -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="ga-song" android:host="play"/>
+                <data android:scheme="gasong" android:host="play"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

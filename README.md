@@ -1,28 +1,33 @@
 # 🎵 G.A - Song
 
-A full-featured, cross-platform music player built with Flutter. Supports local audio playback, KTV (karaoke), online YouTube, equalizer, audio effects, visualizer, lyrics display, and system integration.
+A modern, full-featured, cross-platform music player built with Flutter. Supports local audio playback, KTV (karaoke) mode, YouTube integration, 5-band parametric equalizer, audio effects, audio-reactive visualizer, synced lyrics, and native OS integrations.
+
+---
 
 ## ✨ Features
 
-- **Audio Playback** — Local file playback with SoLoud engine, crossfade, gapless
-- **Equalizer** — 5-band parametric EQ with presets (Normal, Bass+, Vocal, Acoustic)
-- **Audio Effects** — Bass boost, pitch shift, reverb, compressor, normalization
-- **Visualizer** — Real-time audio-reactive particle/starfield visualizer
-- **KTV Mode** — Karaoke with microphone input and YouTube integration
-- **Lyrics** — LRC and SRT format support with synced display
-- **Playlist Management** — Create, edit, shuffle, repeat modes
-- **Cover Art** — Automatic cover art extraction and caching
-- **System Integration** — System tray, global hotkeys, media keys
-- **Multi-platform** — Windows, Android, Linux (macOS/iOS/Web partial)
+- **Audio Playback** — Native audio playback powered by SoLoud engine with gapless playback and crossfade.
+- **Parametric Equalizer** — 5-band parametric EQ with presets (Normal, Bass+, Vocal, Acoustic) and custom sliders.
+- **Audio Effects** — Bass boost, pitch shift, reverb, compressor, volume normalization.
+- **Audio Visualizer** — Real-time audio-reactive particle and starfield wave visualizer.
+- **Synced Lyrics** — LRC and SRT format support with real-time synchronized line-by-line display.
+- **KTV / Karaoke Mode** — Sing along with live microphone input and YouTube video accompaniment.
+- **Smart Playlists** — User playlists and auto-generated smart playlists (Most Played, Recently Played, Favorites).
+- **Cover Art Pipeline** — High-performance 3-tier caching (memory → disk → file) with dynamic dominant color adaptation.
+- **System Integration** — Native System Tray, global hotkeys, Windows SMTC, Linux MPRIS, Android media notifications, macOS Menu Bar & Mini Player window, iOS Lockscreen & Control Center remote commands.
+- **Battery & Performance Modes** — Low Power Mode / Battery Saver detection, and Android-specific **"Giảm Lag" (Reduce Lag)** mode for low-tier devices.
+- **Multi-platform Support** — Windows, Android, macOS, iOS, Linux.
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.32.0+
-- Dart SDK 3.11.4+
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.44.0+ (stable channel)
+- Dart SDK 3.12.0+
 
-### Installation
+### Installation & Run
 
 ```bash
 # Clone the repository
@@ -32,122 +37,71 @@ cd ga-song
 # Install dependencies
 flutter pub get
 
-# Run the app
+# Run on your current connected device / desktop
 flutter run
 ```
 
 ### Build for Release
 
 ```bash
-# Windows (MSIX)
+# Windows
 flutter build windows --release
 
-# Android (APK)
-flutter build apk --release
+# Android (APK / App Bundle)
+flutter build apk --release --target-platform android-arm64
+flutter build appbundle --release
 
-# Linux
+# macOS (DMG / App)
+./build_apple.sh 1.0.1-beta macos
+
+# iOS (IPA)
+./build_apple.sh 1.0.1-beta ios
+
+# Linux (.deb / bundle)
 flutter build linux --release
 ```
+
+---
 
 ## 📁 Project Structure
 
 ```
 lib/
-├── main.dart                    # App entry point (creates services, Riverpod overrides)
-├── core/
-│   ├── audio/                   # Audio engine, effects, playlist, lyrics
-│   │   ├── audio_engine_service.dart    # SoLoud playback + LRU cache
-│   │   ├── audio_effect_service.dart    # EQ, bass, reverb, compressor
-│   │   ├── playlist_service.dart        # Playlist management, shuffle
-│   │   └── lyric_parser.dart            # LRC/SRT parser
-│   ├── database/                # Drift ORM (type-safe SQLite)
-│   │   ├── app_database.dart            # Tables, DAOs, migrations
-│   │   └── migration/                   # Legacy sqflite → Drift auto-migration
-│   ├── services/                # Platform services
-│   │   ├── db_service_wrapper.dart      # Drift-backed persistence API
-│   │   ├── window_manager_service.dart  # Desktop window management
-│   │   ├── system_tray_service.dart     # System tray
-│   │   ├── hotkey_service.dart          # Global hotkeys
-│   │   └── smtc_service.dart            # Windows media controls
-│   ├── settings/                # SettingsState (Freezed) + SettingsNotifier
-│   ├── theme/                   # Design tokens, typography, motion
-│   ├── logging/                 # Structured AppLogger
-│   ├── cover_art_repository.dart        # Cover art 3-tier cache
-│   ├── settings_manager.dart            # App settings persistence
-│   └── platform_capabilities.dart       # Platform detection
-├── models/                      # Data models
-│   ├── song.dart
-│   ├── playlist.dart
-│   └── cover_art_cache.dart
-├── providers/                   # Riverpod providers
-│   ├── song_provider.dart
-│   ├── lyric_provider.dart
-│   ├── state_providers.dart
-│   └── service_providers.dart
-├── ui/                          # User interface
-│   ├── screens/                 # App screens
-│   │   ├── home_screen.dart
-│   │   ├── mini_player_screen.dart
-│   │   └── ktv_screen.dart
-│   ├── widgets/                 # Reusable widgets
-│   │   ├── sidebar.dart
-│   │   ├── main_content.dart
-│   │   ├── player_bar/
-│   │   └── ...
-│   ├── visualizer/              # Audio visualizer
-│   └── painters/                # Custom painters
-└── l10n/                        # Localization (vi, en)
+├── main.dart                    # App entry point, deferred initializations & service binding
+├── core/                        # Core business logic & platform layer
+│   ├── audio/                   # SoLoud audio engine, equalizer, effects, playlist service
+│   ├── database/                # Drift ORM (type-safe SQLite tables & migrations)
+│   ├── logging/                 # Structured AppLogger facade
+│   ├── motion/                  # Motion tokens, durations, and curves
+│   ├── platforms/               # Platform-specific integrations (iOS, macOS, etc.)
+│   ├── services/                # Power state, window manager, system tray, hotkeys, SMTC
+│   ├── theme/                   # Material 3 tokens, design extensions & color schemes
+│   ├── audio_source_cache_policy.dart # Decoded audio caching & idle eviction
+│   ├── cover_art_repository.dart      # Cover art caching & background thumbnailing
+│   ├── platform_capabilities.dart     # Hardware tier detection & capability queries
+│   └── settings_manager.dart          # Persistent user settings (SharedPreferences)
+├── models/                      # Immutable data models
+├── providers/                   # Riverpod state & service providers
+├── ui/                          # UI layer
+│   ├── screens/                 # Main screens (Home, Mini Player, KTV, Fullscreen Player)
+│   ├── widgets/                 # Reusable UI components & dialogs
+│   └── visualizer/              # GPU & CPU audio visualizer controllers
+└── l10n/                        # Localization (Vietnamese, English)
 ```
 
-## 🏗️ Architecture
-
-The app follows a layered architecture:
-
-```
-┌─────────────────────────────────┐
-│           UI Layer              │  Widgets, Screens
-├─────────────────────────────────┤
-│        Provider Layer           │  Riverpod Providers
-├─────────────────────────────────┤
-│       Service Layer             │  Business Logic
-├─────────────────────────────────┤
-│        Model Layer              │  Data Classes
-└─────────────────────────────────┘
-```
-
-- **Dependency Injection**: services created directly in `main()`, injected via Riverpod `ProviderScope.overrides` (no service locator)
-- **State Management**: `flutter_riverpod` providers + `ValueNotifier`/`ChangeNotifier` within services
-- **Persistence**: `SharedPreferences` (settings) + Drift ORM / SQLite (songs, playlists, cover art, lyrics)
+---
 
 ## 🧪 Testing
 
 ```bash
-# Run all tests
-flutter test
+# Run all unit and service tests
+flutter test test/core test/ui test/providers test/mocks test/widget_test.dart
 
-# Run with coverage
-flutter test --coverage
-
-# Run specific test file
-flutter test test/core/audio/playlist_service_test.dart
+# Run static analysis
+flutter analyze
 ```
 
-## 🌍 Localization
-
-The app supports Vietnamese (vi) and English (en). Localization is handled via `lib/l10n/app_localizations.dart`; the language can be switched at runtime in **Settings → Language** (persisted across sessions).
-
-## 📦 Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `flutter_soloud` | Native audio engine |
-| `flutter_riverpod` | State management & DI |
-| `drift` | Type-safe SQLite ORM |
-| `audio_service` | Android/Linux media notifications |
-| `smtc_windows` | Windows System Media Transport Controls |
-| `window_manager` | Desktop window management |
-| `hotkey_manager` | Global hotkeys |
-| `palette_generator` | Dominant color extraction |
+---
 
 ## 📄 License
 

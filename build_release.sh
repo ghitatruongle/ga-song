@@ -94,9 +94,13 @@ echo -e "${BLUE}Building Windows...${NC}"
 flutter build windows --release --target-platform=windows-x64
 
 # Build Android
+# NOTE: product_flavors (playstore/github/fdroid) exist only in
+# android_build_config.yaml (documentation) — android/app/build.gradle.kts
+# does NOT declare them, so `--flavor` would fail the build. Build the
+# default (no-flavor) release instead.
 echo -e "${BLUE}Building Android...${NC}"
-flutter build appbundle --release --flavor playstore
-flutter build apk --release --flavor playstore --split-per-abi
+flutter build appbundle --release
+flutter build apk --release --split-per-abi
 
 # Build Linux
 echo -e "${BLUE}Building Linux...${NC}"

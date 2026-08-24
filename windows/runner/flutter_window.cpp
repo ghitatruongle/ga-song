@@ -2,6 +2,8 @@
 
 #include <optional>
 
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
 #include "flutter/generated_plugin_registrant.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -25,6 +27,8 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  RegisterPowerStateChannel(flutter_controller_->engine());
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +44,60 @@ void FlutterWindow::OnDestroy() {
   }
 
   Win32Window::OnDestroy();
+}
+
+// Exposes Windows power state (battery saver / AC / level) to Dart via
+// the "com.gasong.ga_song/power" MethodChannel.
+void FlutterWindow::RegisterPowerStateChannel(
+    flutter::FlutterEngine* engine) {
+  power_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      engine->messenger(), "com.gasong.ga_song/power",
+      &flutter::StandardMethodCodec::GetInstance());
+
+  power_channel_->SetMethodCallHandler(
+      [](const flutter::MethodCall<flutter::EncodableValue>& call,
+         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "powerState") {
+          SYSTEM_POWER_STATUS status{};
+          const BOOL ok = ::GetSystemPowerStatus(&status);
+
+          // SPI_GETBATTERYSAVERSTATE (0x0073) — Windows 10 1607+. Reads
+          // whether Battery Saver is currently active. Not defined unless the
+          // SDK targets Win10, so define it locally as a fallback.
+          BOOL battery_saver = FALSE;
+#ifndef SPI_GETBATTERYSAVERSTATE
+#define SPI_GETBATTERYSAVERSTATE 0x0073
+#endif
+          ::SystemParametersInfo(SPI_GETBATTERYSAVERSTATE, 0, &battery_saver, 0);
+
+          if (!ok) {
+            // GetSystemPowerStatus failed — report defaults (charging).
+            result->Success(flutter::EncodableValue(flutter::EncodableMap{
+                {flutter::EncodableValue("isPowerSaving"),
+                 flutter::EncodableValue(false)},
+                {flutter::EncodableValue("isCharging"),
+                 flutter::EncodableValue(true)},
+                {flutter::EncodableValue("level"),
+                 flutter::EncodableValue(100)},
+            }));
+            return;
+          }
+
+          const bool is_charging = status.ACLineStatus == 1;
+          const int level = status.BatteryLifePercent;  // 0-100, 255=unknown
+
+          result->Success(flutter::EncodableValue(flutter::EncodableMap{
+              {flutter::EncodableValue("isPowerSaving"),
+               flutter::EncodableValue(battery_saver == TRUE)},
+              {flutter::EncodableValue("isCharging"),
+               flutter::EncodableValue(is_charging)},
+              {flutter::EncodableValue("level"),
+               flutter::EncodableValue(level == 255 ? -1 : level)},
+          }));
+        } else {
+          result->NotImplemented();
+        }
+      });
 }
 
 LRESULT

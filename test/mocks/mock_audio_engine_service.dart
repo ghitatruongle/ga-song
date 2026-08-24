@@ -107,6 +107,15 @@ class MockAudioEngineService
     // No-op in mock
   }
 
+  // Cache-epoch API: skip-aware preload cancellation.
+  int _epoch = 0;
+  @override
+  int get cacheEpoch => _epoch;
+  @override
+  void bumpCacheEpoch() {
+    _epoch++;
+  }
+
   @override
   Future<void> dispose() async {
     await _songCompletedController.close();

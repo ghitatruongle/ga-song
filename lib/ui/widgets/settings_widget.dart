@@ -234,6 +234,36 @@ class SettingsWidget extends ConsumerWidget {
                 ],
                 const SizedBox(height: 20),
                 _buildSectionHeader('Hệ thống', textColor),
+                // Giảm Lag: chỉ Android
+                if (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.android) ...[
+                  _buildSettingCard(
+                    isDark: isDark,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: settings.reduceLagNotifier,
+                      builder: (final context, final reduceLag, _) =>
+                          SwitchListTile(
+                            title: Text(
+                              'Giảm Lag (Reduce Lag)',
+                              style: TextStyle(color: textColor),
+                            ),
+                            subtitle: Text(
+                              'Ép ứng dụng chạy ở mức tài nguyên thấp nhất: '
+                              'tắt visualizer & hiệu ứng mờ, giảm cache ảnh, '
+                              'hạn chế preload — giúp máy yếu mượt hơn',
+                              style: TextStyle(
+                                color: textColor.withValues(alpha: 0.6),
+                                fontSize: 13,
+                              ),
+                            ),
+                            value: reduceLag,
+                            activeThumbColor: Theme.of(context).primaryColor,
+                            onChanged: settings.setReduceLag,
+                          ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
                 // Minimize to tray: chỉ desktop
                 if (!kIsWeb &&
                     defaultTargetPlatform != TargetPlatform.android &&

@@ -10,7 +10,6 @@ class PlayModeButton extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    // Phase 2.2: play mode from state provider instead of PlayerViewModel.
     final playMode = ref.watch(playModeProvider);
     final playlist = ref.read(playlistServiceProvider);
 

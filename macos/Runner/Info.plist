@@ -41,5 +41,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>G.A Song cần quyền truy cập Micro cho chế độ Karaoke và Visualizer.</string>
 </dict>
 </plist>

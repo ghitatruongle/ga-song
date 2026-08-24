@@ -18,7 +18,7 @@ class PipService {
   /// Whether the app is currently in PiP mode.
   final ValueNotifier<bool> isInPipNotifier = ValueNotifier(false);
 
-  /// Stream of song IDs received via deep link (ga-song://play?id=xxx).
+  /// Stream of song IDs received via deep link (gasong://play?id=xxx).
   final StreamController<int> _deepLinkController =
       StreamController<int>.broadcast();
   Stream<int> get deepLinkStream => _deepLinkController.stream;

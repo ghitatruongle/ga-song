@@ -123,4 +123,11 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
+
+  # Strip the runner binary and the Dart AOT lib so the
+  # .deb bundle carries no debug symbols (libapp.so is the biggest target).
+  install(CODE "
+    execute_process(COMMAND \"${CMAKE_STRIP}\" \"${CMAKE_INSTALL_PREFIX}/${BINARY_NAME}\")
+    execute_process(COMMAND \"${CMAKE_STRIP}\" \"${INSTALL_BUNDLE_LIB_DIR}/libapp.so\")
+  " COMPONENT Runtime)
 endif()

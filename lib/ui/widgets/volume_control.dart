@@ -16,7 +16,6 @@ class _VolumeControlState extends ConsumerState<VolumeControl> {
 
   @override
   Widget build(final BuildContext context) {
-    // Phase 2.2: read volume from state provider, set via engine service.
     final volume = ref.watch(volumeProvider);
     final engine = ref.read(audioEngineServiceProvider);
 

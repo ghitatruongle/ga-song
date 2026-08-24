@@ -1,5 +1,4 @@
 /// Settings Search Dialog for G.A - Song
-///
 /// Provides a searchable interface for all settings, accessible via Ctrl+K.
 library;
 
@@ -320,6 +319,17 @@ class _SettingsSearchDialogState extends ConsumerState<SettingsSearchDialog> {
         icon: Icons.minimize_outlined,
         searchText: '${l10n.categoryWindowSystem} ${l10n.minimizeToTray}',
         onTap: () => _navigateToSettingsPage('window', 'minimize_to_tray'),
+      ),
+      // Giảm Lag (Android-only)
+      _SettingsSearchEntry(
+        category: l10n.categoryWindowSystem,
+        title: 'Giảm Lag (Reduce Lag)',
+        subtitle: settings.reduceLagNotifier.value
+            ? l10n.enabled
+            : l10n.disabled,
+        icon: Icons.speed_outlined,
+        searchText: '${l10n.categoryWindowSystem} giảm lag reduce lag',
+        onTap: () => _navigateToSettingsPage('window', 'reduce_lag'),
       ),
       _SettingsSearchEntry(
         category: l10n.categoryWindowSystem,

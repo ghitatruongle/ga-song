@@ -40,11 +40,7 @@ class AlbumGridWidget extends StatelessWidget {
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 200,
-                          // Phase 4 fix: aspect 0.75 (tile is 33% taller than
-                          // wide) gives the album-name Text enough vertical
-                          // budget for 2 lines + ellipsis on narrow mobile
-                          // viewports (~111 px wide after sidebar + padding)
-                          // without silently collapsing to a single line.
+                          // Aspect ratio 0.75 gives sufficient budget for 2-line title.
                           childAspectRatio: 0.75,
                           crossAxisSpacing: 24,
                           mainAxisSpacing: 24,
@@ -130,7 +126,6 @@ class _AlbumTileState extends State<_AlbumTile> {
 
   void _onTap() {
     AppLogger.i('AlbumGridWidget', '_AlbumTile tapped: ${widget.albumName}');
-    // Phase 4 Task 7: tap also gets a tiny scale-down echo (released on press).
     if (animationsEnabled(context) && _isPressed) {
       setState(() => _isPressed = false);
     }

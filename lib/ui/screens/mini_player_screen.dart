@@ -722,8 +722,10 @@ class _PipCompactPlayer extends ConsumerWidget {
               onHorizontalDragEnd: (final details) {
                 if (details.primaryVelocity == null) return;
                 if (details.primaryVelocity! < -300) {
+                  safeHaptic(HapticType.light);
                   ref.read(playlistServiceProvider).next();
                 } else if (details.primaryVelocity! > 300) {
+                  safeHaptic(HapticType.light);
                   ref.read(playlistServiceProvider).previous();
                 }
               },
@@ -739,6 +741,7 @@ class _PipCompactPlayer extends ConsumerWidget {
                 }
               },
               onTap: () {
+                safeHaptic(HapticType.medium);
                 final playing =
                     ref.read(engineStateProvider) == AudioEngineState.playing;
                 if (playing) {

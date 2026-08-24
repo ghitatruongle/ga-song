@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:system_tray/system_tray.dart';
-import 'package:window_manager/window_manager.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 import '../logging/app_logger.dart';
+import '../../ui/visualizer/visualizer_controller.dart';
 
 class SystemTrayService {
   SystemTrayService({
@@ -34,8 +34,8 @@ class SystemTrayService {
   static const _iconCacheDuration = Duration(days: 7);
 
   // ─── Event-driven updates ──────────────────────────────────────────────
-  // v0.9.5: Uses addListener (returns void) — we store WeakReferences via
-  // a helper to allow removal. Listeners are added/removed by reference.
+  // Uses addListener (returns void) — we store WeakReferences via
+  // a helper to allow removal. Listeners are added/removed by reference
   final Set<VoidCallback> _trayListeners = {};
 
   // ─── Live tooltip ──────────────────────────────────────────────────────
@@ -99,8 +99,8 @@ class SystemTrayService {
       // Set up event-driven updates (replaces polling)
       _setupEventDrivenUpdates();
 
-      // Start live tooltip updates
-      _startLiveTooltipUpdates();
+      // Start live tooltip updates (runs only while playing to save idle wakeups)
+      _syncTooltipTimer();
     } catch (e, stackTrace) {
       AppLogger.e('system_tray.service', 'SystemTray init failed', error: e);
       AppLogger.d('system_tray.service', 'stack', error: stackTrace);
@@ -177,7 +177,11 @@ class SystemTrayService {
 
     // addListener returns void; we add the same callback to each notifier
     // and store a reference so we can remove them later.
-    void onEvent() => _scheduleMenuUpdate();
+    void onEvent() {
+      _scheduleMenuUpdate();
+      _syncTooltipTimer();
+    }
+
     engine.engineState.addListener(onEvent);
     engine.positionNotifier.addListener(onEvent);
     engine.durationNotifier.addListener(onEvent);
@@ -188,6 +192,7 @@ class SystemTrayService {
   /// Schedules a menu update (debounced to 200ms).
   Timer? _menuUpdateDebounce;
   bool _isBuildingMenu = false;
+  bool _pendingRebuild = false;
   void _scheduleMenuUpdate() {
     _menuUpdateDebounce?.cancel();
     _menuUpdateDebounce = Timer(const Duration(milliseconds: 200), () {
@@ -198,9 +203,12 @@ class SystemTrayService {
   /// Builds and sets the system tray context menu with current playback info.
   Future<void> _buildMenu() async {
     if (_systemTray == null) return;
-    // Guard: skip if a previous build is still in flight — overlapping
-    // platform channel calls can interleave and install a stale menu.
-    if (_isBuildingMenu) return;
+    // Guard: if a previous build is still in flight, mark pending so we
+    // re-run after it completes — avoids stale menu when rapid events fire.
+    if (_isBuildingMenu) {
+      _pendingRebuild = true;
+      return;
+    }
     _isBuildingMenu = true;
 
     final engineService = _engine;
@@ -216,7 +224,6 @@ class SystemTrayService {
       final position = engineService.positionNotifier.value;
       final duration = engineService.durationNotifier.value;
 
-      // Format position/duration cho progress display
       final positionStr = _formatDuration(position);
       final durationStr = _formatDuration(duration);
       final progressPercent = duration.inSeconds > 0
@@ -224,18 +231,23 @@ class SystemTrayService {
           : 0.0;
 
       await _menu.buildFrom([
-        // Progress bar (displayed as text)
         MenuItemLabel(
           label: '$positionStr / $durationStr (${progressPercent.toInt()}%)',
         ),
         MenuSeparator(),
         MenuItemLabel(
           label: 'Show',
-          onClicked: (final menuItem) => _appWindow.show(),
+          onClicked: (final menuItem) {
+            VisualizerController.setWindowHidden(false);
+            _appWindow.show();
+          },
         ),
         MenuItemLabel(
           label: 'Hide',
-          onClicked: (final menuItem) => _appWindow.hide(),
+          onClicked: (final menuItem) {
+            VisualizerController.setWindowHidden(true);
+            _appWindow.hide();
+          },
         ),
         MenuSeparator(),
         MenuItemLabel(
@@ -244,7 +256,7 @@ class SystemTrayService {
             if (isPlaying) {
               engineService.pause();
             } else {
-              playlistService.play();
+              engineService.resume();
             }
           },
         ),
@@ -259,20 +271,41 @@ class SystemTrayService {
         MenuSeparator(),
         MenuItemLabel(
           label: 'Exit',
-          onClicked: (final menuItem) async {
-            await windowManager.destroy();
-          },
+          onClicked: (final menuItem) => exit(0),
         ),
       ]);
 
-      // May throw if the tray was destroyed (dispose) while we were building.
       try {
         await _systemTray!.setContextMenu(_menu);
       } catch (e) {
-        AppLogger.d('system_tray.service', 'setContextMenu failed', error: e);
+        AppLogger.w(
+          'system_tray.service',
+          'setContextMenu failed, falling back',
+          error: e,
+        );
+        try {
+          final menu = Menu();
+          await menu.buildFrom([
+            MenuItemLabel(
+              label: 'Exit',
+              onClicked: (final menuItem) => exit(0),
+            ),
+          ]);
+          await _systemTray!.setContextMenu(menu);
+        } catch (e2) {
+          AppLogger.w(
+            'system_tray.service',
+            'fallback setContextMenu failed',
+            error: e2,
+          );
+        }
       }
     } finally {
       _isBuildingMenu = false;
+      if (_pendingRebuild) {
+        _pendingRebuild = false;
+        _buildMenu();
+      }
     }
   }
 
@@ -284,11 +317,23 @@ class SystemTrayService {
   }
 
   /// Starts live tooltip updates (every 2 seconds when playing).
-  void _startLiveTooltipUpdates() {
-    _tooltipUpdateTimer?.cancel();
-    _tooltipUpdateTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _updateTooltip();
-    });
+  void _syncTooltipTimer() {
+    final engine = _engine;
+    if (engine == null || _systemTray == null) return;
+    final isPlaying = engine.engineState.value == AudioEngineState.playing;
+    if (isPlaying) {
+      if (_tooltipUpdateTimer == null || !_tooltipUpdateTimer!.isActive) {
+        _tooltipUpdateTimer?.cancel();
+        _tooltipUpdateTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+          _updateTooltip();
+        });
+      }
+    } else {
+      _tooltipUpdateTimer?.cancel();
+      _tooltipUpdateTimer = null;
+      // Push the idle tooltip once so the tray never shows a stale track.
+      unawaited(_updateTooltip());
+    }
   }
 
   /// Updates system tray tooltip with current track info.

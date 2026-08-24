@@ -1,11 +1,18 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:audio_service/audio_service.dart';
+import 'package:image/image.dart' as img;
 import '../logging/app_logger.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import '../audio/audio_engine_service.dart';
 import '../audio/playlist_service.dart';
 import '../cover_art_repository.dart';
+import '../platforms/platform_service.dart';
+
+/// Max edge length for the notification artwork written to the temp file.
+/// Downscaling avoids decoding full-resolution covers on every track change.
+const int _kNotificationArtMaxEdge = 512;
 
 class GaSongAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
@@ -143,14 +150,15 @@ class GaSongAudioHandler extends BaseAudioHandler
           (!tempFile.existsSync() || tempFile.lengthSync() == 0)) {
         if (song.isBuiltIn) {
           final data = await rootBundle.load(resolvedPath);
-          await tempFile.writeAsBytes(
+          await _writeScaledNotificationArt(
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-            flush: true,
+            tempFile,
           );
         } else {
           final imageFile = File(resolvedPath);
           if (await imageFile.exists()) {
-            await imageFile.copy(tempFile.path);
+            final bytes = await imageFile.readAsBytes();
+            await _writeScaledNotificationArt(bytes, tempFile);
           }
         }
       }
@@ -180,8 +188,68 @@ class GaSongAudioHandler extends BaseAudioHandler
           artUri: artUri,
         ),
       );
+      // macOS: push Now Playing info to MPNowPlayingInfoCenter so media
+      // keys and the Touch Bar display the current track.
+      PlatformService.instance.updateNowPlaying(
+        title: song.name,
+        artist: song.artist ?? 'Unknown Artist',
+        album: song.album,
+        position: _engineService.positionNotifier.value,
+        duration: _engineService.durationNotifier.value,
+        isPlaying: _engineService.engineState.value == AudioEngineState.playing,
+      );
+      // iOS: sync WidgetKit home screen widget with current track info.
+      PlatformService.instance.updateWidget(
+        songName: song.name,
+        artist: song.artist ?? 'Unknown Artist',
+        isPlaying: _engineService.engineState.value == AudioEngineState.playing,
+      );
     } catch (e) {
       AppLogger.w('audio_handler.service', 'mediaItem update failed', error: e);
+    }
+  }
+
+  /// Decodes [bytes], downscales to at most [_kNotificationArtMaxEdge] on
+  /// its longest edge, and writes a PNG to [target]. Falls back to writing
+  /// the original bytes if the image package cannot decode them (never
+  /// throws — notification art is best-effort).
+  Future<void> _writeScaledNotificationArt(
+    final Uint8List bytes,
+    final File target,
+  ) async {
+    try {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) {
+        await target.writeAsBytes(bytes, flush: true);
+        return;
+      }
+      final longest = decoded.width > decoded.height
+          ? decoded.width
+          : decoded.height;
+      final img.Image scaled = longest > _kNotificationArtMaxEdge
+          ? img.copyResize(
+              decoded,
+              width: (decoded.width * _kNotificationArtMaxEdge / longest)
+                  .round(),
+              height: (decoded.height * _kNotificationArtMaxEdge / longest)
+                  .round(),
+              interpolation: img.Interpolation.average,
+            )
+          : decoded;
+      await target.writeAsBytes(
+        Uint8List.fromList(img.encodePng(scaled)),
+        flush: true,
+      );
+    } catch (e, stack) {
+      AppLogger.w(
+        'audio_handler.service',
+        'notification art downscale failed; writing original',
+        error: e,
+        stack: stack,
+      );
+      try {
+        await target.writeAsBytes(bytes, flush: true);
+      } catch (_) {}
     }
   }
 

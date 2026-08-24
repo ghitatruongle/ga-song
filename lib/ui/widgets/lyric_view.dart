@@ -6,8 +6,7 @@ import '../../core/audio/lyric_parser.dart';
 import '../../core/motion/app_motion.dart';
 import '../utils/animation_utils.dart';
 
-/// Enhanced lyric view with karaoke-style effects.
-///
+/// Enhanced lyric view with karaoke-style effects
 /// Features:
 /// - Gradient color on current line (accent → white)
 /// - Fade effect on past/future lines
@@ -88,8 +87,7 @@ class _LyricViewState extends ConsumerState<LyricView> {
     final lyricScale = ref.watch(settingsNotifierProvider).lyricFontSize;
     final currentPosition = ref.watch(positionProvider);
 
-    // Phase 2.3: ref.listen for reactive position updates; auto-cleaned on
-    // widget dispose (vs. manual addListener/removeListener).
+    // Reactive position updates for scrolling
     ref.listen<Duration>(positionProvider, (_, final next) {
       _onPositionChanged(next);
     });

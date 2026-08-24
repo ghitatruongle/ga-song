@@ -124,9 +124,13 @@ class DesktopLyricsService {
     }
   }
 
-  /// Show the lyrics overlay với fade-in animation
+  /// Show the lyrics overlay.
+  /// If a previous overlay exists (e.g. hide → show in rapid succession),
+  /// remove it immediately to prevent double-insert race.
   void show(final BuildContext context) {
-    if (_overlayEntry != null) return;
+    // Remove any lingering entry from a prior hide() — avoids overlay leak
+    // when show() is called during the 200ms fade-out window.
+    _overlayEntry?.remove();
 
     _overlayEntry = OverlayEntry(
       builder: (final context) => _DesktopLyricsOverlay(service: this),
@@ -137,21 +141,18 @@ class DesktopLyricsService {
     _settingsManager.setDesktopLyricsEnabled(true);
   }
 
-  /// Hide the lyrics overlay với fade-out animation
+  /// Hide the lyrics overlay.
+  /// Removes immediately to prevent race with rapid show()/toggle() calls.
   void hide() {
     // Null the entry FIRST so a second hide() (e.g. toggle() + the settings
     // listener both firing) is a no-op instead of double-removing the same
-    // OverlayEntry → assert/TypeError crash ~200ms later.
+    // OverlayEntry → assert/TypeError crash.
     final entry = _overlayEntry;
     if (entry == null) return;
     _overlayEntry = null;
 
-    // Fade-out animation trước khi remove
     isVisibleNotifier.value = false;
-    // Remove sau một khoảng thời gian để animation hoàn thành
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (entry.mounted) entry.remove();
-    });
+    if (entry.mounted) entry.remove();
   }
 
   /// Toggle lyrics visibility

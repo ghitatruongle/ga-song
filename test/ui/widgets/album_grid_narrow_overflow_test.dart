@@ -11,7 +11,7 @@ Widget createTestApp(final Widget child) => MaterialApp(
 );
 
 void main() {
-  // Phase 4 device-debug regression: on a 720-physical-px / DPR 1.75
+  // Regression: on a 720-physical-px / DPR 1.75
   // phone in portrait with sidebar visible, the album grid is only
   // ~191 logical px wide (411 device width - 220 sidebar = 191).  After
   // the 40+40 inner padding, each tile is ~111 px tall.  The current

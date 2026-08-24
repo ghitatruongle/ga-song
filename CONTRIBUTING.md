@@ -2,7 +2,7 @@
 
 ## Development Setup
 
-1. Install [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.32.0+
+1. Install [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.44.0+
 2. Clone the repository
 3. Run `flutter pub get`
 4. Run `flutter run` to start the app

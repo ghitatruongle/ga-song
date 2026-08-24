@@ -413,8 +413,16 @@ class AudioEngineService with WidgetsBindingObserver {
     final normalizedKeepPaths = keepAssetPaths
         .map((final path) => path.replaceAll(r'\', '/'))
         .toSet();
-    final toRemove = _sourceCache.keys
-        .where((final path) => !normalizedKeepPaths.contains(path))
+    final toRemove = _sourceCache.entries
+        .where(
+          (final e) =>
+              !normalizedKeepPaths.contains(e.key) &&
+              // Never dispose the source that is currently playing — a stale
+              // keep-window (e.g. from an aborted preload run) must not cut
+              // the audio out from under the user.
+              e.value.source != _currentSource,
+        )
+        .map((final e) => e.key)
         .toList();
     for (final path in toRemove) {
       final entry = _sourceCache.remove(path);
@@ -430,6 +438,68 @@ class AudioEngineService with WidgetsBindingObserver {
           stack: stack,
         );
       }
+    }
+  }
+
+  // ─── Cache epoch & idle disposal ─────────────────────────────────────────
+
+  /// Bumped whenever the play position changes (skip/next/previous/playAt),
+  /// so in-flight preloads for the previous queue window abort early.
+  int _cacheEpoch = 0;
+  int get cacheEpoch => _cacheEpoch;
+  void bumpCacheEpoch() => _cacheEpoch++;
+
+  Timer? _idleDisposeTimer;
+  static const _idleDisposeDelay = Duration(minutes: 5);
+
+  /// Starts a 5-minute countdown when playback stops/pauses; on fire, cached
+  /// decoded sources (30–40MB each) are disposed.
+  void _scheduleIdleDispose() {
+    _idleDisposeTimer?.cancel();
+    _idleDisposeTimer = Timer(_idleDisposeDelay, () {
+      AppLogger.d(
+        'audio.engine_service',
+        'Idle 5min without playback — disposing cached sources',
+      );
+      unawaited(_disposeIdleSources());
+    });
+  }
+
+  void _cancelIdleDispose() {
+    _idleDisposeTimer?.cancel();
+    _idleDisposeTimer = null;
+  }
+
+  /// Disposes every cached source except the currently-playing one. Playback
+  /// may resume mid-disposal, so the current-source check is re-run per entry.
+  Future<void> _disposeIdleSources() async {
+    if (_isDisposed) return;
+    try {
+      final toRemove = _sourceCache.entries
+          .where((final e) => e.value.source != _currentSource)
+          .map((final e) => e.key)
+          .toList();
+      for (final key in toRemove) {
+        if (_isDisposed) return;
+        final entry = _sourceCache[key];
+        // Re-check: the user may have started playback since we snapshotted.
+        if (entry == null || entry.source == _currentSource) continue;
+        _sourceCache.remove(key);
+        try {
+          await _soloud.disposeSource(entry.source);
+        } catch (_) {
+          // Source may already be disposed; ignore
+        }
+        PerformanceProbe.instance.recordEviction();
+      }
+      _sourceLoadFutures.clear();
+    } catch (e, stack) {
+      AppLogger.e(
+        'audio.engine_service',
+        'idle dispose failed',
+        error: e,
+        stack: stack,
+      );
     }
   }
 
@@ -497,6 +567,7 @@ class AudioEngineService with WidgetsBindingObserver {
 
       engineState.value = AudioEngineState.playing;
       _startPositionTimer();
+      _cancelIdleDispose();
 
       AppLogger.i(
         'audio.engine_service',
@@ -565,6 +636,7 @@ class AudioEngineService with WidgetsBindingObserver {
     if (hadAnyHandle) {
       engineState.value = AudioEngineState.playing;
       _startPositionTimer();
+      _cancelIdleDispose();
     }
   }
 
@@ -597,6 +669,7 @@ class AudioEngineService with WidgetsBindingObserver {
     }
     engineState.value = AudioEngineState.paused;
     _pausePositionTimer();
+    _scheduleIdleDispose();
   }
 
   Future<void> stop() async {
@@ -604,6 +677,7 @@ class AudioEngineService with WidgetsBindingObserver {
     positionNotifier.value = Duration.zero;
     engineState.value = AudioEngineState.stopped;
     _pausePositionTimer();
+    _scheduleIdleDispose();
   }
 
   Future<void> seek(final Duration position) async {
@@ -751,6 +825,7 @@ class AudioEngineService with WidgetsBindingObserver {
         positionNotifier.value = Duration.zero;
         engineState.value = AudioEngineState.playing;
         _startPositionTimer();
+        _cancelIdleDispose();
 
         // Subscribe to song-end event — cancel any prior subscription first
         await _songEndSub?.cancel();
@@ -900,6 +975,8 @@ class AudioEngineService with WidgetsBindingObserver {
     await sub?.cancel();
 
     _positionTimer?.cancel();
+    _idleDisposeTimer?.cancel();
+    _idleDisposeTimer = null;
     _crossfadeTimer?.cancel();
     _crossfadeTimer = null;
 

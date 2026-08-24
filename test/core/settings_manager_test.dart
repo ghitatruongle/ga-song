@@ -58,6 +58,10 @@ void main() {
         expect(manager.visualizerEnabledNotifier.value, isTrue);
       });
 
+      test('reduceLag defaults to false', () {
+        expect(manager.reduceLagNotifier.value, isFalse);
+      });
+
       test('useDynamicColor defaults to true', () {
         expect(manager.useDynamicColorNotifier.value, isTrue);
       });
@@ -632,6 +636,33 @@ void main() {
         expect(newManager.crossfadeDurationNotifier.value, 5.0);
         expect(newManager.sensitivityNotifier.value, 1.8);
 
+        newManager.dispose();
+      });
+    });
+
+    // ─── Reduce Lag ─────────────────────────────────────────
+
+    group('reduce lag', () {
+      test('setReduceLag updates notifier and persists', () async {
+        await manager.setReduceLag(true);
+        expect(manager.reduceLagNotifier.value, isTrue);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getBool('reduceLag'), isTrue);
+      });
+
+      test('setReduceLag(false) persists off', () async {
+        await manager.setReduceLag(true);
+        await manager.setReduceLag(false);
+        expect(manager.reduceLagNotifier.value, isFalse);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getBool('reduceLag'), isFalse);
+      });
+
+      test('reduceLag survives re-init (restart)', () async {
+        await manager.setReduceLag(true);
+        final newManager = SettingsManager();
+        await newManager.init();
+        expect(newManager.reduceLagNotifier.value, isTrue);
         newManager.dispose();
       });
     });

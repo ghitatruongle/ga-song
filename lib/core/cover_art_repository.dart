@@ -107,6 +107,32 @@ class CoverArtRepository with WidgetsBindingObserver {
   final LinkedHashMap<String, Future<Color?>> _dominantColorFutures =
       LinkedHashMap<String, Future<Color?>>();
 
+  // ─── Concurrent decode limiter ──────────────────────────────────────────
+  // Limits concurrent native image decodes to avoid memory spikes.
+  int _activeDecodes = 0;
+  final List<void Function()> _decodeQueue = [];
+
+  /// Runs [action] under the platform's concurrent-decode cap.
+  Future<T> _withDecodeSlot<T>(final Future<T> Function() action) async {
+    final maxConcurrent =
+        PlatformCapabilities.instance.maxConcurrentImageDecodes;
+    if (_activeDecodes >= maxConcurrent) {
+      final completer = Completer<void>();
+      _decodeQueue.add(completer.complete);
+      await completer.future;
+    }
+    _activeDecodes++;
+    try {
+      return await action();
+    } finally {
+      _activeDecodes--;
+      if (_decodeQueue.isNotEmpty) {
+        final next = _decodeQueue.removeAt(0);
+        next();
+      }
+    }
+  }
+
   @override
   void didHaveMemoryPressure() {
     super.didHaveMemoryPressure();
@@ -168,7 +194,32 @@ class CoverArtRepository with WidgetsBindingObserver {
   }
 
   Future<void> primeForSongs(final Iterable<Song> songs) async {
-    await Future.wait(songs.map(resolveEntry));
+    // Resolve library covers concurrently respecting the platform decode cap.
+    final concurrency = PlatformCapabilities.instance.maxConcurrentImageDecodes;
+    final iterator = songs.iterator;
+    Future<void> worker() async {
+      while (true) {
+        final bool hasNext;
+        try {
+          hasNext = iterator.moveNext();
+        } catch (_) {
+          return;
+        }
+        if (!hasNext) return;
+        try {
+          await resolveEntry(iterator.current);
+        } catch (e, stack) {
+          AppLogger.w(
+            'cover_art.repository',
+            'prime entry failed',
+            error: e,
+            stack: stack,
+          );
+        }
+      }
+    }
+
+    await Future.wait(List.generate(concurrency, (_) => worker()));
   }
 
   Future<void> preloadNextSongs(
@@ -177,6 +228,8 @@ class CoverArtRepository with WidgetsBindingObserver {
     final int count,
   ) async {
     if (songs.isEmpty) return;
+    // Skip proactive preloads when in battery saver or background work is deferred.
+    if (PlatformCapabilities.instance.deferBackgroundWork) return;
     final concurrency = PlatformCapabilities.instance.preloadConcurrency;
     final toPreload = <int>[];
     for (int i = 1; i <= count; i++) {
@@ -265,6 +318,29 @@ class CoverArtRepository with WidgetsBindingObserver {
     _memoryCache.remove(fileName);
   }
 
+  /// Drops the oldest provider entries when the Flutter image cache holds
+  /// more bytes than the platform budget.
+  void _evictProvidersOverByteBudget() {
+    final caps = PlatformCapabilities.instance;
+    final int budgetBytes;
+    if (caps.reduceLagOverride) {
+      budgetBytes = 8 * 1024 * 1024;
+    } else if (caps.isAndroid && caps.effectiveTier == DeviceTier.low) {
+      budgetBytes = 16 * 1024 * 1024;
+    } else if (caps.isAndroid) {
+      budgetBytes = 32 * 1024 * 1024;
+    } else {
+      budgetBytes = 120 * 1024 * 1024;
+    }
+    final used = PaintingBinding.instance.imageCache.currentSizeBytes;
+    if (used < budgetBytes || _providerCache.isEmpty) return;
+    final toEvict = (_providerCache.length / 2).ceil();
+    for (var i = 0; i < toEvict && _providerCache.isNotEmpty; i++) {
+      _providerCache.remove(_providerCache.keys.first);
+      PerformanceProbe.instance.recordEviction();
+    }
+  }
+
   ImageProvider<Object>? getCachedProvider(
     final String fileName, {
     final int? cacheWidth,
@@ -274,6 +350,7 @@ class CoverArtRepository with WidgetsBindingObserver {
     if (entry == null || !entry.hasCover) {
       return null;
     }
+    _evictProvidersOverByteBudget();
 
     final key = _CoverArtVariantKey(
       fileName: fileName,
@@ -434,6 +511,18 @@ class CoverArtRepository with WidgetsBindingObserver {
     final CoverArtEntry entry,
     final String fileName,
   ) async {
+    await _withDecodeSlot(
+      () => _prepopulateProviderFromDiskOrSourceLocked(entry, fileName),
+    );
+  }
+
+  /// Body of [_prepopulateProviderFromDiskOrSource] — runs under the decode
+  /// limiter so concurrent memory spikes stay within
+  /// [PlatformCapabilities.maxConcurrentImageDecodes].
+  Future<void> _prepopulateProviderFromDiskOrSourceLocked(
+    final CoverArtEntry entry,
+    final String fileName,
+  ) async {
     try {
       Uint8List? bytes;
 
@@ -479,6 +568,7 @@ class CoverArtRepository with WidgetsBindingObserver {
 
       // 3. Pre-populate the in-memory provider cache.
       if (bytes != null) {
+        _evictProvidersOverByteBudget();
         // Encode to WebP for efficient memory storage
         final webpBytes = await _encodeToWebP(bytes);
         final provider = MemoryImage(webpBytes ?? bytes);
@@ -901,13 +991,14 @@ class CoverArtRepository with WidgetsBindingObserver {
 
       // Spawn isolate for heavy lifting
       final receivePort = ReceivePort();
-      await Isolate.spawn(
+      _indexingIsolate = await Isolate.spawn(
         _backgroundIndexWorker,
         _BackgroundIndexMessage(
           songs: songsToIndex,
           sendPort: receivePort.sendPort,
         ),
       );
+      _indexingPort = receivePort;
 
       // Listen for progress updates
       await for (final message in receivePort) {
@@ -920,6 +1011,8 @@ class CoverArtRepository with WidgetsBindingObserver {
           );
           _indexingInProgress = false;
           receivePort.close();
+          _indexingPort = null;
+          _indexingIsolate = null;
           break;
         } else if (message is _IndexError) {
           AppLogger.e(
@@ -929,6 +1022,8 @@ class CoverArtRepository with WidgetsBindingObserver {
           );
           _indexingInProgress = false;
           receivePort.close();
+          _indexingPort = null;
+          _indexingIsolate = null;
           break;
         }
       }
@@ -940,6 +1035,7 @@ class CoverArtRepository with WidgetsBindingObserver {
         stack: stack,
       );
       _indexingInProgress = false;
+      cancelBackgroundIndexing();
     }
   }
 
@@ -948,11 +1044,25 @@ class CoverArtRepository with WidgetsBindingObserver {
   /// Checks if background indexing is currently in progress.
   bool get isIndexingInProgress => _indexingInProgress;
 
+  Isolate? _indexingIsolate;
+  ReceivePort? _indexingPort;
+
   /// Cancels any ongoing background indexing.
   void cancelBackgroundIndexing() {
-    // The isolate will clean up when it receives the cancel message
-    // In a full implementation, you'd send a cancel message to the isolate
     _indexingInProgress = false;
+    try {
+      _indexingIsolate?.kill(priority: Isolate.immediate);
+    } catch (e, stack) {
+      AppLogger.w(
+        'cover_art.repository',
+        'isolate kill failed',
+        error: e,
+        stack: stack,
+      );
+    }
+    _indexingIsolate = null;
+    _indexingPort?.close();
+    _indexingPort = null;
   }
 }
 

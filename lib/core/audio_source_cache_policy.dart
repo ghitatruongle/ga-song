@@ -15,12 +15,13 @@ class AudioSourceCachePolicy {
 
     final keep = <int>{currentIndex};
 
-    // P2.3: On Android (tighter RAM budget), only keep the current track.
-    // On desktop, also preload next track for gapless-ready performance.
-    if (!PlatformCapabilities.instance.isAndroid) {
-      if (currentIndex + 1 < playlistLength) {
-        keep.add(currentIndex + 1);
-      }
+    // Keep enough tracks in the eviction window so preloaded sources aren't
+    // immediately discarded. The window is bounded by preloadConcurrency
+    // (tier-aware) — on Android low it's 1, mid it's 3, desktop it's 3.
+    final caps = PlatformCapabilities.instance;
+    final windowSize = caps.preloadConcurrency;
+    for (var i = 1; i < windowSize && currentIndex + i < playlistLength; i++) {
+      keep.add(currentIndex + i);
     }
     return keep;
   }
@@ -37,14 +38,22 @@ class AudioSourceCachePolicy {
     }
 
     final keep = <int>{currentIndex};
-    // On desktop: preload the planned shuffle next track.
-    // On Android: keep only current to conserve RAM.
-    if (!PlatformCapabilities.instance.isAndroid) {
-      if (plannedNextIndex != null &&
-          plannedNextIndex >= 0 &&
-          plannedNextIndex < playlistLength) {
-        keep.add(plannedNextIndex);
-      }
+    // Keep the planned next track if within the preload window so preloaded
+    // sources survive eviction.
+    final caps = PlatformCapabilities.instance;
+    if (plannedNextIndex != null &&
+        plannedNextIndex >= 0 &&
+        plannedNextIndex < playlistLength &&
+        plannedNextIndex != currentIndex) {
+      keep.add(plannedNextIndex);
+    }
+    // Also keep sequential neighbors up to preloadConcurrency.
+    for (
+      var i = 1;
+      i < caps.preloadConcurrency && currentIndex + i < playlistLength;
+      i++
+    ) {
+      keep.add(currentIndex + i);
     }
     return keep;
   }

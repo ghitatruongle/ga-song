@@ -1,11 +1,11 @@
 [Setup]
 AppName=GA Song
-AppVersion=1.0.0
+AppVersion=1.0.1-beta
 AppPublisher=Ghita
 DefaultDirName={autopf}\GA Song
 DisableProgramGroupPage=yes
 OutputDir=..\build\windows\installer
-OutputBaseFilename=GA_Song_v1.0.0_Setup
+OutputBaseFilename=GA_Song_v1.0.1-beta_Setup
 SetupIconFile=..\assets\pic\app_icon.ico
 Compression=lzma
 SolidCompression=yes

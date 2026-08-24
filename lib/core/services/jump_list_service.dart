@@ -1,5 +1,4 @@
 /// Windows Jump List Service for G.A - Song
-///
 /// Provides integration with Windows Taskbar Jump List for:
 /// - Recent playlists
 /// - Pinned songs/playlists
@@ -10,6 +9,8 @@ import 'dart:async';
 
 import '../logging/app_logger.dart';
 import '../platform_capabilities.dart';
+import '../audio/audio_engine_service.dart';
+import '../audio/playlist_service.dart';
 import '../../models/playlist.dart';
 import '../../models/song.dart';
 
@@ -70,7 +71,14 @@ enum JumpListItemType { recent, pinned, task }
 
 /// Windows Jump List Service
 class JumpListService {
-  JumpListService();
+  JumpListService({
+    final AudioEngineService? audioEngineService,
+    final PlaylistService? playlistService,
+  }) : _engine = audioEngineService,
+       _playlist = playlistService;
+
+  final AudioEngineService? _engine;
+  final PlaylistService? _playlist;
 
   static const int _maxRecentItems = 10;
   static const int _maxPinnedItems = 5;
@@ -81,6 +89,9 @@ class JumpListService {
 
   Timer? _debounceTimer;
   bool _initialized = false;
+
+  // Content hash of the last pushed Jump List to skip redundant updates.
+  int _lastBuiltHash = 0;
 
   /// Initialize the Jump List service
   Future<void> init() async {
@@ -200,9 +211,26 @@ class JumpListService {
   /// Get all pinned items
   List<JumpListItem> get pinnedItems => List.unmodifiable(_pinnedItems);
 
+  /// Content hash of the current [recentItems] + [pinnedItems].
+  int _computeHash() {
+    var hash = 17;
+    for (final item in _recentItems) {
+      hash = hash * 31 + item.id.hashCode;
+    }
+    for (final item in _pinnedItems) {
+      hash = hash * 31 + item.id.hashCode;
+    }
+    return hash;
+  }
+
   /// Rebuild the Windows Jump List
   Future<void> _rebuildJumpList() async {
     if (!PlatformCapabilities.instance.isWindows) return;
+
+    // Skip redundant platform updates when nothing changed.
+    final hash = _computeHash();
+    if (hash == _lastBuiltHash) return;
+    _lastBuiltHash = hash;
 
     try {
       // This is where we would call the Windows API to update the Jump List
@@ -301,32 +329,40 @@ class JumpListService {
 
     AppLogger.i('jump_list.service', 'Handling Jump List action: $action');
 
+    final engine = _engine;
+    final playlist = _playlist;
+
     switch (action) {
       case 'play':
-        // Resume playback
+        if (playlist != null) await playlist.play();
         break;
       case 'pause':
-        // Pause playback
+        engine?.pause();
         break;
       case 'next':
-        // Next track
+        await playlist?.next();
         break;
       case 'previous':
-        // Previous track
+        await playlist?.previous();
+        break;
+      case 'stop':
+        engine?.stop();
         break;
       case 'settings':
-        // Open settings
+        // Settings navigation handled by caller (needs context)
         break;
       case 'open_playlist':
-        final playlistId = arguments['playlist_id'] as int?;
-        if (playlistId != null) {
-          // Navigate to playlist
-        }
+        // Playlist navigation handled by caller (needs context)
         break;
       case 'play_song':
         final songId = arguments['song_id'] as int?;
-        if (songId != null) {
-          // Play song
+        if (songId != null && playlist != null) {
+          final index = playlist.playlist.indexWhere(
+            (final s) => s.id == songId,
+          );
+          if (index >= 0) {
+            await playlist.playSongAt(index);
+          }
         }
         break;
     }

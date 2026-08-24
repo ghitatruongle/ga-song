@@ -2,7 +2,7 @@ name: ga_song
 description: "A full-featured music player with KTV mode, lyrics sync, and audio effects."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1-beta+80002
 
 environment:
   sdk: ^3.11.4
@@ -75,10 +75,21 @@ flutter:
     - assets/song/mat_nham_mat_mo/
     - assets/song/anh_trai_say_hi/
     - assets/song/b_ray/
+    - assets/song/tinh_ha_say_hi/
     - assets/pic/
     - assets/pic/mat_nham_mat_mo/
     - assets/pic/anh_trai_say_hi/
     - assets/pic/b_ray/
+    - assets/pic/tinh_ha_say_hi/
+
+  # Noto Sans as a glyph fallback so Vietnamese text never
+  # renders as tofu on minimal Linux installs without VN fonts. It is wired as
+  # fontFamilyFallback (not the primary family), so platforms that already have
+  # proper fonts keep their exact current look — zero visual change.
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
 
   shaders:
     - shaders/visualizer.frag
@@ -114,7 +125,7 @@ debian:
   display_name: GA Song
   description: A new Flutter project.
   maintainer: ghitatruongle <ghitatruongle@gmail.com>
-  version: 1.0.0
+  version: 1.0.1
   section: utils
   priority: optional
   architecture: amd64

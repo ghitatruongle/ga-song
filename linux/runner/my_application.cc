@@ -1,8 +1,12 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
+#include <stdlib.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
+#endif
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
@@ -25,20 +29,33 @@ static void my_application_activate(GApplication* application) {
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  // Use a header bar when running in GNOME as this is the common style used
-  // by applications and is the setup most users will be using (e.g. Ubuntu
-  // desktop).
-  // If running on X and not using GNOME then just use a traditional title bar
-  // in case the window manager does more exotic layout, e.g. tiling.
-  // If running on Wayland assume the header bar will work (may need changing
-  // if future cases occur).
+  // Use a header bar when running in GNOME/Cinnamon as this is the common
+  // style used by applications and is the setup most users will be using.
+  // KDE/KWin prefers client-side title bars, so use the traditional
+  // title bar there. Tiling WMs (i3, sway, etc.) also work better with
+  // the standard title bar.
   gboolean use_header_bar = TRUE;
-#ifdef GDK_WINDOWING_X11
-  GdkScreen* screen = gtk_window_get_screen(window);
-  if (GDK_IS_X11_SCREEN(screen)) {
-    const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
-    if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
+  const gchar* xdg_desktop = g_getenv("XDG_CURRENT_DESKTOP");
+  if (xdg_desktop != NULL) {
+    // KDE, LXQt, Deepin, and tiling WMs prefer the traditional title bar.
+    if (g_str_has_prefix(xdg_desktop, "KDE") ||
+        g_str_has_prefix(xdg_desktop, "LXQt") ||
+        g_str_has_prefix(xdg_desktop, "Deepin") ||
+        g_str_has_prefix(xdg_desktop, "i3") ||
+        g_str_has_prefix(xdg_desktop, "sway")) {
       use_header_bar = FALSE;
+    }
+  }
+#ifdef GDK_WINDOWING_X11
+  // Fallback: if XDG_CURRENT_DESKTOP is unset, detect via WM name.
+  if (use_header_bar) {
+    GdkScreen* screen = gtk_window_get_screen(window);
+    if (GDK_IS_X11_SCREEN(screen)) {
+      const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
+      if (g_strcmp0(wm_name, "GNOME Shell") != 0 &&
+          g_strcmp0(wm_name, "Mutter") != 0) {
+        use_header_bar = FALSE;
+      }
     }
   }
 #endif
@@ -62,7 +79,15 @@ static void my_application_activate(GApplication* application) {
   GdkRGBA background_color;
   // Background defaults to black, override it here if necessary, e.g. #00000000
   // for transparent.
-  gdk_rgba_parse(&background_color, "#00000000");
+  // Solid background on Wayland compositors; X11 keeps transparent default.
+  gboolean use_transparent = TRUE;
+#ifdef GDK_WINDOWING_WAYLAND
+  if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(GTK_WIDGET(window)))) {
+    use_transparent = FALSE;
+  }
+#endif
+  gdk_rgba_parse(&background_color,
+                 use_transparent ? "#00000000" : "#121212");
   fl_view_set_background_color(view, &background_color);
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
@@ -142,7 +167,13 @@ MyApplication* my_application_new() {
   // the application to be recognized beyond its binary name.
   g_set_prgname(APPLICATION_ID);
 
+#if GLIB_CHECK_VERSION(2, 74, 0)
+  const GApplicationFlags flags = G_APPLICATION_DEFAULT_FLAGS;
+#else
+  const GApplicationFlags flags = G_APPLICATION_FLAGS_NONE;
+#endif
+
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     G_APPLICATION_NON_UNIQUE, nullptr));
+                                     flags, nullptr));
 }

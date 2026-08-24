@@ -2,11 +2,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import 'logging/app_logger.dart';
+import 'services/power_state_service.dart';
+import 'platforms/ios/ios_integration.dart';
 
-/// Detects platform capabilities and hardware tier to tune performance settings.
-///
+/// Detects platform capabilities and hardware tier to tune performance settings
 /// Provides a single source of truth for platform-specific decisions across
-/// the app — visualizer frame budget, cache sizes, blur quality, timer intervals.
+/// the app — visualizer frame budget, cache sizes, blur quality, timer intervals
 class PlatformCapabilities {
   PlatformCapabilities._();
   static final PlatformCapabilities instance = PlatformCapabilities._();
@@ -127,6 +128,16 @@ class PlatformCapabilities {
     return DeviceTier.mid; // Default fallback
   }
 
+  /// Android "Reduce Lag" mode override. When true, performance knobs
+  /// report their lowest tier values regardless of the detected [deviceTier].
+  bool reduceLagOverride = false;
+
+  /// Tier used by all performance knobs. Honors [reduceLagOverride] by
+  /// forcing [DeviceTier.low] — this is what makes Reduce Lag a single-point
+  /// switch instead of touching every consumer.
+  DeviceTier get effectiveTier =>
+      reduceLagOverride ? DeviceTier.low : deviceTier;
+
   /// Android display refresh rate in Hz (90Hz/120Hz detection).
   /// Returns 60 on non-Android platforms or when detection fails.
   int get androidFrameRateHz {
@@ -153,10 +164,11 @@ class PlatformCapabilities {
   // ─── Performance tuning knobs ─────────────────────────────────────────────
 
   /// Position update interval for the audio progress bar.
-  /// 250ms on desktop; 500ms on Android (low-end 800ms) to reduce wake-ups.
+  /// 250ms on desktop; 500ms on Android (low-end 600ms) to reduce wake-ups.
+  /// 600ms (not 800ms) keeps progress bar smooth on 90/120Hz displays.
   Duration get positionTimerInterval {
-    if (isAndroid && deviceTier == DeviceTier.low) {
-      return const Duration(milliseconds: 800);
+    if (effectiveTier == DeviceTier.low) {
+      return const Duration(milliseconds: 600);
     }
     if (isAndroid) return const Duration(milliseconds: 500);
     return const Duration(milliseconds: 250);
@@ -166,14 +178,14 @@ class PlatformCapabilities {
   /// Desktop: 12 (each decoded track costs ~30-40MB RAM; 50 was too greedy).
   /// Android mid: 10; Android low: 6.
   int get maxAudioSourceCacheEntries {
-    if (isAndroid && deviceTier == DeviceTier.low) return 6;
+    if (effectiveTier == DeviceTier.low) return 6;
     if (isAndroid) return 10;
     return 12;
   }
 
   /// Max number of cover art image providers to keep in the LRU cache.
   int get maxCoverArtCacheEntries {
-    if (isAndroid && deviceTier == DeviceTier.low) return 12;
+    if (effectiveTier == DeviceTier.low) return 12;
     if (isAndroid) return 24;
     return 32;
   }
@@ -181,38 +193,37 @@ class PlatformCapabilities {
   /// Whether to allow high-quality blur effects.
   /// Desktop always allows; Android mid allows with reduced sigma; low disables.
   bool get allowHighQualityBlur {
-    if (isAndroid && deviceTier == DeviceTier.low) return false;
+    if (effectiveTier == DeviceTier.low) return false;
     return isDesktop;
   }
 
   /// Suggested blur sigma for blurred backgrounds.
   double get backgroundBlurSigma {
-    if (isAndroid && deviceTier == DeviceTier.low) return 8; // Very light
+    if (effectiveTier == DeviceTier.low) return 8; // Very light
     if (isAndroid) return 16;
     return 30;
   }
 
   /// Max particle count for the visualizer.
-  /// Desktop: 150; Android mid: 60; Android low: 30.
+  /// Desktop: 150; mid-tier (Android mid, iPhone/iPad): 60; low: 30.
   int get maxParticleCount {
-    if (isAndroid && deviceTier == DeviceTier.low) return 30;
-    if (isAndroid) return 60;
+    if (effectiveTier == DeviceTier.low) return 30;
+    if (effectiveTier == DeviceTier.mid) return 60;
     return 150;
   }
 
   /// Max star count for the starfield visualizer.
-  /// Desktop: 200; Android mid: 80; Android low: 40.
+  /// Desktop: 200; mid-tier: 80; low: 40.
   int get maxStarCount {
-    if (isAndroid && deviceTier == DeviceTier.low) return 40;
-    if (isAndroid) return 80;
+    if (effectiveTier == DeviceTier.low) return 40;
+    if (effectiveTier == DeviceTier.mid) return 80;
     return 200;
   }
 
   /// How many audio sources to preload concurrently.
   /// Android low: 1 (sequential); Android mid: 3; Desktop: 3.
   int get preloadConcurrency {
-    if (isAndroid && deviceTier == DeviceTier.low) return 1;
-    if (isAndroid) return 3;
+    if (effectiveTier == DeviceTier.low) return 1;
     return 3;
   }
 
@@ -221,69 +232,88 @@ class PlatformCapabilities {
 
   /// Frame time budget in milliseconds before the visualizer drops to half-rate.
   int get visualizerFrameBudgetMs {
-    switch (deviceTier) {
+    switch (effectiveTier) {
       case DeviceTier.high:
-        return 14; // ~71fps budget — drops to 30fps if over
+        return 14; // ~71fps budget
       case DeviceTier.mid:
-        return 18; // ~55fps budget (tận dụng 90Hz màn hình) — drops to 24fps if over
+        return 18; // ~55fps budget
       case DeviceTier.low:
-        return 33; // ~30fps fixed budget, no further drop
+        return 33; // ~30fps fixed budget
     }
   }
 
   /// Whether the visualizer should process audio amplitude data at full rate.
   /// Low-end devices sample at half rate to reduce CPU load.
-  bool get visualizerHalfRate => isAndroid && deviceTier == DeviceTier.low;
+  bool get visualizerHalfRate => isAndroid && effectiveTier == DeviceTier.low;
 
   /// Whether the animated starfield background should run.
   /// Disabled on low-end Android to save GPU cycles.
-  bool get allowStarfieldBackground =>
-      !(isAndroid && deviceTier == DeviceTier.low);
+  bool get allowStarfieldBackground => effectiveTier != DeviceTier.low;
 
   /// Whether to enable the shimmer/skeleton loading animation on lists.
   /// Disabled on low-end Android to reduce jank.
-  bool get allowShimmerLoading => !(isAndroid && deviceTier == DeviceTier.low);
+  bool get allowShimmerLoading => effectiveTier != DeviceTier.low;
 
   /// Whether animated page transitions (slide/fade) are enabled.
   /// Low-end Android gets instant transitions — no animation.
-  bool get allowPageTransitions => !(isAndroid && deviceTier == DeviceTier.low);
+  bool get allowPageTransitions => effectiveTier != DeviceTier.low;
 
   // ─── Power management ───────────────────────────────────────────────────
 
   /// Whether the system is in a low-power / battery-saver mode.
-  /// Windows: queries power status; macOS/Linux/Android fall back to false.
+  /// Supported on Android (PowerManager), iOS (Low Power Mode), and Windows (Battery Saver).
   bool get isPowerSavingMode {
-    if (isWindows) {
+    if (isAndroid) {
       try {
-        // Windows: PowerManager::GetPowerStatus returns 0 when on battery,
-        // 1 when on AC. We use the SystemParameters API via a platform channel
-        // — here we rely on a simpler heuristic: if battery capacity is low.
-        // Since Flutter doesn't expose this directly, we use a heuristic
-        // based on the platform's power state from SystemSettings.
-        return false; // Fallback — real detection requires native code
-      } catch (e) {
+        return PowerStateService.instance.isPowerSaving;
+      } catch (e, stack) {
+        AppLogger.w(
+          'platform.capabilities',
+          'power saving read failed',
+          error: e,
+          stack: stack,
+        );
+        return false;
+      }
+    }
+    if (isIOS) {
+      try {
+        return IOSIntegration.isLowPowerMode;
+      } catch (e, stack) {
+        AppLogger.w(
+          'platform.capabilities',
+          'iOS low power read failed',
+          error: e,
+          stack: stack,
+        );
         return false;
       }
     }
     return false;
   }
 
+  /// Whether battery-hungry background work (cover-art preloads, scanning)
+  /// should be deferred. True when the OS is in battery saver OR background scanning is disabled.
+  bool get deferBackgroundWork =>
+      isPowerSavingMode || !enableBackgroundScanning;
+
   /// Whether to use aggressive memory cleanup on Android.
   /// Enabled on low-end devices to prevent OOM.
-  bool get aggressiveMemoryCleanup => isAndroid && deviceTier == DeviceTier.low;
+  bool get aggressiveMemoryCleanup =>
+      isAndroid && effectiveTier == DeviceTier.low;
 
   /// Maximum number of concurrent image decodes.
-  /// Lower on Android to prevent OOM.
+  /// Lower on Android to prevent OOM. Low-tier uses 2 (not 1) so list
+  /// scrolling doesn't stall on a single decode at a time.
   int get maxConcurrentImageDecodes {
-    if (isAndroid && deviceTier == DeviceTier.low) return 1;
+    if (effectiveTier == DeviceTier.low) return 2;
     if (isAndroid) return 3;
     return 6;
   }
 
   /// Whether to enable background audio scanning.
   /// Disabled on low-end Android to save battery.
-  bool get enableBackgroundScanning =>
-      !(isAndroid && deviceTier == DeviceTier.low);
+  bool get enableBackgroundScanning => effectiveTier != DeviceTier.low;
 
   /// Battery optimization mode - reduces background activity.
   bool get batteryOptimizationMode => isAndroid;
@@ -303,8 +333,9 @@ class PlatformCapabilities {
 
   @override
   String toString() =>
-      'PlatformCapabilities(tier: $deviceTier, android: $isAndroid, '
-      'desktop: $isDesktop, linux: $isLinux, chromeos: $isChromeOS, '
+      'PlatformCapabilities(tier: $effectiveTier, reduceLag: '
+      '$reduceLagOverride, android: $isAndroid, desktop: $isDesktop, '
+      'linux: $isLinux, chromeos: $isChromeOS, '
       'frameRateHz: $androidFrameRateHz)';
 }
 

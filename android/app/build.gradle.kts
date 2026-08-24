@@ -41,7 +41,10 @@ android {
 
             // Hỗ trợ cả arm64-v8a và armeabi-v7a (cho thiết bị 32-bit như SM J610F)
             ndk {
-                debugSymbolLevel = "full"
+                // "full" embeds full native debug symbols in the
+                // release APK (bloats every ABI). No crash-symbolication
+                // pipeline is wired yet, so strip them for smaller artifacts.
+                debugSymbolLevel = "none"
             }
 
             // TODO: Add your own signing config for the release build.

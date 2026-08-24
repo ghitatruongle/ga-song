@@ -32,6 +32,8 @@ class MockSettingsManager implements SettingsManager {
   final ValueNotifier<double> compressionRatioNotifier = ValueNotifier(1);
   @override
   final ValueNotifier<bool> visualizerEnabledNotifier = ValueNotifier(true);
+  @override
+  final ValueNotifier<bool> reduceLagNotifier = ValueNotifier(false);
   final ValueNotifier<double> lyricsFontSizeNotifier = ValueNotifier(16);
 
   @override
@@ -214,6 +216,7 @@ class MockSettingsManager implements SettingsManager {
     reverbMixNotifier.dispose();
     compressionRatioNotifier.dispose();
     visualizerEnabledNotifier.dispose();
+    reduceLagNotifier.dispose();
     lyricsFontSizeNotifier.dispose();
     themeModeNotifier.dispose();
     localeNotifier.dispose();
@@ -251,6 +254,7 @@ class MockSettingsManager implements SettingsManager {
     minimizeToTrayNotifier,
     autoHidePlayerBarNotifier,
     visualizerEnabledNotifier,
+    reduceLagNotifier,
     useDynamicColorNotifier,
     sidebarCollapsedNotifier,
     desktopLyricsEnabledNotifier,

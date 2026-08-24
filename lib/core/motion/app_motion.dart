@@ -2,9 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Canonical animation durations used throughout the app.
-///
-/// Phase 4 applies these to all transitions. Today (Phase 1) the library
-/// is introduced but no widget references it yet.
 class AppDurations {
   AppDurations._();
 
@@ -42,11 +39,6 @@ class AppCurves {
 }
 
 /// Holder for the user's motion preference.
-///
-/// Currently a single boolean field set explicitly by code that has read
-/// the platform setting (e.g. `MediaQuery.disableAnimations` in Flutter,
-/// or `Settings.Global.ANIMATOR_DURATION_SCALE` on Android). A
-/// `MotionPreferences.fromMediaQuery` factory is planned for Phase 2.
 @immutable
 class MotionPreferences {
   /// When true, animations should be reduced or eliminated. Set automatically

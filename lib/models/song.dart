@@ -2,14 +2,12 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'song.g.dart';
 
-/// Represents a song in the music library.
-///
+/// Represents a song in the music library
 /// A song can be either a built-in asset (shipped with the app) or a local
 /// file imported by the user. The [sourcePath] determines how the song is
 /// loaded: asset paths start with `assets/`, local paths are absolute file paths.
-///
 /// Equality is based on [id] only, allowing the same song to appear multiple
-/// times in a playlist with different positions.
+/// times in a playlist with different positions
 @JsonSerializable()
 class Song {
   int? id;
@@ -26,7 +24,7 @@ class Song {
   @JsonKey(fromJson: _dateTimeFromJson)
   final DateTime? dateAdded;
 
-  // ─── Phase 2: Smart Playlist & Tag Editor fields ──────────────────────────
+  // ─── Playback statistics & ID3 tags ─────────────────────────────────────
   final int playCount;
   @JsonKey(fromJson: _dateTimeFromJson)
   final DateTime? lastPlayed;

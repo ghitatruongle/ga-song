@@ -22,7 +22,6 @@ class BottomPlayerBarWidget extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    // Phase 2.2: read state from Riverpod providers (was PlayerViewModel).
     final playlist = ref.watch(playlistServiceProvider);
     final index = ref.watch(currentPlayingIndexProvider);
     final song = (index >= 0 && index < playlist.playlist.length)
@@ -30,7 +29,7 @@ class BottomPlayerBarWidget extends ConsumerWidget {
         : null;
     final isDark = context.isDark;
 
-    // v0.6.5: Per-song dominant color for accent-tinted player bar.
+    // Per-song dominant color for accent-tinted player bar.
     final dominantColorAsync = ref.watch(currentSongDominantColorProvider);
     final dominantColor = switch (dominantColorAsync) {
       AsyncData(:final value) => value,
@@ -39,10 +38,7 @@ class BottomPlayerBarWidget extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (final context, final constraints) {
-        // Phase 4 device-debug fix: at narrow widths (mobile portrait with
-        // sidebar visible, ~191 logical px), the 3-column horizontal
-        // layout overflows by ~50 px.  Collapse to a vertical layout
-        // (SongInfo on top, controls below) which scales gracefully.
+        // At narrow widths, collapse to vertical layout to prevent overflow.
         final isNarrow = constraints.maxWidth < _kNarrowPlayerBarThreshold;
         final barHeight = isNarrow
             ? _kPlayerBarHeightNarrow

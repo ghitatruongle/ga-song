@@ -3,6 +3,7 @@
 
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 #include <windows.h>
 
 #include <memory>
@@ -23,8 +24,14 @@ class FlutterWindow : public Win32Window {
                         LPARAM const lparam) noexcept override;
 
  private:
+  // Power-state channel (battery saver / AC / level) for
+  // PlatformCapabilities.isPowerSavingMode on Windows.
+  void RegisterPowerStateChannel(flutter::FlutterEngine* engine);
+
   flutter::DartProject project_;
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      power_channel_;
 };
 
 #endif  // FLUTTER_WINDOW_H_

@@ -17,14 +17,16 @@ void main() {
       expect(policy.linearWindow(currentIndex: 10, playlistLength: 5), isEmpty);
     });
 
-    test('returns {currentIndex} when on Android (single-track window)', () {
-      // Default test platform is non-Android for unit tests (we don't change
-      // PlatformCapabilities here). When the host is desktop, we expect current+next.
-      final result = policy.linearWindow(currentIndex: 2, playlistLength: 10);
-      // Either {2} (Android) or {2, 3} (desktop) — both are valid responses.
-      expect(result.contains(2), isTrue);
-      expect(result.length, inInclusiveRange(1, 2));
-    });
+    test(
+      'returns {currentIndex} and sequential neighbors (tier-aware window)',
+      () {
+        // Window size depends on preloadConcurrency: desktop=3, Android low=1.
+        final result = policy.linearWindow(currentIndex: 2, playlistLength: 10);
+        expect(result.contains(2), isTrue);
+        // At minimum {2}; at most {2, 3, 4} on desktop.
+        expect(result.length, inInclusiveRange(1, 3));
+      },
+    );
 
     test('on the last track, only returns currentIndex', () {
       final result = policy.linearWindow(currentIndex: 9, playlistLength: 10);
@@ -51,9 +53,8 @@ void main() {
         plannedNextIndex: 7,
       );
       expect(result.contains(1), isTrue);
-      // Desktop includes planned next; Android doesn't.
-      // Either {1} (Android) or {1, 7} (desktop) is valid.
-      expect(result.length, inInclusiveRange(1, 2));
+      // Always includes planned next; may also include sequential neighbors.
+      expect(result.length, inInclusiveRange(2, 4));
     });
   });
 }

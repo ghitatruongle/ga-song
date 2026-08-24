@@ -382,10 +382,7 @@ class _SongListTileState extends ConsumerState<SongListTile> {
               ),
               child: LayoutBuilder(
                 builder: (final context, final constraints) {
-                  // Phase 4 fix: at narrow viewports (mobile portrait with
-                  // sidebar visible, ~63 px inner) the fixed-width children
-                  // (32+12+36+12+8+40 = 140) overflow.  Drop the index and
-                  // shrink the cover/duration so the row fits.
+                  // Adapt sizing for narrow viewports to avoid overflow.
                   final isNarrow = constraints.maxWidth < 240;
                   final coverSize = isNarrow ? 28.0 : 36.0;
                   final durationWidth = isNarrow ? 32.0 : 40.0;

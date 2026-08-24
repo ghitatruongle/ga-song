@@ -1,10 +1,13 @@
 [Desktop Entry]
-Version=1.0.0
-Name=ga song
-GenericName=ga song
-Comment=A new Flutter project.
+Version=1.0.1
+Name=GA Song
+GenericName=Music Player
+Comment=A full-featured music player with KTV mode, lyrics sync, and audio effects
 Terminal=false
 Type=Application
-Categories=Utility;
-Keywords=Flutter;
+Categories=Audio;Music;Player;Utility;
+Keywords=music;audio;player;karaoke;lyrics;KTV;
 Icon=ga_song
+StartupNotify=true
+MimeType=audio/mpeg;audio/flac;audio/x-wav;audio/x-m4a;audio/ogg;
+X-GNOME-UsesNotifications=true

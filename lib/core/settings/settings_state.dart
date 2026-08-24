@@ -3,10 +3,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'settings_state.freezed.dart';
 
-/// Immutable settings state using Freezed.
-///
+/// Immutable settings state using Freezed
 /// This replaces the 40+ ValueNotifiers in [SettingsManager] with a single
-/// immutable state object that integrates cleanly with Riverpod.
+/// immutable state object that integrates cleanly with Riverpod
 @freezed
 class SettingsState with _$SettingsState {
   const factory SettingsState({
@@ -68,7 +67,7 @@ class SettingsState with _$SettingsState {
     @Default({}) final Map<String, String> customHotkeys,
     @Default(true) final bool mediaKeyEnabled,
 
-    // ─── Feedback (Phase 4) ──────────────────────────────────────────
+    // ─── Feedback ────────────────────────────────────────────────────
     @Default(false) final bool soundFeedbackEnabled,
 
     // ─── Other ──────────────────────────────────────────────────────

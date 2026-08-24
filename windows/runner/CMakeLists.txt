@@ -36,5 +36,28 @@ target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
+# Whole-program optimization for the runner target ONLY.
+# INTERPROCEDURAL_OPTIMIZATION maps to /GL (compiler) + /LTCG (linker) for
+# MSVC Release builds, letting the linker inline across translation units.
+# This is intentionally scoped to the app runner — plugins keep their own
+# flags (apply_standard_settings is shared and stays untouched).
+set_target_properties(${BINARY_NAME} PROPERTIES
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
+)
+
+# Linker COMDAT folding + dead-code elimination on Release.
+# /OPT:REF drops unreferenced functions/data, /OPT:ICF merges identical
+# code. Both are already ON by default in MSVC Release link lines, but we
+# pin them explicitly so the optimization is guaranteed even if a future
+# Flutter template changes the default.
+#
+# `target_link_options(...)` with genexes did NOT reach the linker on the
+# Visual Studio generator in this Flutter template (verified in the
+# generated .vcxproj), so use the classic per-config LINK_FLAGS property,
+# which MSBuild always appends to the link line.
+set_target_properties(${BINARY_NAME} PROPERTIES
+  LINK_FLAGS_RELEASE "/OPT:REF /OPT:ICF"
+)
+
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)

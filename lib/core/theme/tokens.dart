@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Design token colors — single source of truth.
-///
-/// These values feed Material 3 `ColorScheme.fromSeed` and any direct
-/// widget references. Do not introduce `Color(0xFF...)` literals elsewhere.
-///
-/// The legacy palette from `app_colors.dart` was folded into this file
-/// during Phase 4 (UI Polish). The single class [AppColors] is now the
-/// only color entry point — both the Material 3 seed palette and the
-/// legacy dark/light neutrals live here.
+/// Design token colors — single source of truth for color definitions
+/// These values feed Material 3 `ColorScheme.fromSeed` and widget references.
 class AppColors {
   AppColors._();
 

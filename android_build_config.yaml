@@ -10,8 +10,8 @@ android:
 
 # Version
 version:
-  name: "1.0.0"
-  code: 80001
+  name: "1.0.1-beta"
+  code: 80002
 
 # Signing Configuration
 signing:
@@ -82,12 +82,11 @@ apk_size_budget:
   builtin_songs_excluded: true
 
 # ProGuard Rules
+# NOTE: only proguard-rules.pro exists on disk — proguard-audio/drift/riverpod
+# were referenced here but never created (they are documentation-only).
 proguard:
   rules_files:
     - "proguard-rules.pro"
-    - "proguard-audio.pro"
-    - "proguard-drift.pro"
-    - "proguard-riverpod.pro"
 
 # Bundle Configuration
 bundle:
@@ -106,8 +105,8 @@ bundle_config:
 # Android App Bundle Settings
 aab:
   enable: true
-  version_code: 80001
-  version_name: "1.0.0"
+  version_code: 80002
+  version_name: "1.0.1-beta"
 
 # Play Store Listing
 play_store:

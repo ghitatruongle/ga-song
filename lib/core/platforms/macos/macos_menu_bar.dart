@@ -2,15 +2,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 import '../../../providers/service_providers.dart';
+import '../../../ui/widgets/sidebar.dart';
 import '../../audio/audio_engine_service.dart';
+import 'macos_integration.dart';
 
-/// macOS menu bar configuration for G.A Song.
-///
+/// macOS menu bar configuration for G.A Song
 /// Provides native macOS menu bar items for playback control,
-/// window management, and app features.
+/// window management, and app features
 class MacOSMenuBar extends ConsumerWidget {
-  /// Child widget.
+  /// Child widget
   final Widget child;
 
   /// Callback for play/pause action.
@@ -46,6 +48,19 @@ class MacOSMenuBar extends ConsumerWidget {
     final playlistService = ref.read(playlistServiceProvider);
     final engineService = ref.read(audioEngineServiceProvider);
 
+    // Defaults so menu items always work even when explicit callbacks are not passed.
+    final openSettings =
+        onOpenSettings ??
+        () {
+          ref.read(settingsManagerProvider).currentTabIndexNotifier.value =
+              TabItem.settings.index;
+        };
+    final importSongs =
+        onImportSongs ??
+        () {
+          ref.read(musicManagerProvider).importLocalSongs();
+        };
+
     final handlePlayPause =
         onPlayPause ??
         () {
@@ -80,7 +95,7 @@ class MacOSMenuBar extends ConsumerWidget {
                     LogicalKeyboardKey.comma,
                     meta: true,
                   ),
-                  onSelected: () => onOpenSettings?.call(),
+                  onSelected: openSettings,
                 ),
               ],
             ),
@@ -92,7 +107,9 @@ class MacOSMenuBar extends ConsumerWidget {
                     LogicalKeyboardKey.keyQ,
                     meta: true,
                   ),
-                  onSelected: () => SystemNavigator.pop(),
+                  // SystemNavigator.pop() is a no-op on macOS desktop — go
+                  // through the native channel so the app really terminates.
+                  onSelected: () => MacOSIntegration.quitApplication(),
                 ),
               ],
             ),
@@ -111,7 +128,7 @@ class MacOSMenuBar extends ConsumerWidget {
                     LogicalKeyboardKey.keyO,
                     meta: true,
                   ),
-                  onSelected: () => onImportSongs?.call(),
+                  onSelected: importSongs,
                 ),
               ],
             ),
@@ -123,7 +140,9 @@ class MacOSMenuBar extends ConsumerWidget {
                     LogicalKeyboardKey.keyW,
                     meta: true,
                   ),
-                  onSelected: () => SystemNavigator.pop(),
+                  // Goes through window_manager so close-to-tray / destroy
+                  // behaviour (onWindowClose) matches the window close button.
+                  onSelected: () => windowManager.close(),
                 ),
               ],
             ),
@@ -174,7 +193,7 @@ class MacOSMenuBar extends ConsumerWidget {
                     LogicalKeyboardKey.keyM,
                     meta: true,
                   ),
-                  onSelected: () {},
+                  onSelected: () => windowManager.minimize(),
                 ),
               ],
             ),
@@ -189,7 +208,7 @@ class MacOSMenuBar extends ConsumerWidget {
     showAboutDialog(
       context: context,
       applicationName: 'G.A Song',
-      applicationVersion: '1.0.0',
+      applicationVersion: '1.0.1-beta',
       applicationIcon: const FlutterLogo(size: 64),
     );
   }

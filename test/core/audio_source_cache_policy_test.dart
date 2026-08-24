@@ -96,8 +96,10 @@ void main() {
           playlistLength: 5,
           plannedNextIndex: -1,
         );
-        expect(result.length, 1);
+        // Negative plannedNext is excluded; sequential neighbors may be
+        // included depending on preloadConcurrency (tier-aware).
         expect(result, contains(0));
+        expect(result, isNot(contains(-1)));
       });
 
       test('works without planned next index', () {

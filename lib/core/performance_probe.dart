@@ -1,13 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import 'logging/app_logger.dart';
 
 /// Debug-only frame timing + memory logger used while profiling desktop surfaces.
-///
 /// In debug mode, captures frame build/raster P95 times and periodic
-/// snapshots of the audio source cache size. Reports every 120 frames.
+/// snapshots of the audio source cache size. Reports every 120 frames
 class PerformanceProbe {
   PerformanceProbe._();
 
@@ -21,12 +21,14 @@ class PerformanceProbe {
 
   // ─── Memory Tracking ──────────────────────────────────────────────────────
   int _peakAudioCacheSize = 0;
+  int _currentAudioCacheSize = 0;
   int _totalPreloads = 0;
   int _totalEvictions = 0;
 
   void recordPreload() => _totalPreloads++;
   void recordEviction() => _totalEvictions++;
   void recordCacheSize(final int size) {
+    _currentAudioCacheSize = size;
     if (size > _peakAudioCacheSize) _peakAudioCacheSize = size;
   }
 
@@ -58,14 +60,35 @@ class PerformanceProbe {
   }
 
   void _reportMemoryStats() {
+    final imageCache = PaintingBinding.instance.imageCache;
     AppLogger.d(
       'performance.probe',
       '[perf][memory] '
           'peakCacheSize=$_peakAudioCacheSize '
+          'currentCacheSize=$_currentAudioCacheSize '
           'totalPreloads=$_totalPreloads '
-          'totalEvictions=$_totalEvictions',
+          'totalEvictions=$_totalEvictions '
+          'imageCacheBytes=${imageCache.currentSizeBytes} '
+          'imageCacheCount=${imageCache.currentSize}',
     );
   }
+
+  /// Exports performance metrics snapshot as a map.
+  Map<String, dynamic> toJson() {
+    final imageCache = PaintingBinding.instance.imageCache;
+    return <String, dynamic>{
+      'surface': _surface,
+      'frameCount': _frameCount,
+      'peakAudioCacheSize': _peakAudioCacheSize,
+      'currentAudioCacheSize': _currentAudioCacheSize,
+      'totalPreloads': _totalPreloads,
+      'totalEvictions': _totalEvictions,
+      'imageCacheBytes': imageCache.currentSizeBytes,
+      'imageCacheCount': imageCache.currentSize,
+    };
+  }
+
+  String exportJson() => jsonEncode(toJson());
 
   void _onTimings(final List<FrameTiming> timings) {
     _timings.addAll(timings);

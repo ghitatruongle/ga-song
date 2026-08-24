@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 
-/// macOS-specific integration for G.A Song.
-///
+/// macOS-specific integration for G.A Song
 /// Provides native macOS features like menu bar, Touch Bar,
 /// and system integration.
 class MacOSIntegration {
@@ -11,12 +10,19 @@ class MacOSIntegration {
   /// Whether the current platform is macOS.
   static bool get isMacOS => Platform.isMacOS;
 
+  /// Invoked when the OS reports memory pressure ("warning" / "critical" / "normal")
+  /// to trigger image-cache and decoded-audio relief.
+  static void Function(String level)? onMemoryPressureHandler;
+
   /// Initializes macOS-specific features.
   static Future<void> setup() async {
     if (!isMacOS) return;
 
     _channel.setMethodCallHandler(_handleMethodCall);
-    await _configureWindow();
+    // Note: window configuration (titlebar hidden, full-size content view)
+    // is handled by WindowManagerService via the Window plugin — the native
+    // _configureWindow() call was removed to avoid a race condition between
+    // the two approaches.
   }
 
   static Future<dynamic> _handleMethodCall(final MethodCall call) async {
@@ -30,16 +36,21 @@ class MacOSIntegration {
       case 'onPowerStateChanged':
         // Handle power state changes (sleep/wake)
         break;
+      case 'onMemoryPressure':
+        final level =
+            (call.arguments as Map<dynamic, dynamic>?)?['level'] as String? ??
+            'warning';
+        onMemoryPressureHandler?.call(level);
+        break;
     }
   }
 
-  static Future<void> _configureWindow() async {
+  /// Terminates the application (macOS). Menu-bar "Quit" must use this —
+  /// [SystemNavigator.pop] is a no-op on desktop.
+  static Future<void> quitApplication() async {
+    if (!isMacOS) return;
     try {
-      await _channel.invokeMethod('configureWindow', {
-        'titleBarStyle': 'hidden',
-        'fullSizeContentView': true,
-        'transparent': true,
-      });
+      await _channel.invokeMethod('quitApplication');
     } catch (e) {
       // Ignore if not supported
     }

@@ -628,9 +628,10 @@ class HotkeyService {
           newPosition < Duration.zero ? Duration.zero : newPosition,
         );
         break;
-      // New: stop action
+      // Media Stop: pause instead of full stop — a full stop clears the
+      // queue and resets position, which is surprising for a media key.
       case 'stop':
-        engineService.stop();
+        engineService.pause();
         break;
       // New: settings search
       case 'settingsSearch':
@@ -668,14 +669,14 @@ class HotkeyService {
           mainKey = _mapStringToKey(part);
         }
       }
-
       if (mainKey != null) {
         return HotKey(
           key: mainKey,
           modifiers: modifiers.isEmpty ? null : modifiers,
-          scope: defaultTargetPlatform == TargetPlatform.linux
-              ? HotKeyScope.inapp
-              : HotKeyScope.system,
+          // keybinder on Linux supports system-wide hotkeys — no need to
+          // fall back to inapp scope.  The earlier inapp fallback was a
+          // conservative choice; keybinder works on both X11 and Wayland.
+          scope: HotKeyScope.system,
         );
       }
     } catch (e, stack) {

@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════════════════════
 #  G.A - Song — Comprehensive .gitignore
 #  Flutter multi-platform project (Android, iOS, macOS, Windows, Linux, Web)
-#  Last updated: 2026-08-05
+#  Last updated: 2026-08-24
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -228,6 +228,7 @@ GoogleService-Info.plist
 /dist/
 /installer/
 /release/
+/release_artifacts/
 /output/
 
 
@@ -290,16 +291,16 @@ venv/
 *.sh
 *.bat
 !build_all.bat
+!build_apple.sh
 !build_release.sh
 !build_linux.sh
 !run_linux_optimized.sh
-!pubspec.yaml
-!.metadata
 
 
 # ─── AI / Tooling artifacts ──────────────────────────────────────────────────
-.github/
+.freebuff/
 .openclaude/
+.claude/
 .zcode/
 .zcode-screenshots/
 .kilo/
@@ -310,7 +311,8 @@ venv/
 .copilot/
 .aider/
 .continue/
-Plan/
+/docs/
+/Plan/
 nul
 
 
@@ -369,3 +371,6 @@ Package.resolved
 *.sqlite
 *.sqlite3
 !/assets/**/*.db
+
+# Windows build helper (flutter_inappwebview_windows needs nuget on PATH)
+/nuget.exe

@@ -63,6 +63,15 @@ class MockAudioEngineService
   @override
   Future<void> dispose() async {}
 
+  // Cache-epoch API: skip-aware preload cancellation.
+  int _epoch = 0;
+  @override
+  int get cacheEpoch => _epoch;
+  @override
+  void bumpCacheEpoch() {
+    _epoch++;
+  }
+
   // P3.4: Lifecycle observer — mock is a no-op.
   @override
   void didChangeAppLifecycleState(final AppLifecycleState state) {}

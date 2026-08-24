@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/audio/audio_engine_service.dart';
 import '../core/audio/playlist_service.dart';
 import '../core/audio/lyric_parser.dart';
 import '../core/services/online_lyrics_service.dart';
@@ -21,10 +19,9 @@ final lyricVisibilityProvider = NotifierProvider<LyricVisibilityNotifier, bool>(
   LyricVisibilityNotifier.new,
 );
 
-/// Notifier managing the current song's parsed lyric lines.
-///
-/// Watches the playlist index and loads lyrics (local → cache → online).
-/// Uses the modern [Notifier] pattern (Riverpod v3).
+/// Notifier managing the current song's parsed lyric lines
+/// Watches the playlist index and loads lyrics (local → cache → online)
+/// Uses the modern [Notifier] pattern (Riverpod)
 class LyricNotifier extends Notifier<List<LyricLine>> {
   PlaylistService? _playlistService;
   DatabaseServiceWrapper? _databaseService;
@@ -189,14 +186,9 @@ final lyricProvider = NotifierProvider<LyricNotifier, List<LyricLine>>(
 );
 
 /// Combines lyric lines + current playback position into a reactive
-/// current-line string. Listens to BOTH lyric changes AND position changes.
-///
-/// The poll timer is only active when a song is playing and lyrics are
-/// available — saving CPU wake-ups when idle.
+/// Current-line string notifier. Listens to lyric changes and position events.
 class CurrentLyricLineNotifier extends Notifier<String> {
-  Timer? _pollTimer;
   List<LyricLine> _lines = [];
-  bool _isPlaying = false;
   // Local mirror — reading `state` inside build() throws
   // "uninitialized provider" StateError in Riverpod 3.
   String _currentLine = '';
@@ -206,49 +198,20 @@ class CurrentLyricLineNotifier extends Notifier<String> {
     // Listen to lyric changes
     ref.listen<List<LyricLine>>(lyricProvider, (_, final next) {
       _lines = next;
-      _syncTimer();
       _updateCurrentLine();
-    });
-
-    // Listen to engine state to pause/resume timer
-    ref.listen<AudioEngineState>(engineStateProvider, (_, final next) {
-      _isPlaying = next == AudioEngineState.playing;
-      _syncTimer();
     });
 
     // Listen to position changes for real-time updates
     ref.listen<Duration>(positionProvider, (_, _) => _onPositionChanged());
 
     _lines = ref.read(lyricProvider);
-    _isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
-    _syncTimer();
-
-    // Clean up timer when this provider is disposed
-    ref.onDispose(() {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    });
+    _updateCurrentLine();
 
     return _currentLine;
   }
 
   void _onPositionChanged() {
     _updateCurrentLine();
-  }
-
-  /// Starts the poll timer only when needed, stops it otherwise.
-  void _syncTimer() {
-    if (_lines.isNotEmpty && _isPlaying) {
-      if (_pollTimer == null || !_pollTimer!.isActive) {
-        _pollTimer?.cancel();
-        _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-          _updateCurrentLine();
-        });
-      }
-    } else {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    }
   }
 
   void _updateCurrentLine() {
@@ -263,8 +226,6 @@ class CurrentLyricLineNotifier extends Notifier<String> {
     final position = ref.read(positionProvider);
 
     // Binary search: last line with startTime <= currentPosition.
-    // Falls back to the first line when position precedes all timestamps
-    // (matches the original reverse-scan behavior).
     int low = 0;
     int high = _lines.length - 1;
     int matchIndex = -1;
@@ -296,9 +257,7 @@ final currentLyricLineProvider =
 /// Provider for the current syllable index in the active lyric line.
 /// Returns -1 if no syllable-level timing or no lyrics.
 class CurrentSyllableIndexNotifier extends Notifier<int> {
-  Timer? _pollTimer;
   List<LyricLine> _lines = [];
-  bool _isPlaying = false;
   // Local cached value — reading `state` inside build() throws in Riverpod 3.
   int _currentSyllable = -1;
 
@@ -307,49 +266,20 @@ class CurrentSyllableIndexNotifier extends Notifier<int> {
     // Listen to lyric changes
     ref.listen<List<LyricLine>>(lyricProvider, (_, final next) {
       _lines = next;
-      _syncTimer();
       _updateCurrentSyllable();
-    });
-
-    // Listen to engine state to pause/resume timer
-    ref.listen<AudioEngineState>(engineStateProvider, (_, final next) {
-      _isPlaying = next == AudioEngineState.playing;
-      _syncTimer();
     });
 
     // Listen to position changes for real-time updates
     ref.listen<Duration>(positionProvider, (_, _) => _onPositionChanged());
 
     _lines = ref.read(lyricProvider);
-    _isPlaying = ref.read(engineStateProvider) == AudioEngineState.playing;
-    _syncTimer();
-
-    // Clean up timer when this provider is disposed
-    ref.onDispose(() {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    });
+    _updateCurrentSyllable();
 
     return _currentSyllable;
   }
 
   void _onPositionChanged() {
     _updateCurrentSyllable();
-  }
-
-  /// Starts the poll timer only when needed, stops it otherwise.
-  void _syncTimer() {
-    if (_lines.isNotEmpty && _isPlaying) {
-      if (_pollTimer == null || !_pollTimer!.isActive) {
-        _pollTimer?.cancel();
-        _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-          _updateCurrentSyllable();
-        });
-      }
-    } else {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    }
   }
 
   void _updateCurrentSyllable() {

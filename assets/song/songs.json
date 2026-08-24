@@ -1,0 +1,282 @@
+[
+  {
+    "name": "Biết Thương Mình Hơn",
+    "fileName": "biet_thuong_minh_hon.mp3",
+    "artist": "Võ Phan Kim Khánh",
+    "peakDb": 0.0
+  },
+  {
+    "name": "CHÂN THÀNH",
+    "fileName": "anh_trai_say_hi/chan_thanh.mp3",
+    "artist": "RHYDER x Captain x Quang Hùng MasterD x WEAN x Ali Hoàng Dương",
+    "album": "Anh Trai Say Hi",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Chờ Anh Về",
+    "fileName": "b_ray/cho_anh_ve.mp3",
+    "artist": "B Ray x AMEE",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Dạo Bước Hồng Kông 1999",
+    "fileName": "dao_buoc_hong_kong_1999.mp3",
+    "artist": "NHONHO",
+    "peakDb": 0.0
+  },
+  {
+    "name": "稻香",
+    "fileName": "dao_xiang.mp3",
+    "artist": "AnnieTaco",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Đến Lúc Bông Hoa Sẽ Nở",
+    "fileName": "den_luc_bong_hoa_se_no.mp3",
+    "artist": "Huỳnh Tâm",
+    "peakDb": 0.0
+  },
+  {
+    "name": "ĐOẠN KỊCH CÂM",
+    "fileName": "anh_trai_say_hi/doan_kich_cam.mp3",
+    "artist": "B Ray x Negav x Phạm Đình Thái Ngân x CODY x Mỹ Mỹ",
+    "album": "Anh Trai Say Hi",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Feel At Home",
+    "fileName": "b_ray/feel_at_home.mp3",
+    "artist": "B Ray",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Không Ngừng Suy Nghĩ",
+    "fileName": "khong_ngung_suy_nghi.mp3",
+    "artist": "Dương Domic",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Không Thuộc Về Nơi Này",
+    "fileName": "b_ray/khong_thuoc_ve_noi_nay.mp3",
+    "artist": "B Ray",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Mách Bảo",
+    "fileName": "b_ray/mach_bao.mp3",
+    "artist": "B Ray",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Mưa Rào Và Đại Dương",
+    "fileName": "mua_rao_va_dai_duong.mp3",
+    "artist": "Lyly",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Nếu Những Tiếc Nuối",
+    "fileName": "neu_nhung_tiec_nuoi.mp3",
+    "artist": "Vũ.",
+    "peakDb": 0.0
+  },
+  {
+    "name": "NGƯỜI ĐẦU TIÊN - GIỜ THÌ",
+    "fileName": "nguoi_dau_tien_gio_thi.mp3",
+    "artist": "Juky San x buitruonglinh",
+    "peakDb": 0.0
+  },
+  {
+    "name": "NGƯỜI NHƯ ANH XỨNG ĐÁNG CÔ ĐƠN - KHÔNG ĐAU NỮA RỒI",
+    "fileName": "anh_trai_say_hi/nguoi_nhu_anh_xung_dang_co_don_khong_dau_nua_roi.mp3",
+    "artist": "Vũ Cát Tường x Negav x Jey B x Ngô Kiến Huy",
+    "album": "Anh Trai Say Hi",
+    "peakDb": 0.0
+  },
+  {
+    "name": "你的答案",
+    "fileName": "ni_de_da_an.mp3",
+    "artist": "阿冗",
+    "peakDb": 0.0
+  },
+  {
+    "name": "NỠ LÒNG ĐỒNG Ý",
+    "fileName": "anh_trai_say_hi/no_long_dong_y.mp3",
+    "artist": "B Ray x Karik x CODY x GILL x Ryn Lee",
+    "album": "Anh Trai Say Hi",
+    "peakDb": 0.0
+  },
+  {
+    "name": "SAY MỘT ĐỜI VÌ EM - CHO PHÉP TÔI MỜI ANH MỘT LY",
+    "fileName": "anh_trai_say_hi/say_mot_doi_vi_em_cho_phep_toi_moi_anh_mot_ly.mp3",
+    "artist": "Phạm Đình Thái Ngân x Vương Bình x ZA.I",
+    "album": "Anh Trai Say Hi",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Sớm Như Vậy",
+    "fileName": "som_nhu_vay.mp3",
+    "artist": "buitruonglinh",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Tạm Biệt Tình Đơn Phương",
+    "fileName": "tam_biet_tinh_don_phuong.mp3",
+    "artist": "A.C Xuân Tài",
+    "peakDb": 0.0
+  },
+  {
+    "name": "THIÊU THÂN",
+    "fileName": "anh_trai_say_hi/thieu_than.mp3",
+    "artist": "B Ray x Phạm Đình Thái Ngân x Ryn Lee x KHOI VU x Bùi Duy Ngọc",
+    "album": "Anh Trai Say Hi",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Tíc Tắc",
+    "fileName": "b_ray/tic_tac.mp3",
+    "artist": "B Ray",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Tìm Đâu Để Thấy Nhau - Film Version",
+    "fileName": "tim_dau_de_thay_nhau_film_version.mp3",
+    "artist": "Phạm Hải Âu",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Và Thế Giới Đã Mất Đi Một Người Cô Đơn",
+    "fileName": "va_the_gioi_da_mat_di_mot_nguoi_co_don.mp3",
+    "artist": "marzuz x Changg",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Viết Em Bản Tình Ca",
+    "fileName": "b_ray/viet_em_ban_tinh_ca.mp3",
+    "artist": "B Ray",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Vùng An Toàn",
+    "fileName": "b_ray/vung_an_toan.mp3",
+    "artist": "B Ray",
+    "peakDb": 0.0,
+    "album": "B Ray"
+  },
+  {
+    "name": "Anh Nên Đi Khỏi Đây",
+    "fileName": "mat_nham_mat_mo/anh_nen_di_khoi_day.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Chờ Tới Khi Anh Về",
+    "fileName": "mat_nham_mat_mo/cho_toi_khi_anh_ve.mp3",
+    "artist": "HIEUTHUHAI ft. Hoàng Tôn",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Dạo Gần Đây Anh Thấy Anh Không Bằng Ai Hết",
+    "fileName": "mat_nham_mat_mo/dao_gan_day_anh_thay_anh_khong_bang_ai_het.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Hết Yêu",
+    "fileName": "mat_nham_mat_mo/het_yeu.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Mắt Nhắm Mắt Mở Trailer",
+    "fileName": "mat_nham_mat_mo/mat_nham_mat_mo_trailer.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Người Im Lặng Gặp Người Hay Nói",
+    "fileName": "mat_nham_mat_mo/nguoi_im_lang_gap_nguoi_hay_noi.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Nước Mắt Cá Sấu",
+    "fileName": "mat_nham_mat_mo/nuoc_mat_ca_sau.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Nước Mắt Cá Sấu Interlude",
+    "fileName": "mat_nham_mat_mo/nuoc_mat_ca_sau_interlude.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Sắp Nổi Tiếng 2",
+    "fileName": "mat_nham_mat_mo/sap_noi_tieng_2.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Vacheron Louie V",
+    "fileName": "mat_nham_mat_mo/vacheron_louie_v.mp3",
+    "artist": "HIEUTHUHAI ft. Hustlang Robber",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Đáng Lý Anh Nên Yêu Em Hơn",
+    "fileName": "mat_nham_mat_mo/dang_ly_anh_nen_yeu_em_hon.mp3",
+    "artist": "HIEUTHUHAI ft. HURRYKNG",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Đâu Có Ai Nhìn",
+    "fileName": "mat_nham_mat_mo/dau_co_ai_nhin.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Đâu Cần Gì Hơn",
+    "fileName": "mat_nham_mat_mo/dau_can_gi_hon.mp3",
+    "artist": "HIEUTHUHAI",
+    "album": "Mắt Nhắm Mắt Mở",
+    "peakDb": 0.0
+  },
+  {
+    "name": "SSD",
+    "fileName": "SSD.mp3",
+    "artist": "PAR SG x Nguyenn",
+    "peakDb": 0.0
+  },
+  {
+    "name": "Thế Giới Của Anh",
+    "fileName": "tinh_ha_say_hi/the_gioi_cua_anh.mp3",
+    "artist": "Dương Domic x WEAN x CONGB x buitruonglinh x Van Toan",
+    "album": "Tinh Hà Say HI",
+    "peakDb": 0.0
+  },
+  {
+    "name": "MRT",
+    "fileName": "tinh_ha_say_hi/mrt.mp3",
+    "artist": "XUÂN ĐỊNH K.Y x buitruonglinh x CAPTAIN BOY x HYO",
+    "album": "Tinh Hà Say HI",
+    "peakDb": 0.0
+  }
+]

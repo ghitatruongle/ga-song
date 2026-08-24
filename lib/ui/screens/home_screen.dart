@@ -457,7 +457,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(final BuildContext context) {
-    // Phase 2.3: ref.listen replaces direct addListener call.
     ref.listen<int>(currentPlayingIndexProvider, (_, final next) {
       _onSongChanged();
     });
