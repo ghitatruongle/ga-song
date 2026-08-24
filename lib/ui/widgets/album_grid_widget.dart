@@ -37,14 +37,13 @@ class AlbumGridWidget extends StatelessWidget {
             child: albums.isEmpty
                 ? _buildEmptyState(adaptiveColor, context)
                 : GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 200,
-                          // Aspect ratio 0.75 gives sufficient budget for 2-line title.
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 24,
-                          mainAxisSpacing: 24,
-                        ),
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 200,
+                      // Aspect ratio 0.75 gives sufficient budget for 2-line title.
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 24,
+                      mainAxisSpacing: 24,
+                    ),
                     itemCount: albums.length,
                     itemBuilder: (final context, final index) {
                       final albumName = albums[index];

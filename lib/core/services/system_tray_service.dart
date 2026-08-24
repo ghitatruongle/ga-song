@@ -269,10 +269,7 @@ class SystemTrayService {
           onClicked: (final menuItem) => playlistService.previous(),
         ),
         MenuSeparator(),
-        MenuItemLabel(
-          label: 'Exit',
-          onClicked: (final menuItem) => exit(0),
-        ),
+        MenuItemLabel(label: 'Exit', onClicked: (final menuItem) => exit(0)),
       ]);
 
       try {

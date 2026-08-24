@@ -70,11 +70,11 @@ void main() {
       final setList = service.setPlaylist(songs);
       await flush();
 
-    await service.playSongAt(5);
+      await service.playSongAt(5);
 
-    engine.release();
-    await setList;
-    await flush();
+      engine.release();
+      await setList;
+      await flush();
 
       expect(engine.preloaded, contains('song_5.mp3'));
       expect(engine.preloaded, contains('song_6.mp3'));

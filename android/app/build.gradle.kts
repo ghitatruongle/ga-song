@@ -41,10 +41,10 @@ android {
 
             // Hỗ trợ cả arm64-v8a và armeabi-v7a (cho thiết bị 32-bit như SM J610F)
             ndk {
-                // "full" embeds full native debug symbols in the
-                // release APK (bloats every ABI). No crash-symbolication
-                // pipeline is wired yet, so strip them for smaller artifacts.
-                debugSymbolLevel = "none"
+                // SYMBOL_TABLE extracts only ELF symbol tables into the bundle —
+                // far smaller than "full". Flutter's post-build AAB validation
+                // requires these symbol entries to exist, so "none" fails CI.
+                debugSymbolLevel = "SYMBOL_TABLE"
             }
 
             // TODO: Add your own signing config for the release build.

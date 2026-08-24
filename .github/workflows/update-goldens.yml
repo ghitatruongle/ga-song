@@ -1,0 +1,31 @@
+name: Update Goldens
+
+on:
+  workflow_dispatch: # Manual trigger
+
+env:
+  FLUTTER_VERSION: '3.44.9'
+
+jobs:
+  update-goldens:
+    name: Regenerate golden files on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure asset directories exist
+        run: |
+          mkdir -p assets/song/mat_nham_mat_mo
+          mkdir -p assets/song/anh_trai_say_hi
+          mkdir -p assets/song/b_ray
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - run: flutter pub get
+      - name: Regenerate goldens
+        run: flutter test test/golden_test.dart --update-goldens
+      - name: Upload goldens artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldens-linux
+          path: test/goldens/
